@@ -5,7 +5,7 @@
 
 '''
 This is the main file for the authnzerver, a simple authorization and
-authentication server backed by SQLite and Tornado for use with the lcc-server.
+authentication server backed by SQLite, SQLAlchemy, and Tornado.
 
 '''
 

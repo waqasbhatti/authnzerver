@@ -100,7 +100,7 @@ def cache_delete(key,
 
 def cache_increment(key,
                     timeout_seconds=0.3,
-                    cache_dirname='lccserver-cache'):
+                    cache_dirname='authnzerver-cache'):
     '''
     This sets up a counter for the key in the cache.
 

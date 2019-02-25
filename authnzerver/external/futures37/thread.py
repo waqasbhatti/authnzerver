@@ -6,7 +6,7 @@
 __author__ = 'Brian Quinlan (brian@sweetapp.com)'
 
 import atexit
-from lccserver.external.futures37 import _base
+from authnzerver.external.futures37 import _base
 import itertools
 import queue
 import threading

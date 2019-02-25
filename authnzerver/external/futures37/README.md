@@ -9,7 +9,7 @@ https://github.com/python/cpython/tree/v3.7.0/Lib/concurrent/futures
 
 to:
 
-lcc-server/lccserver/external/futures37
+authnzerver/authnzerver/external/futures37
 
 to provide this functionality for Python < 3.7 (Python 3.6 in particular)
 

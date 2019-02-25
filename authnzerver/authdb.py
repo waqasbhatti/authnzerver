@@ -795,7 +795,7 @@ def initial_authdb_inserts(auth_db_path,
         try:
             superuser_email = '%s@localhost' % getpass.getuser()
         except Exception as e:
-            superuser_email = 'lccs_admin@localhost'
+            superuser_email = 'admin@localhost'
 
     if not superuser_pass:
         superuser_pass = secrets.token_urlsafe(16)
