@@ -392,7 +392,7 @@ def auth_kill_old_sessions(
 
     if len(rows) > 0:
 
-        LOGGER.warning('will kill %s sessions older than %sZ' %
+        LOGGER.warning('Will kill %s sessions older than %sZ.' %
                        (len(rows), earliest_date.isoformat()))
 
         delete = sessions.delete().where(
@@ -411,7 +411,7 @@ def auth_kill_old_sessions(
     else:
 
         LOGGER.warning(
-            'no sessions older than %sZ found to delete. returning...' %
+            'No sessions older than %sZ found to delete.' %
             earliest_date.isoformat()
         )
         return {

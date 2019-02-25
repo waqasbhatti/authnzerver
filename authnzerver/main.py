@@ -280,7 +280,7 @@ def main():
     ## LOCAL IMPORTS ##
     ###################
 
-    from .external.futures37 import ProcExecutor
+    from .external.futures37.process import ProcessPoolExecutor
 
 
     ##############
@@ -316,7 +316,7 @@ def main():
         if ( (not os.path.exists(AUTHDB_SQLITE)) or
              (not os.path.exists(options.authdb.replace('sqlite:///',''))) ):
 
-            authdb_p, creds, fernet_file, session_file = autogen_secrets_authdb(
+            authdb_p, creds, fernet_file = autogen_secrets_authdb(
                 options.basedir,
                 LOGGER
             )
@@ -350,11 +350,13 @@ def main():
     #
     # this is the background executor we'll pass over to the handler
     #
-    executor = ProcExecutor(max_workers=MAXWORKERS,
-                            initializer=setup_auth_worker,
-                            initargs=(AUTHDB_PATH,
-                                      FERNETSECRET),
-                            finalizer=close_authentication_database)
+    executor = ProcessPoolExecutor(
+        max_workers=MAXWORKERS,
+        initializer=setup_auth_worker,
+        initargs=(AUTHDB_PATH,
+                  FERNETSECRET),
+        finalizer=close_authentication_database
+    )
 
     # we only have one actual endpoint, the other one is for testing
     handlers = [
