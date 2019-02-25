@@ -27,7 +27,7 @@ with open('requirements.txt') as infd:
 setup(
     name='authnzerver',
     version=__version__,
-    description=('An authentication-authorization server.'),
+    description=('A small authentication-authorization server.'),
     long_description=readme(),
     long_description_content_type="text/markdown",
     classifiers=[

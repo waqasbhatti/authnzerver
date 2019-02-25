@@ -44,7 +44,6 @@ def _recv_sigint(signum, stack):
 ## TORNADO IMPORTS ##
 #####################
 
-# experimental, probably will remove at some point
 try:
     import asyncio
     import uvloop
@@ -71,7 +70,7 @@ modpath = os.path.abspath(os.path.dirname(__file__))
 
 # the port to serve on
 define('port',
-       default=12690,
+       default=13431,
        help='Run on the given port.',
        type=int)
 
@@ -112,20 +111,21 @@ define('authdb',
 
 # the path to the cache directory used to enforce API limits
 define('cachedir',
-       default='/tmp/vizinspect-cache',
+       default='/tmp/authnzerver-cache',
        help=('Path to the cache directory used by the authnzerver.'),
        type=str)
 
 
-# the environment variable to get FERNETSECRET from.
+# the environment variable to get the secret key that secures HTTP
+# communications between the authnzerver and any other processes.
 define('secretenv',
-       default='FERNETSECRET',
+       default='AUTHNZERVER_SECRET',
        help=('The environment variable used to get the secret key.'),
        type=str)
 
-# the path to the secret file to get FERNETSECRET from.
+# the path to the secret file to get secret key from.
 define('secretfile',
-       default='.server.secret-fernet',
+       default='.authnzerver.secret-key',
        help=('Path to the file containing the secret key. '
              'This is relative to the path given in the basedir option.'),
        type=str)
@@ -235,7 +235,7 @@ def autogen_secrets_authdb(basedir, logger):
                                   superuser_pass=password)
 
     creds = os.path.join(basedir,
-                         '.server.admin-credentials')
+                         '.authnzerver.admin-credentials')
     with open(creds,'w') as outfd:
         outfd.write('%s %s\n' % (u,p))
         os.chmod(creds, 0o100400)
@@ -248,20 +248,13 @@ def autogen_secrets_authdb(basedir, logger):
     # with them later
     logger.info('Generating server secret tokens...')
     fernet_secret = Fernet.generate_key()
-    fernet_secret_file = os.path.join(basedir,'.server.secret-fernet')
+    fernet_secret_file = os.path.join(basedir,'.authnzerver.secret-key')
 
     with open(fernet_secret_file,'wb') as outfd:
         outfd.write(fernet_secret)
     os.chmod(fernet_secret_file, 0o100400)
 
-    session_secret = Fernet.generate_key()
-    session_secret_file = os.path.join(basedir,'.server.secret-session')
-
-    with open(session_secret_file,'wb') as outfd:
-        outfd.write(session_secret)
-    os.chmod(session_secret_file, 0o100400)
-
-    return authdb_path, creds, fernet_secret_file, session_secret_file
+    return authdb_path, creds, fernet_secret_file
 
 
 
@@ -287,7 +280,8 @@ def main():
     ## LOCAL IMPORTS ##
     ###################
 
-    from ..utils import ProcExecutor
+    from .external.futures37 import ProcExecutor
+
 
     ##############
     ## HANDLERS ##
@@ -404,7 +398,7 @@ def main():
     removed_items = cache.cache_flush(
         cache_dirname=options.cachedir
     )
-    LOGGER.info('removed %s stale items from authdb cache' % removed_items)
+    LOGGER.info('Removed %s stale items from authdb cache' % removed_items)
 
     session_killer = partial(actions.auth_kill_old_sessions,
                              session_expiry_days=options.sessionexpiry,
@@ -441,13 +435,6 @@ def main():
                      maxtries)
         sys.exit(1)
 
-    LOGGER.info('Started authnzerver. listening on http://%s:%s' %
-                (options.serve, serverport))
-    LOGGER.info('Background worker processes: %s. IOLoop in use: %s' %
-                (MAXWORKERS, IOLOOP_SPEC))
-    LOGGER.info('Base directory is: %s' % os.path.abspath(options.basedir))
-
-
     # start the IOLoop and begin serving requests
     try:
 
@@ -461,6 +448,12 @@ def main():
             jitter=0.1,
         )
         periodic_session_kill.start()
+
+        LOGGER.info('Starting authnzerver. listening on http://%s:%s' %
+                    (options.serve, serverport))
+        LOGGER.info('Background worker processes: %s. IOLoop in use: %s' %
+                    (MAXWORKERS, IOLOOP_SPEC))
+        LOGGER.info('Base directory is: %s' % os.path.abspath(options.basedir))
 
         # start the IOLoop
         loop.start()
