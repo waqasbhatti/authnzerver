@@ -50,7 +50,7 @@ setup(
     install_requires=INSTALL_REQUIRES,
     entry_points={
         'console_scripts':[
-            'authnzerver=authnzerver.main:main',
+            'authnzrv=authnzerver.main:main',
         ],
     },
     include_package_data=True,
