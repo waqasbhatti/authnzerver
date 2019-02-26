@@ -22,26 +22,18 @@ LOGGER = logging.getLogger(__name__)
 #############
 
 import json
-import numpy as np
 from datetime import datetime
 
 class FrontendEncoder(json.JSONEncoder):
 
     def default(self, obj):
 
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, datetime):
+        if isinstance(obj, datetime):
             return obj.isoformat()
         elif isinstance(obj, bytes):
             return obj.decode()
         elif isinstance(obj, complex):
             return (obj.real, obj.imag)
-        elif (isinstance(obj, (float, np.float64, np.float_)) and
-              not np.isfinite(obj)):
-            return None
-        elif isinstance(obj, (np.int8, np.int16, np.int32, np.int64)):
-            return int(obj)
         else:
             return json.JSONEncoder.default(self, obj)
 
