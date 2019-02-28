@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block pagecss %}
+{% end %}
+
+
+{% block pagecontent %}
+
+<!-- this is where all the alerts go -->
+<div class="container-fluid">
+  <div class="row mt-2">
+    <div class="col-12">
+      <div id="alert-box">
+        {% raw flash_messages %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if current_user['user_role'] in ('authenticated','staff','superuser') %}
+<div class="container" >
+  <div class="row" >
+    <div class="col-12" >
+      Hello there, {{ current_user['email'] }}!
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- this contains the save controls -->
+  <div class="row mt-2">
+    <div class="col-12 text-center" >
+      <button type="button" class="btn btn-outline-secondary btn-lg">See hscMap</button>
+    </div>
+  </div>
+
+  <div class="row mt-4" >
+
+    <!-- this contains the main viewer and buttons -->
+    <div class="col-sm-12 col-md-9">
+
+      <!-- viewer row -->
+      <div class="row" >
+
+        <div class="col-sm-12 col-md-8">
+          <figure class="figure">
+            <img src="https://spaceholder.cc/800x600" class="figure-img img-fluid rounded" alt="A generic square placeholder image with rounded corners in a figure.">
+            <figcaption class="figure-caption text-center">This is a neat galaxy caption.</figcaption>
+          </figure>
+        </div>
+
+        <div class="col-sm-12 col-md-4">
+
+          <div class="row" >
+            <div class="col-12" >
+              <figure class="figure">
+                <img src="https://spaceholder.cc/300x200" class="figure-img img-fluid rounded" alt="A generic square placeholder image with rounded corners in a figure.">
+                <figcaption class="figure-caption text-center">color plot</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <div class="row" >
+            <div class="col-12" >
+              <figure class="figure">
+                <img src="https://spaceholder.cc/300x200" class="figure-img img-fluid rounded" alt="A generic square placeholder image with rounded corners in a figure.">
+                <figcaption class="figure-caption text-center">half-light radius plot</figcaption>
+              </figure>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- this contains the info on the current object -->
+      <div class="row">
+        <div class="col-12" >
+          <table class="table table-sm" >
+            <thead>
+              <tr>
+                <th><code>r_eff</code></th>
+                <th><code>mu_0(g)</code></th>
+                <th><code>g-i color</code></th>
+                <th><code>g-r color</code></th>
+                <th><code>class</code></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="current-reff-val" >1</td>
+                <td id="current-mug0-val" >2</td>
+                <td id="current-gicolor-val" >3</td>
+                <td id="current-grcolor-val" >4</td>
+                <td id="current-objectclass-val" >unknown</td>
+              </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- control row -->
+      <div class="row" >
+        <div class="col-12" >
+          <div class="btn-toolbar justify-content-between"
+               role="toolbar" aria-label="Toolbar with button groups">
+            <div class="btn-group mr-auto" role="group" aria-label="First group">
+              <button type="button" class="btn btn-outline-info">previous</button>
+            </div>
+            <div class="btn-group" role="group" aria-label="Second group">
+              <button type="button" class="btn btn-primary">yes</button>
+              <button type="button" class="btn btn-success">no</button>
+              <button type="button" class="btn btn-warning">tidal</button>
+              <button type="button" class="btn btn-secondary">lol what?</button>
+            </div>
+            <div class="btn-group ml-auto" role="group" aria-label="Third group">
+              <button type="button" class="btn btn-outline-info">next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- this contains the source index and notes -->
+      <div class="row" >
+        <div class="col-12" >
+          <form>
+            <div class="form-group">
+              <label for="exampleInputEmail1">Source index</label>
+              <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="The current object's source index">
+            </div>
+            <div class="form-group">
+              <label for="exampleInputPassword1">Comments on this object</label>
+              <textarea class="form-control" id="comments-textbox">
+                 Comments go here
+              </textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- this contains the commment stream and a comment box -->
+    <div class="col-sm-12 col-md-3">
+      <h4>All users' comments</h4>
+
+      <div class="card mt-3">
+        <div class="card-header">
+          Someone (hours ago)
+        </div>
+        <div class="card-body">
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
+            posuere erat a ante.</p>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header">
+          Someone else (minutes ago)
+        </div>
+        <div class="card-body">
+          <p>Nil Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
+            posuere erat a ante.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+{% else %}
+<div class="container" >
+  <div class="row" >
+    <div class="col-12" >
+      Hello there! Please <a href="/users/login" >login to continue</a>.
+    </div>
+  </div>
+</div>
+{% end %}
+
+
+<!-- end of page content -->
+{% end %}
+
+{% block pagejs_modules %}
+{% end %}
+
+
+{% block pagejs %}
+
+$(document).ready(function() {
+
+// UI action setup
+ui.action_setup();
+
+// load the user prefs
+ui.load_cookie_prefs('main-page');
+
+
+});
+
+{% end %}

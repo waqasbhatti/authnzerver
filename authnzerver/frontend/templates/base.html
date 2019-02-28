@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{{ static_url('css/bootstrap.min.css') }}">
+
+    <!-- our own CSS -->
+    <link rel="stylesheet" href="{{ static_url('css/vizinspect.css') }}">
+
+    {% block pagecss %}
+
+    {% end %}
+
+    <title>{{ page_title }}</title>
+  </head>
+
+  <body>
+
+    {% block topnav %}
+    <!-- the top bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+
+      <button class="navbar-toggler"
+              type="button"
+              data-toggle="collapse"
+              data-target="#navbarNavAltMarkup"
+              aria-controls="navbarNavAltMarkup"
+              aria-expanded="false"
+              aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+
+        <div class="navbar-nav mr-auto">
+
+          <a class="nav-item nav-link"
+             title="HSC Viz Inspect"
+             href="/">
+            HSC Viz Inspect
+          </a>
+
+          <a class="nav-item nav-link active">
+            <strong>{{ page_title }}</strong> <span class="sr-only">(current)</span>
+          </a>
+
+        </div>
+
+        <form class="form-inline" action="/users/logout"
+              id="user-logout-form" method="POST" >
+          {% module xsrf_form_html() %}
+          {% raw user_account_box %}
+        </form>
+
+      </div>
+
+    </nav>
+    {% end %}
+
+    {% block pagecontent %}
+    <div class="container-fluid">
+
+      <h1>Hello, world! This is the {{ page_title }} page.</h1>
+
+    </div>
+    {% end %}
+
+    <footer class="text-muted">
+      <div class="container-fluid" >
+        <div class="row" >
+          <div class="col-sm-12" >
+            <hr>
+          </div>
+        </div>
+        <div class="row justify-content-between p-3">
+
+          <div class="col-sm-12 col-md-3" >
+            <ul class="list-unstyled" >
+              <li>
+                <a href="https://github.com/johnnygreco/viz-inspect" >
+                  viz-inspect
+                </a>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </footer>
+
+    <!-- bootstrap scripts -->
+    <script src="{{ static_url('js/jquery.min.js') }}"></script>
+    <script src="{{ static_url('js/popper.min.js') }}"></script>
+    <script src="{{ static_url('js/bootstrap.min.js') }}"></script>
+
+    <!-- cookie handling for prefs -->
+    <script src="{{ static_url('js/js.cookie.js') }}"></script>
+
+    <!-- time utilities -->
+    <script src="{{ static_url('js/moment.min.js') }}"></script>
+
+    <!-- our own js modules -->
+    <script src="{{ static_url('js/vizinspect.js') }}"></script>
+
+    {% block pagejs_modules %}
+
+    {% end %}
+
+    <script>
+      {% block pagejs %}
+
+      $(document).ready(function() {
+
+          // UI action setup
+          ui.action_setup();
+
+          // format all the moments
+          $('.moment-format').each(function (index, elem) {
+
+              // get the text we need
+              var mt = moment($(this).text()).fromNow();
+              $(this).html($(this).text() + ' <strong>(' + mt + ')</strong>');
+
+          });
+
+      });
+      {% end %}
+    </script>
+
+  </body>
+
+</html>

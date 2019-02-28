@@ -125,7 +125,7 @@ define('secretenv',
 
 # the path to the secret file to get secret key from.
 define('secretfile',
-       default='.authnzerver.secret-key',
+       default='.authnzerver-secret-key',
        help=('Path to the file containing the secret key. '
              'This is relative to the path given in the basedir option.'),
        type=str)
@@ -235,7 +235,7 @@ def autogen_secrets_authdb(basedir, logger):
                                   superuser_pass=password)
 
     creds = os.path.join(basedir,
-                         '.authnzerver.admin-credentials')
+                         '.authnzerver-admin-credentials')
     with open(creds,'w') as outfd:
         outfd.write('%s %s\n' % (u,p))
         os.chmod(creds, 0o100400)
@@ -248,7 +248,7 @@ def autogen_secrets_authdb(basedir, logger):
     # with them later
     logger.info('Generating server secret tokens...')
     fernet_secret = Fernet.generate_key()
-    fernet_secret_file = os.path.join(basedir,'.authnzerver.secret-key')
+    fernet_secret_file = os.path.join(basedir,'.authnzerver-secret-key')
 
     with open(fernet_secret_file,'wb') as outfd:
         outfd.write(fernet_secret)
