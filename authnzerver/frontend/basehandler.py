@@ -84,9 +84,9 @@ from tornado import httputil
 ###################
 
 from ..external.cookies import cookies
-from ..authnzerver.actions import authnzerver_send_email
-from ..authnzerver.authdb import check_role_limits
-from ..authnzerver import cache
+from ..actions import authnzerver_send_email
+from ..authdb import check_role_limits
+from .. import cache
 
 
 #######################

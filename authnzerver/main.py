@@ -185,10 +185,13 @@ def close_authentication_database():
 ###########################################
 
 def autogen_secrets_authdb(basedir, logger):
-    '''
-    This automatically generates a secrets file and auth DB.
+    '''This automatically generates a secrets file and auth DB.
 
     Run only once on the first start of an authnzerver.
+
+    FIXME: this should also generate a server cookie secrets file so we can use
+    authnzerver as the auth backend for another server, complete with /users and
+    /admin support.
 
     '''
 
@@ -288,6 +291,9 @@ def main():
     ##############
 
     from .handlers import AuthHandler, EchoHandler
+    from .frontend import auth_handlers as ah
+    from .frontend.admin_handlers import AdminHandler
+
     from . import authdb
     from . import cache
     from . import actions

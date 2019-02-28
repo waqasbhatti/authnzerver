@@ -92,7 +92,7 @@ from .basehandler import BaseHandler
 ## MAIN INDEX PAGE ##
 #####################
 
-class IndexHandler(BaseHandler):
+class AdminPageHandler(BaseHandler):
     '''This handles the index page.
 
     This page shows the current project.
@@ -138,10 +138,10 @@ class IndexHandler(BaseHandler):
         '''
 
         self.render(
-            'index.html',
+            'admin.html',
             flash_messages=self.render_flash_messages(),
             user_account_box=self.render_user_account_box(),
-            page_title='viz-inspect',
+            page_title='Admin',
             siteinfo=self.siteinfo,
             current_user=self.current_user,
         )

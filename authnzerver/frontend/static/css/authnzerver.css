@@ -1,7 +1,7 @@
-/* viz-inspsect.css - Waqas Bhatti (wbhatti@astro.princeton.edu) - Jul 2018
+/* authnzerver.css - Waqas Bhatti (wbhatti@astro.princeton.edu) - Jul 2018
    LICENSE: MIT. See the LICENSE file for details.
 
-   This contains the CSS styles for the HSC visualization server.
+   This contains the CSS styles for the authnzerver.
  */
 
 
@@ -129,7 +129,7 @@ code {
   overflow-y: auto;
 }
 
-.viz-filterbucket {
+.authnz-filterbucket {
   height: 13em;
   overflow-y: auto;
 }
@@ -139,7 +139,7 @@ code {
   background: #d4edda;
 }
 
-.viz-filtercolumn-select {
+.authnz-filtercolumn-select {
   font-size: small;
 }
 
@@ -245,7 +245,7 @@ details.no-details:not([open]) summary {
 
 /* styles for docs pages */
 
-.viz-breadcrumb {
+.authnz-breadcrumb {
   background: #fff;
   font-size: 2.5rem;
   padding-left: 0px;
