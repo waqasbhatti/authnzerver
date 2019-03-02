@@ -17,7 +17,7 @@ This contains the permissions and user-role models for authnzerver.
 ROLE_PERMISSIONS = {
     'superuser':{
         'limits':{
-            'max_rows': 5000000,
+            'max_req_items': 5000000,
             'max_reqs_60sec': 60000,
         },
         'can_own':{'dataset','object','collection','apikeys','preferences'},
@@ -82,7 +82,7 @@ ROLE_PERMISSIONS = {
     },
     'staff':{
         'limits':{
-            'max_rows': 1000000,
+            'max_req_items': 1000000,
             'max_reqs_60sec': 60000,
         },
         'can_own':{'dataset','object','collection','apikeys','preferences'},
@@ -123,7 +123,7 @@ ROLE_PERMISSIONS = {
     },
     'authenticated':{
         'limits':{
-            'max_rows': 500000,
+            'max_req_items': 500000,
             'max_reqs_60sec': 6000,
         },
         'can_own':{'dataset','apikeys','preferences'},
@@ -156,7 +156,7 @@ ROLE_PERMISSIONS = {
     },
     'anonymous':{
         'limits':{
-            'max_rows': 100000,
+            'max_req_items': 100000,
             'max_reqs_60sec': 600,
         },
         'can_own':{'dataset'},
@@ -182,7 +182,7 @@ ROLE_PERMISSIONS = {
     },
     'locked':{
         'limits':{
-            'max_rows': 0,
+            'max_req_items': 0,
             'max_reqs_60sec': 0,
         },
         'can_own':set({}),
@@ -286,6 +286,17 @@ ITEM_PERMISSIONS = {
     }
 }
 
+
+###########################################
+## GENERATING PERMISSION AND ROLE MODELS ##
+###########################################
+
+
+
+
+##########################
+## CHECKING PERMISSIONS ##
+##########################
 
 def get_item_permissions(role_name,
                          target_name,
@@ -493,7 +504,7 @@ def check_user_access(userid=2,
 
 
 def check_role_limits(role,
-                      rows=None,
+                      requested_items=None,
                       rate_60sec=None,
                       all_role_permissions=None):
     '''
@@ -504,11 +515,17 @@ def check_role_limits(role,
     if not all_role_permissions:
         all_role_permissions = ROLE_PERMISSIONS
 
-    if rows is not None:
-        return all_role_permissions[role]['limits']['max_rows'] <= rows
+    if requested_items is not None:
+        return (
+            all_role_permissions[role]['limits']['max_req_items'] <= (
+                requested_items
+            )
+        )
     elif rate_60sec is not None:
         return (
-            all_role_permissions[role]['limits']['max_reqs_60sec'] >= rate_60sec
+            all_role_permissions[role]['limits']['max_reqs_60sec'] >= (
+                rate_60sec
+            )
         )
     else:
         return all_role_permissions[role]['limits']
