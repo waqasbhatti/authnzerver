@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# actions.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# License: MIT - see the LICENSE file for the full text.
 
-'''actions.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
-License: MIT - see the LICENSE file for the full text.
-
+'''
 This contains functions to drive auth actions.
 
 '''

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# actions_user.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# License: MIT - see the LICENSE file for the full text.
 
-'''user_actions.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
-License: MIT - see the LICENSE file for the full text.
 
-This contains functions to drive user account related auth actions.
+'''This contains functions to drive user account related auth actions.
 
 '''
 

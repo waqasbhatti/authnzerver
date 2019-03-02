@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# actions_session.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# License: MIT - see the LICENSE file for the full text.
 
-'''session_actions.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
-License: MIT - see the LICENSE file for the full text.
-
-This contains functions to drive session-related auth actions.
+'''This contains functions to drive session-related auth actions.
 
 '''
 

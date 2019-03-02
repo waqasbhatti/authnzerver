@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# actions_email.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# License: MIT - see the LICENSE file for the full text.
 
-'''email_actions.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
-License: MIT - see the LICENSE file for the full text.
-
-This contains functions to drive email-related auth actions.
+'''This contains functions to drive email-related auth actions.
 
 '''
 

@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# actions_admin.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# License: MIT - see the LICENSE file for the full text.
 
-'''admin_actions.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
-License: MIT - see the LICENSE file for the full text.
-
-This contains functions to drive admin related actions (listing users, editing
-users, change user roles).
+'''This contains functions to drive admin related actions (listing users,
+editing users, change user roles).
 
 '''
 
@@ -214,6 +213,11 @@ def edit_user(payload,
         - session_token: str, session token of admin or target_userid token
         - target_userid: int, the user to edit
         - update_dict: dict, the update dict
+
+        Only these items can be present in `update_dict`::
+
+        {'full_name', 'email',    <- updateable by user and superuser
+         'is_active','user_role'} <- updateable by superuser only
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
