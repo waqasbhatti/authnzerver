@@ -54,9 +54,8 @@ from tornado.escape import squeeze
 from sqlalchemy import select, desc
 from fuzzywuzzy.fuzz import UQRatio
 
-from . import authdb
-
-from .actions_session import auth_session_exists
+from .. import authdb
+from .session import auth_session_exists
 
 
 ###################

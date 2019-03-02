@@ -52,8 +52,8 @@ import multiprocessing as mp
 
 from sqlalchemy import select
 
-from . import authdb
-from .actions_session import auth_session_exists
+from .. import authdb
+from .session import auth_session_exists
 
 
 
