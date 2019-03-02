@@ -291,7 +291,9 @@ def get_item_permissions(role_name,
                          target_name,
                          target_visibility,
                          target_scope,
-                         debug=False):
+                         debug=False,
+                         all_role_permissions=None,
+                         all_item_permissions=None):
     '''Returns the possible permissions for a target given a role and target
     status.
 
@@ -309,6 +311,11 @@ def get_item_permissions(role_name,
 
     '''
 
+    if not all_role_permissions:
+        all_role_permissions = ROLE_PERMISSIONS
+    if not all_item_permissions:
+        all_item_permissions = ITEM_PERMISSIONS
+
     if debug:
         print(
             'role_name = %s\ntarget_name = %s\n'
@@ -317,13 +324,13 @@ def get_item_permissions(role_name,
         )
 
     try:
-        target_valid_permissions = ITEM_PERMISSIONS[
+        target_valid_permissions = all_item_permissions[
             target_name
         ]['valid_permissions']
-        target_valid_visibilities = ITEM_PERMISSIONS[
+        target_valid_visibilities = all_item_permissions[
             target_name
         ]['valid_visibilities']
-        target_invalid_roles = ITEM_PERMISSIONS[
+        target_invalid_roles = all_item_permissions[
             target_name
         ]['invalid_roles']
 
@@ -349,13 +356,13 @@ def get_item_permissions(role_name,
         # if this target is owned by the user, then check target owned
         # permissions
         if target_scope == 'for_owned':
-            role_permissions = ROLE_PERMISSIONS[role_name][target_scope]
+            role_permissions = all_role_permissions[role_name][target_scope]
 
         # otherwise, the target is not owned by the user, check scope
         # permissions for target status
         else:
             role_permissions = (
-                ROLE_PERMISSIONS[role_name][target_scope][target_visibility]
+                all_role_permissions[role_name][target_scope][target_visibility]
             )
 
         # these are the final available permissions
@@ -380,11 +387,19 @@ def check_user_access(userid=2,
                       target_owner=1,
                       target_visibility='private',
                       target_sharedwith=None,
-                      debug=False):
+                      debug=False,
+                      all_role_permissions=None,
+                      all_item_permissions=None):
     '''
     This does a check for user access to a target.
 
     '''
+
+    if not all_role_permissions:
+        all_role_permissions = ROLE_PERMISSIONS
+    if not all_item_permissions:
+        all_item_permissions = ITEM_PERMISSIONS
+
     if debug:
         print('userid = %s\ntarget_owner = %s\nsharedwith_userids = %s' %
               (userid, target_owner, target_sharedwith))
@@ -442,7 +457,7 @@ def check_user_access(userid=2,
         print('target shared or owned test passed = %s' % shared_or_owned_ok)
 
     target_may_be_owned_by_role = (
-        target_name in ROLE_PERMISSIONS[role]['can_own']
+        target_name in all_role_permissions[role]['can_own']
     )
 
     if debug:
@@ -479,15 +494,21 @@ def check_user_access(userid=2,
 
 def check_role_limits(role,
                       rows=None,
-                      rate_60sec=None):
+                      rate_60sec=None,
+                      all_role_permissions=None):
     '''
     This just returns the role limits.
 
     '''
 
+    if not all_role_permissions:
+        all_role_permissions = ROLE_PERMISSIONS
+
     if rows is not None:
-        return ROLE_PERMISSIONS[role]['limits']['max_rows'] <= rows
+        return all_role_permissions[role]['limits']['max_rows'] <= rows
     elif rate_60sec is not None:
-        return ROLE_PERMISSIONS[role]['limits']['max_reqs_60sec'] >= rate_60sec
+        return (
+            all_role_permissions[role]['limits']['max_reqs_60sec'] >= rate_60sec
+        )
     else:
-        return ROLE_PERMISSIONS[role]['limits']
+        return all_role_permissions[role]['limits']
