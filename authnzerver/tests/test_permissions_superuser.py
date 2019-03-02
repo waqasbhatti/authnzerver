@@ -19,7 +19,7 @@ def test_user_access_default():
     '''
 
     # default policy is deny
-    assert authdb.check_user_access() is False
+    assert permissions.check_user_access() is False
 
 
 ######################
@@ -235,7 +235,7 @@ def test_superuser_access_to_collection(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -456,7 +456,7 @@ def test_superuser_access_to_dataset(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -677,7 +677,7 @@ def test_superuser_access_to_object(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -898,7 +898,7 @@ def test_superuser_access_to_users(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -1119,7 +1119,7 @@ def test_superuser_access_to_sessions(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -1340,7 +1340,7 @@ def test_superuser_access_to_apikeys(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -1561,7 +1561,7 @@ def test_superuser_access_to_preferences(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
