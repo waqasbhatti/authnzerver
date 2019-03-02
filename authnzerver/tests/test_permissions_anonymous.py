@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# test_permissions_anonymous.py - Waqas Bhatti (wbhatti@astro.princeton.edu) -
+# Aug 2018
+# License: MIT - see the LICENSE file for the full text.
 
-'''test_authdb.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
-License: MIT - see the LICENSE file for the full text.
-
-This tests authnzerver.authdb.py.
+'''
+This tests permissions for anonymous users.
 
 '''
 
 import pytest
-from authnzerver import authdb
+from authnzerver import permissions
 
 
 def test_check_user_access_default():
@@ -19,7 +20,7 @@ def test_check_user_access_default():
     '''
 
     # default policy is deny
-    assert authdb.check_user_access() is False
+    assert permissions.check_user_access() is False
 
 
 ######################
@@ -235,7 +236,7 @@ def test_check_anonymous_access_to_collection(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -456,7 +457,7 @@ def test_check_anonymous_access_to_dataset(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -677,7 +678,7 @@ def test_check_anonymous_access_to_object(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -898,7 +899,7 @@ def test_check_anonymous_access_to_users(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -1119,7 +1120,7 @@ def test_check_anonymous_access_to_sessions(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -1340,7 +1341,7 @@ def test_check_anonymous_access_to_apikeys(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,
@@ -1561,7 +1562,7 @@ def test_check_anonymous_access_to_preferences(access, target, expected):
     userid, role, action = access
     target_name, target_owner, target_visibility, target_sharedwith = target
 
-    assert authdb.check_user_access(
+    assert permissions.check_user_access(
         userid=userid,
         role=role,
         action=action,

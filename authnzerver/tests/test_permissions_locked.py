@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# test_permissions_locked.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug
+# 2018
+# License: MIT - see the LICENSE file for the full text.
 
-'''test_authdb.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
-License: MIT - see the LICENSE file for the full text.
-
-This tests authnzerver.authdb.py.
+'''
+This tests permissions for locked users
 
 '''
 
 import pytest
-from authnzerver import authdb
+from authnzerver import permissions
 
 
 def test_check_user_access_default():
