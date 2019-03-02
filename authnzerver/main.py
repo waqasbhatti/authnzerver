@@ -60,13 +60,16 @@ import tornado.options
 from tornado.options import define, options
 import multiprocessing as mp
 
-###############################
-### APPLICATION SETUP BELOW ###
-###############################
+########################################
+### APPLICATION COMMAND-LINE OPTIONS ###
+########################################
 
 modpath = os.path.abspath(os.path.dirname(__file__))
 
-# define our commandline options
+
+######################
+## START UP OPTIONS ##
+######################
 
 # the port to serve on
 define('port',
@@ -92,12 +95,28 @@ define('backgroundworkers',
        help=('number of background workers to use '),
        type=int)
 
+
+###################################
+## BASE DIRECTORY AND CACHE PATH ##
+###################################
+
 # basedir is the directory at the root where this server stores its auth DB and
 # looks for secret keys.
 define('basedir',
        default=os.getcwd(),
        help=('The base directory containing secret files and the auth DB.'),
        type=str)
+
+# the path to the cache directory used to enforce API limits
+define('cachedir',
+       default='/tmp/authnzerver-cache',
+       help=('Path to the cache directory used by the authnzerver.'),
+       type=str)
+
+
+##################
+## AUTH DB PATH ##
+##################
 
 # the path to the authentication DB
 define('authdb',
@@ -109,12 +128,10 @@ define('authdb',
              '/core/engines.html#database-urls'),
        type=str)
 
-# the path to the cache directory used to enforce API limits
-define('cachedir',
-       default='/tmp/authnzerver-cache',
-       help=('Path to the cache directory used by the authnzerver.'),
-       type=str)
 
+#################
+## SECRET KEYS ##
+#################
 
 # the environment variable to get the secret key that secures HTTP
 # communications between the authnzerver and any other processes.
@@ -123,13 +140,15 @@ define('secretenv',
        help=('The environment variable used to get the secret key.'),
        type=str)
 
-# the path to the secret file to get secret key from.
+# alternatively, the file to get the secret key that secures HTTP communications
+# between the authnzerver and any other processes.
 define('secretfile',
        default='.authnzerver-secret-key',
        help=('Path to the file containing the secret key. '
              'This is relative to the path given in the basedir option.'),
        type=str)
 
+# this defines how long a session is supposed to last
 define('sessionexpiry',
        default=30,
        help=('This sets the session-expiry time in days.'),
@@ -188,10 +207,6 @@ def autogen_secrets_authdb(basedir, logger):
     '''This automatically generates a secrets file and auth DB.
 
     Run only once on the first start of an authnzerver.
-
-    FIXME: this should also generate a server cookie secrets file so we can use
-    authnzerver as the auth backend for another server, complete with /users and
-    /admin support.
 
     '''
 
@@ -291,8 +306,6 @@ def main():
     ##############
 
     from .handlers import AuthHandler, EchoHandler
-    from .frontend import auth_handlers as ah
-    from .frontend.admin_handlers import AdminHandler
 
     from . import authdb
     from . import cache
