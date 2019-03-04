@@ -24,6 +24,7 @@ LOGMOD = __name__
 #############
 
 import os
+import stat
 import os.path
 import socket
 import sys
@@ -159,6 +160,61 @@ define('sessionexpiry',
 ## UTILITY FUNCTIONS ##
 #######################
 
+def get_secret_token(token_environvar,
+                     token_file,
+                     logger):
+    """
+    This loads the specified token file from the environment or the token_file.
+
+
+    """
+    if token_environvar in os.environ:
+
+        secret = os.environ[token_environvar]
+        if len(secret.strip()) == 0:
+
+            raise EnvironmentError(
+                'Secret from environment is either empty or not valid.'
+            )
+
+        logger.info(
+            'Using secret from environment.' % token_environvar
+        )
+
+    elif os.path.exists(token_file):
+
+        # check if this file is readable/writeable by user only
+        fileperm = oct(os.stat(token_file)[stat.ST_MODE])
+
+        if not (fileperm == '0100400' or fileperm == '0o100400'):
+            raise PermissionError('Incorrect file permissions on secret file '
+                                  '(needs chmod 400)')
+
+
+        with open(token_file,'r') as infd:
+            secret = infd.read().strip('\n')
+
+        if len(secret.strip()) == 0:
+
+            raise ValueError(
+                'Secret from specified secret file '
+                'is either empty or not valid, will not continue'
+            )
+
+        logger.info(
+            'Using secret from specified secret file.'
+        )
+
+    else:
+
+        raise IOError(
+            'Could not load secret from environment or the specified file.'
+        )
+
+    return secret
+
+
+
 def setup_auth_worker(authdb_path,
                       fernet_secret):
     '''This stores secrets and the auth DB path in the worker loop's context.
@@ -217,7 +273,9 @@ def autogen_secrets_authdb(basedir, logger):
     # create our authentication database if it doesn't exist
     authdb_path = os.path.join(basedir, '.authdb.sqlite')
 
-    logger.warning('No existing authentication DB found, making a new one...')
+    logger.warning('No existing authentication DB was found, '
+                   'making a new one in authnzerver basedir: %s'
+                   % authdb_path)
 
     # generate the initial DB
     create_sqlite_auth_db(authdb_path, echo=False, returnconn=False)
@@ -307,7 +365,6 @@ def main():
 
     from .handlers import AuthHandler, EchoHandler
 
-    from . import authdb
     from . import cache
     from . import actions
 
@@ -324,11 +381,11 @@ def main():
     # search for the Fernet secret in either the environment variable
     # or the secret file path
     try:
-        FERNETSECRET = authdb.get_secret_token(options.secretenv,
-                                               os.path.join(
-                                                   options.basedir,
-                                                   options.secretfile
-                                               ),LOGGER)
+        FERNETSECRET = get_secret_token(options.secretenv,
+                                        os.path.join(
+                                            options.basedir,
+                                            options.secretfile
+                                        ),LOGGER)
 
     except Exception as e:
 
@@ -340,11 +397,11 @@ def main():
                 LOGGER
             )
 
-            FERNETSECRET = authdb.get_secret_token(options.secretenv,
-                                                   os.path.join(
-                                                       options.basedir,
-                                                       options.secretfile
-                                                   ),LOGGER)
+            FERNETSECRET = get_secret_token(options.secretenv,
+                                            os.path.join(
+                                                options.basedir,
+                                                options.secretfile
+                                            ),LOGGER)
 
         else:
             raise IOError("Auth DB exists, "
@@ -363,7 +420,7 @@ def main():
     else:
         raise ConnectionError(
             "No auth DB connection available. "
-            "The local auth DB is missing or "
+            "The local SQLite auth DB is missing or "
             "no SQLAlchemy database URL was provided to override it"
         )
     #
