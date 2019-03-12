@@ -146,6 +146,7 @@ class BaseHandler(tornado.web.RequestHandler):
                    executor,
                    session_expiry,
                    session_cookiename,
+                   session_cookiesecure,
                    ratelimit,
                    cachedir,
                    email_settings,
@@ -159,12 +160,16 @@ class BaseHandler(tornado.web.RequestHandler):
         self.fernetkey = fernetkey
         self.ferneter = Fernet(fernetkey)
         self.executor = executor
-        self.session_expiry = session_expiry
-        self.session_cookiename = session_cookiename
         self.httpclient = AsyncHTTPClient(force_instance=True)
-        self.ratelimit = ratelimit
+
         self.cachedir = cachedir
         self.email_settings = email_settings
+
+        self.session_expiry = session_expiry
+        self.session_cookiename = session_cookiename
+        self.session_cookiesecure = session_cookiesecure
+
+        self.ratelimit = ratelimit
         self.apiversion
 
         # initialize this to None
@@ -335,7 +340,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 resp['session_token'],
                 expires_days=expires_days,
                 httponly=True,
-                secure=self.csecure,
+                secure=self.session_cookiesecure,
                 samesite='lax',
             )
 
