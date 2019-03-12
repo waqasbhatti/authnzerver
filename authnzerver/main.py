@@ -119,11 +119,19 @@ define('cachedir',
 ## AUTH DB PATH ##
 ##################
 
+# whether to make a new authdb if none exists
+define('autosetup',
+       default=True,
+       help=("If this is True, will automatically generate an SQLite "
+             "authentication database in the basedir if there isn't one "
+             "present and the value of the authdb option is also None."),
+       type=bool)
+
 # the path to the authentication DB
 define('authdb',
        default=None,
-       help=('An SQLAlchemy database URL to override the use of '
-             'the local authentication DB. '
+       help=('An SQLAlchemy database URL to indicate where '
+             'the local authentication DB is. '
              'This should be in the form discussed at: '
              'https://docs.sqlalchemy.org/en/latest'
              '/core/engines.html#database-urls'),
@@ -163,9 +171,30 @@ define('sessionexpiry',
 def get_secret_token(token_environvar,
                      token_file,
                      logger):
-    """
-    This loads the specified token file from the environment or the token_file.
+    """This loads a secret token from the environment or the specified file.
 
+    If the environmental variable in ``token_environvar`` is available, it will
+    be used to get the token. If it's not available, and ``token_file`` exists,
+    it will be used to get the token. If neither are available, this function
+    will raise an exception.
+
+    Parameters
+    ----------
+
+    token_environvar : str
+        The environmental variable to get the token from.
+
+    token_file : str
+        Alternatively, the file to get the token from.
+
+    logger : logging.Logger object
+        The logger object to use to report problems.
+
+    Returns
+    -------
+
+    str
+        The value of the token as a string.
 
     """
     if token_environvar in os.environ:
@@ -215,8 +244,8 @@ def get_secret_token(token_environvar,
 
 
 
-def setup_auth_worker(authdb_path,
-                      fernet_secret):
+def _setup_auth_worker(authdb_path,
+                       fernet_secret):
     '''This stores secrets and the auth DB path in the worker loop's context.
 
     The worker will then open the DB and set up its Fernet instance by itself.
@@ -232,7 +261,7 @@ def setup_auth_worker(authdb_path,
 
 
 
-def close_authentication_database():
+def _close_authentication_database():
 
     '''This is used to close the authentication database when the worker loop
     exits.
@@ -260,9 +289,33 @@ def close_authentication_database():
 ###########################################
 
 def autogen_secrets_authdb(basedir, logger):
-    '''This automatically generates a secrets file and auth DB.
+    '''This automatically generates secrets files and an authentication DB.
 
-    Run only once on the first start of an authnzerver.
+    Run this only once on the first start of an authnzerver.
+
+    Parameters
+    ----------
+
+    basedir : str
+        The base directory of the authnzerver.
+        - The authentication database will be written to a file called
+          ``.authdb.sqlite`` in this directory.
+        - The secret token to authenticate HTTP communications between the
+          authnzerver and a frontend server will be written to a file called
+          ``.authnzerver-secret-key`` in this directory.
+        - Credentials for a superuser that can be used to edit various
+          authnzerver options, and users will be written to
+          ``.authnzerver-admin-credentials`` in this directory.
+
+    logger : logging.Logger object
+        The logger object to use to report problems.
+
+    Returns
+    -------
+
+    (authdb_path, creds, secret_file) : tuple of str
+        The names of the files written by this function will be returned as a
+        tuple of strings.
 
     '''
 
@@ -339,6 +392,10 @@ def autogen_secrets_authdb(basedir, logger):
 ##########
 
 def main():
+    '''
+    This is the main function.
+
+    '''
 
     # parse the command line
     tornado.options.parse_command_line()
@@ -375,63 +432,56 @@ def main():
 
     MAXWORKERS = options.backgroundworkers
 
-    # use the local sqlite DB as the default auth DB
-    AUTHDB_SQLITE = os.path.join(options.basedir, '.authdb.sqlite')
+    if options.authdb:
+        AUTHDB_PATH = options.authdb
 
-    # search for the Fernet secret in either the environment variable
-    # or the secret file path
+    else:
+        AUTHDB_SQLITE = os.path.join(options.basedir, '.authdb.sqlite')
+        if not os.path.exists(AUTHDB_SQLITE):
+            AUTHDB_PATH = None
+        else:
+            AUTHDB_PATH = 'sqlite:///%s' % AUTHDB_SQLITE
+
     try:
         FERNETSECRET = get_secret_token(options.secretenv,
                                         os.path.join(
                                             options.basedir,
                                             options.secretfile
                                         ),LOGGER)
-
     except Exception as e:
-
-        if ( (not os.path.exists(AUTHDB_SQLITE)) or
-             (not os.path.exists(options.authdb.replace('sqlite:///',''))) ):
-
-            authdb_p, creds, fernet_file = autogen_secrets_authdb(
-                options.basedir,
-                LOGGER
-            )
-
-            FERNETSECRET = get_secret_token(options.secretenv,
-                                            os.path.join(
-                                                options.basedir,
-                                                options.secretfile
-                                            ),LOGGER)
-
-        else:
-            raise IOError("Auth DB exists, "
-                          "but no secret key was provided. "
-                          "Use the %s environment variable to pass "
-                          "this in." % options.envsecret)
+        FERNETSECRET = None
 
 
-    # pass the DSN to the SQLAlchemy engine
-    if os.path.exists(AUTHDB_SQLITE):
-        AUTHDB_PATH = 'sqlite:///%s' % os.path.abspath(AUTHDB_SQLITE)
-    elif options.authdb:
-        # if the local authdb doesn't exist, we'll use the DSN provided by the
-        # user
-        AUTHDB_PATH = options.authdb
-    else:
-        raise ConnectionError(
-            "No auth DB connection available. "
-            "The local SQLite auth DB is missing or "
-            "no SQLAlchemy database URL was provided to override it"
+    if (not AUTHDB_PATH or not FERNETSECRET) and options.autosetup:
+
+        authdb_p, creds, fernet_file = autogen_secrets_authdb(
+            options.basedir,
+            LOGGER
         )
+        AUTHDB_PATH = 'sqlite:///%s' % authdb_p
+
+        FERNETSECRET = get_secret_token(options.secretenv,
+                                        fernet_file,
+                                        LOGGER)
+
+    elif (not AUTHDB_PATH or not FERNETSECRET) and not options.autosetup:
+        raise IOError(
+            "Can't find either an existing authentication DB or\n"
+            "the secret token and the `autosetup` option was set to False.\n"
+            "Please provide a valid SQLAlchemy DB connection string in the\n"
+            "`authdb` option, and make sure you have set the\n"
+            "`secretenv` or `secretfile` options as well."
+        )
+
     #
     # this is the background executor we'll pass over to the handler
     #
     executor = ProcessPoolExecutor(
         max_workers=MAXWORKERS,
-        initializer=setup_auth_worker,
+        initializer=_setup_auth_worker,
         initargs=(AUTHDB_PATH,
                   FERNETSECRET),
-        finalizer=close_authentication_database
+        finalizer=_close_authentication_database
     )
 
     # we only have one actual endpoint, the other one is for testing
