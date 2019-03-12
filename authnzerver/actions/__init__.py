@@ -30,6 +30,8 @@ from .apikey import (
 from .admin import (
     list_users,
     edit_user,
+    toggle_user_lock,
+    internal_toggle_user_lock,
 )
 
 from .email import (
@@ -48,6 +50,7 @@ from .session import (
     auth_user_login,
     auth_user_logout,
     auth_kill_old_sessions,
+    auth_delete_sessions_userid,
 )
 
 from .user import (
