@@ -717,6 +717,8 @@ def internal_toggle_user_lock(payload,
 
     '''
 
+    from .session import auth_delete_sessions_userid
+
     for key in ('target_userid',
                 'action'):
 
@@ -800,6 +802,19 @@ def internal_toggle_user_lock(payload,
         result = currproc.connection.execute(sel)
         rows = result.fetchone()
         result.close()
+
+        # delete all the sessions belonging to this user if the action to
+        # perform is 'lock'
+        if payload['action'] == 'lock':
+
+            auth_delete_sessions_userid(
+                {'user_id':target_userid,
+                 'session_token':None},
+                keep_current_session=False,
+                raiseonfail=raiseonfail,
+                override_authdb_path=override_authdb_path
+            )
+
 
         try:
 
