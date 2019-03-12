@@ -58,23 +58,6 @@ from .. import authdb
 from .session import auth_session_exists
 
 
-###################
-## ROLE HANDLING ##
-###################
-
-def change_user_role(payload,
-                     raiseonfail=False,
-                     override_authdb_path=None):
-    '''
-    This changes a user's role.
-
-    Not used except for by superusers to promote people to other roles.
-
-    '''
-    # TODO: finish this
-
-
-
 #######################
 ## PASSWORD HANDLING ##
 #######################
