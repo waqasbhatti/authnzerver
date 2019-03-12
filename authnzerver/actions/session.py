@@ -453,6 +453,103 @@ def auth_session_delete(payload,
         }
 
 
+def auth_delete_sessions_userid(payload,
+                                keep_current_session=True,
+                                raiseonfail=False,
+                                override_authdb_path=None):
+    '''This removes all session tokens corresponding to a user ID.
+
+    If keep_current_session is True, will not delete the session token passed in
+    the payload. This allows for "delete all my other logins" functionality.
+
+    Request payload keys required:
+
+    session_token
+    user_id
+
+    Returns:
+
+    Deletes the row corresponding to the session_key in the sessions table.
+
+    '''
+
+    if 'user_id' not in payload:
+        LOGGER.error('no user_id provided in '
+                     'auth_delete_sessions_userid')
+
+        return {
+            'success':False,
+            'messages':["No user_id provided in "
+                        "auth_delete_sessions_userid."],
+        }
+
+    if 'session_token' not in payload:
+        LOGGER.error('no session token provided in '
+                     'auth_delete_sessions_userid')
+
+        return {
+            'success':False,
+            'messages':["No session token provided in "
+                        "auth_delete_sessions_userid."],
+        }
+
+    user_id = payload['user_id']
+    session_token = payload['session_token']
+
+    try:
+
+        # this checks if the database connection is live
+        currproc = mp.current_process()
+        engine = getattr(currproc, 'engine', None)
+
+        if override_authdb_path:
+            currproc.auth_db_path = override_authdb_path
+
+        if not engine:
+            currproc.engine, currproc.connection, currproc.table_meta = (
+                authdb.get_auth_db(
+                    currproc.auth_db_path,
+                    echo=raiseonfail
+                )
+            )
+
+
+        sessions = currproc.table_meta.tables['sessions']
+
+        if keep_current_session:
+            delete = sessions.delete().where(
+                sessions.c.user_id == user_id
+            ).where(
+                sessions.c.session_token != session_token
+            )
+
+        else:
+            delete = sessions.delete().where(
+                sessions.c.user_id == user_id
+            )
+
+        result = currproc.connection.execute(delete)
+        result.close()
+
+        return {
+            'success':True,
+            'messages':["Sessions deleted successfully."],
+        }
+
+    except Exception as e:
+
+        LOGGER.exception('could not delete the requested sessions.')
+
+        if raiseonfail:
+            raise
+
+        return {
+            'success':False,
+            'messages':["Sessions could not be deleted."],
+        }
+
+
+
 def auth_kill_old_sessions(
         session_expiry_days=7,
         raiseonfail=False,
