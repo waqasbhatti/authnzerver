@@ -1,0 +1,16 @@
+[Unit]
+Description=authentication-authorization server
+After=network.target
+
+[Service]
+CPUAccounting=yes
+MemoryAccounting=yes
+WorkingDirectory={{ authnzerver_basedir }}
+EnvironmentFile={{ authnzerver_environfile }}
+ExecStart={{ authnzerver_venv }}/bin/authnzrv
+Restart=always
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

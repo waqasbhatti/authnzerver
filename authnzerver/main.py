@@ -127,6 +127,13 @@ define('autosetup',
              "present and the value of the authdb option is also None."),
        type=bool)
 
+# the environment variable to get the authentication DB SQLAlchemy URL
+define('authdbenv',
+       default='AUTHNZERVER_AUTHDB',
+       help=('The environment variable used to get '
+             'the authentication DB SQLAlchemy URL.'),
+       type=str)
+
 # the path to the authentication DB
 define('authdb',
        default=None,
