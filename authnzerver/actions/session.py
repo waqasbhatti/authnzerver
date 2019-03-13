@@ -454,7 +454,6 @@ def auth_session_delete(payload,
 
 
 def auth_delete_sessions_userid(payload,
-                                keep_current_session=True,
                                 raiseonfail=False,
                                 override_authdb_path=None):
     '''This removes all session tokens corresponding to a user ID.
@@ -466,6 +465,7 @@ def auth_delete_sessions_userid(payload,
 
     session_token
     user_id
+    keep_current_session
 
     Returns:
 
@@ -493,8 +493,20 @@ def auth_delete_sessions_userid(payload,
                         "auth_delete_sessions_userid."],
         }
 
+    if 'keep_current_session' not in payload:
+        LOGGER.error('no session token provided in '
+                     'auth_delete_sessions_userid')
+
+        return {
+            'success':False,
+            'messages':["No session token provided in "
+                        "auth_delete_sessions_userid."],
+        }
+
+
     user_id = payload['user_id']
     session_token = payload['session_token']
+    keep_current_session = payload['session_token']
 
     try:
 

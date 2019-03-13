@@ -137,7 +137,7 @@ def test_user_lock():
     # check creation of session
     session_token3 = actions.auth_session_new(
         session_payload,
-        override_authdb_path='sqlite:///test-login.authdb.sqlite'
+        override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
     )
     assert session_token3['success'] is True
     assert session_token3['session_token'] is not None
@@ -147,7 +147,7 @@ def test_user_lock():
         {'session_token':session_token3['session_token'],
          'email': user_payload['email'],
          'password':user_payload['password']},
-        override_authdb_path='sqlite:///test-login.authdb.sqlite'
+        override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
     )
 
     # this should fail
@@ -180,7 +180,7 @@ def test_user_lock():
     # check creation of session
     session_token3 = actions.auth_session_new(
         session_payload,
-        override_authdb_path='sqlite:///test-login.authdb.sqlite'
+        override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
     )
     assert session_token3['success'] is True
     assert session_token3['session_token'] is not None
@@ -190,7 +190,7 @@ def test_user_lock():
         {'session_token':session_token3['session_token'],
          'email': user_payload['email'],
          'password':user_payload['password']},
-        override_authdb_path='sqlite:///test-login.authdb.sqlite'
+        override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
     )
 
     # this should succeed

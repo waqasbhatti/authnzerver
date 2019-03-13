@@ -575,12 +575,11 @@ def internal_toggle_user_lock(payload,
 
             auth_delete_sessions_userid(
                 {'user_id':target_userid,
-                 'session_token':None},
-                keep_current_session=False,
+                 'session_token':None,
+                 'keep_current_session':False},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
-
 
         try:
 
