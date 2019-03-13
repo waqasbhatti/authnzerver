@@ -104,7 +104,7 @@ def test_user_lock():
     assert session_token2['session_token'] is not None
 
     #
-    # now try to lock this user
+    # 1. try to lock this user
     #
 
     user_locked = actions.internal_toggle_user_lock(
@@ -125,7 +125,39 @@ def test_user_lock():
     )
     assert info_check['success'] is False
 
-    # unlock the user now
+    # try to login as this user using another session
+    session_payload = {
+        'user_id':2,
+        'client_header':'Mozzarella Killerwhale',
+        'expires':datetime.utcnow()+timedelta(hours=1),
+        'ip_address': '1.1.1.1',
+        'extra_info_json':{'pref_datasets_always_private':True}
+    }
+
+    # check creation of session
+    session_token3 = actions.auth_session_new(
+        session_payload,
+        override_authdb_path='sqlite:///test-login.authdb.sqlite'
+    )
+    assert session_token3['success'] is True
+    assert session_token3['session_token'] is not None
+
+    # try logging in now
+    login = actions.auth_user_login(
+        {'session_token':session_token3['session_token'],
+         'email': user_payload['email'],
+         'password':user_payload['password']},
+        override_authdb_path='sqlite:///test-login.authdb.sqlite'
+    )
+
+    # this should fail
+    assert login['success'] is False
+
+
+    #
+    # 2. unlock the user now
+    #
+
     user_unlocked = actions.internal_toggle_user_lock(
         {'target_userid': emailverify['user_id'],
          'action': 'unlock'},
@@ -134,9 +166,17 @@ def test_user_lock():
     )
     assert user_unlocked['success'] is True
     assert user_unlocked['user_info']['user_role'] == 'authenticated'
-    assert user_locked['user_info']['is_active'] == True
+    assert user_unlocked['user_info']['is_active'] == True
 
     # try to login
+    session_payload = {
+        'user_id':2,
+        'client_header':'Mozzarella Killerwhale',
+        'expires':datetime.utcnow()+timedelta(hours=1),
+        'ip_address': '1.1.1.1',
+        'extra_info_json':{'pref_datasets_always_private':True}
+    }
+
     # check creation of session
     session_token3 = actions.auth_session_new(
         session_payload,

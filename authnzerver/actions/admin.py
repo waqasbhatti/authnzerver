@@ -449,12 +449,180 @@ def edit_user(payload,
 
 
 
+def internal_toggle_user_lock(payload,
+                              raiseonfail=False,
+                              override_authdb_path=None):
+    '''This locks/unlocks user accounts. Can only be run internally.
+
+    The use-case is automatically locking user accounts if there are too many
+    incorrect password attempts. The lock can be permanent or temporary.
+
+    Parameters
+    ----------
+
+    payload : dict
+        This is the input payload dict. Required items:
+
+        - target_userid: int, the user to lock/unlock
+        - action: str {'unlock','lock'}
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    Returns
+    -------
+
+    dict
+        The dict returned is of the form::
+
+            {'success': True or False,
+             'user_info': dict, with new user info,
+             'messages': list of str messages if any}
+
+    '''
+
+    from .session import auth_delete_sessions_userid
+
+    for key in ('target_userid',
+                'action'):
+
+        if key not in payload:
+
+            LOGGER.error('no %s provided for toggle_user_lock' % key)
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["No %s provided for toggle_user_lock" % key],
+            }
+
+    target_userid = payload['target_userid']
+    action = payload['action']
+
+    if action not in ('unlock','lock'):
+        LOGGER.error('Unknown action requested for toggle_user_lock')
+        return {
+            'success':False,
+            'user_info':None,
+            'messages':["Unknown action requested for toggle_user_lock."],
+        }
+
+    if target_userid in (2,3):
+
+        LOGGER.error('Editing anonymous/locked user accounts not allowed')
+        return {
+            'success':False,
+            'user_info':None,
+            'messages':["Editing anonymous/locked user accounts not allowed."],
+        }
+
+    try:
+
+        # this checks if the database connection is live
+        currproc = mp.current_process()
+        engine = getattr(currproc, 'engine', None)
+
+        if override_authdb_path:
+            currproc.auth_db_path = override_authdb_path
+
+        if not engine:
+            currproc.engine, currproc.connection, currproc.table_meta = (
+                authdb.get_auth_db(
+                    currproc.auth_db_path,
+                    echo=raiseonfail
+                )
+            )
+
+        #
+        # all update checks, passed, do the update
+        #
+
+        users = currproc.table_meta.tables['users']
+
+        if payload['action'] == 'lock':
+            update_dict = {'is_active': False,
+                           'user_role': 'locked'}
+        elif payload['action'] == 'unlock':
+            update_dict = {'is_active': True,
+                           'user_role': 'authenticated'}
+
+        # execute the update
+        upd = users.update(
+        ).where(
+            users.c.user_id == target_userid
+        ).values(update_dict)
+        result = currproc.connection.execute(upd)
+
+        # check the update and return new values
+        sel = select([
+            users.c.user_id,
+            users.c.user_role,
+            users.c.full_name,
+            users.c.email,
+            users.c.is_active
+        ]).select_from(users).where(
+            users.c.user_id == target_userid
+        )
+        result = currproc.connection.execute(sel)
+        rows = result.fetchone()
+        result.close()
+
+        # delete all the sessions belonging to this user if the action to
+        # perform is 'lock'
+        if payload['action'] == 'lock':
+
+            auth_delete_sessions_userid(
+                {'user_id':target_userid,
+                 'session_token':None},
+                keep_current_session=False,
+                raiseonfail=raiseonfail,
+                override_authdb_path=override_authdb_path
+            )
+
+
+        try:
+
+            serialized_result = dict(rows)
+
+            return {
+                'success':True,
+                'user_info':serialized_result,
+                'messages':["User lock toggle successful."],
+            }
+
+        except Exception as e:
+
+            if raiseonfail:
+                raise
+
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["User lock toggle failed."],
+            }
+
+    except Exception as e:
+
+        if raiseonfail:
+            raise
+
+        LOGGER.error('User lock toggle not found or '
+                     'could not check if it exists')
+
+        return {
+            'success':False,
+            'user_info':None,
+            'messages':["User lock toggle failed."],
+        }
+
+
+
 def toggle_user_lock(payload,
                      raiseonfail=False,
                      override_authdb_path=None):
     '''This locks/unlocks user accounts. Can only be run by superusers.
-
-    FIXME: this should also kill all the sessions for the target user ID.
 
     Parameters
     ----------
@@ -485,9 +653,6 @@ def toggle_user_lock(payload,
              'messages': list of str messages if any}
 
     '''
-
-    from .session import auth_delete_sessions_userid
-
 
     for key in ('user_id',
                 'user_role',
@@ -599,243 +764,14 @@ def toggle_user_lock(payload,
             }
 
         #
-        # all update checks, passed, do the update
+        # all update checks passed, do the update
         #
-
-        users = currproc.table_meta.tables['users']
-
-        if payload['action'] == 'lock':
-            update_dict = {'is_active': False,
-                           'user_role': 'locked'}
-        elif payload['action'] == 'unlock':
-            update_dict = {'is_active': True,
-                           'user_role': 'authenticated'}
-
-
-        # execute the update
-        upd = users.update(
-        ).where(
-            users.c.user_id == target_userid
-        ).values(update_dict)
-        result = currproc.connection.execute(upd)
-
-        # check the update and return new values
-        sel = select([
-            users.c.user_id,
-            users.c.user_role,
-            users.c.full_name,
-            users.c.email,
-            users.c.is_active
-        ]).select_from(users).where(
-            users.c.user_id == target_userid
+        res = internal_toggle_user_lock(
+            payload,
+            raiseonfail=raiseonfail,
+            override_authdb_path=override_authdb_path
         )
-        result = currproc.connection.execute(sel)
-        rows = result.fetchone()
-        result.close()
-
-        # delete all the sessions belonging to this user if the action to
-        # perform is 'lock'
-        if payload['action'] == 'lock':
-
-            auth_delete_sessions_userid(
-                {'user_id':target_userid,
-                 'session_token':None},
-                keep_current_session=False,
-                raiseonfail=raiseonfail,
-                override_authdb_path=override_authdb_path
-            )
-
-        try:
-
-            serialized_result = dict(rows)
-
-            return {
-                'success':True,
-                'user_info':serialized_result,
-                'messages':["User lock toggle successful."],
-            }
-
-        except Exception as e:
-
-            if raiseonfail:
-                raise
-
-            return {
-                'success':False,
-                'user_info':None,
-                'messages':["User lock toggle failed."],
-            }
-
-    except Exception as e:
-
-        if raiseonfail:
-            raise
-
-        LOGGER.error('User lock toggle not found or '
-                     'could not check if it exists')
-
-        return {
-            'success':False,
-            'user_info':None,
-            'messages':["User lock toggle failed."],
-        }
-
-
-
-def internal_toggle_user_lock(payload,
-                              raiseonfail=False,
-                              override_authdb_path=None):
-    '''This locks/unlocks user accounts. Can only be run internally.
-
-    The use-case is automatically locking user accounts if there are too many
-    incorrect password attempts. The lock can be permanent or temporary.
-
-    Parameters
-    ----------
-
-    payload : dict
-        This is the input payload dict. Required items:
-
-        - target_userid: int, the user to lock/unlock
-        - action: str {'unlock','lock'}
-
-    raiseonfail : bool
-        If True, will raise an Exception if something goes wrong.
-
-    override_authdb_path : str or None
-        If given as a str, is the alternative path to the auth DB.
-
-    Returns
-    -------
-
-    dict
-        The dict returned is of the form::
-
-            {'success': True or False,
-             'user_info': dict, with new user info,
-             'messages': list of str messages if any}
-
-    '''
-
-    from .session import auth_delete_sessions_userid
-
-    for key in ('target_userid',
-                'action'):
-
-        if key not in payload:
-
-            LOGGER.error('no %s provided for toggle_user_lock' % key)
-            return {
-                'success':False,
-                'user_info':None,
-                'messages':["No %s provided for toggle_user_lock" % key],
-            }
-
-    target_userid = payload['target_userid']
-    action = payload['action']
-
-    if action not in ('unlock','lock'):
-        LOGGER.error('Unknown action requested for toggle_user_lock')
-        return {
-            'success':False,
-            'user_info':None,
-            'messages':["Unknown action requested for toggle_user_lock."],
-        }
-
-    if target_userid in (2,3):
-
-        LOGGER.error('Editing anonymous/locked user accounts not allowed')
-        return {
-            'success':False,
-            'user_info':None,
-            'messages':["Editing anonymous/locked user accounts not allowed."],
-        }
-
-    try:
-
-        # this checks if the database connection is live
-        currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
-
-        if override_authdb_path:
-            currproc.auth_db_path = override_authdb_path
-
-        if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
-                authdb.get_auth_db(
-                    currproc.auth_db_path,
-                    echo=raiseonfail
-                )
-            )
-
-        #
-        # all update checks, passed, do the update
-        #
-
-        users = currproc.table_meta.tables['users']
-
-        if payload['action'] == 'lock':
-            update_dict = {'is_active': False,
-                           'user_role': 'locked'}
-        elif payload['action'] == 'unlock':
-            update_dict = {'is_active': True,
-                           'user_role': 'authenticated'}
-
-
-        # execute the update
-        upd = users.update(
-        ).where(
-            users.c.user_id == target_userid
-        ).values(update_dict)
-        result = currproc.connection.execute(upd)
-
-        # check the update and return new values
-        sel = select([
-            users.c.user_id,
-            users.c.user_role,
-            users.c.full_name,
-            users.c.email,
-            users.c.is_active
-        ]).select_from(users).where(
-            users.c.user_id == target_userid
-        )
-        result = currproc.connection.execute(sel)
-        rows = result.fetchone()
-        result.close()
-
-        # delete all the sessions belonging to this user if the action to
-        # perform is 'lock'
-        if payload['action'] == 'lock':
-
-            auth_delete_sessions_userid(
-                {'user_id':target_userid,
-                 'session_token':None},
-                keep_current_session=False,
-                raiseonfail=raiseonfail,
-                override_authdb_path=override_authdb_path
-            )
-
-
-        try:
-
-            serialized_result = dict(rows)
-
-            return {
-                'success':True,
-                'user_info':serialized_result,
-                'messages':["User lock toggle successful."],
-            }
-
-        except Exception as e:
-
-            if raiseonfail:
-                raise
-
-            return {
-                'success':False,
-                'user_info':None,
-                'messages':["User lock toggle failed."],
-            }
+        return res
 
     except Exception as e:
 
