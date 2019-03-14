@@ -31,8 +31,8 @@ containing the key using the command-line option:
 
 ## Installation
 
-Authnzerver is available at PyPI. It can be installed (preferably in a
-virtualenv) using `pip`:
+Authnzerver is [available at PyPI](https://pypi.org/project/authnzerver/). It
+can be installed (preferably in a virtualenv) using `pip`:
 
 ```bash
 (venv) $ pip install authnzerver  # use option --pre for unstable releases
