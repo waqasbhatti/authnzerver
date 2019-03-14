@@ -219,6 +219,8 @@ def verify_apikey(payload,
     apikey dict, user_id, user_role, expires_days, ip_address, client_header,
     apiversion
 
+    apikey_dict is a decrypted and verified API key info dict from a frontend.
+
     '''
     if 'apikey_dict' not in payload:
         return {
@@ -250,6 +252,8 @@ def verify_apikey(payload,
         apikeys.c.apikey == apikey_dict['tkn']
     ).where(
         apikeys.c.user_id == apikey_dict['uid']
+    ).where(
+        apikeys.c.expires > datetime.utcnow()
     )
     result = currproc.connection.execute(sel)
     row = result.fetchone()
