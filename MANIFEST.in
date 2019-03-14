@@ -1,2 +1,12 @@
+include LICENSE
+include README.md
+include requirements.txt
+
+recursive-include authnzerver/tests *.py
 include versioneer.py
 include authnzerver/_version.py
+
+global-exclude *.pkl
+global-exclude *.pyc
+global-exclude .DS_Store
+global-exclude *.map
