@@ -1,4 +1,4 @@
-This is a small server meant to to help add authentication (authn) and
+This is a small server meant to help add authentication (authn) and
 authorization (authz) to other HTTP servers. It's built using
 [Tornado](http://www.tornadoweb.org), [SQLAlchemy](https://www.sqlalchemy.org/),
 [cryptography](https://cryptography.io),
@@ -205,7 +205,7 @@ def decrypt_response(response_base64, fernetkey):
 
 
 # decrypt the response
-decrypted_response_dict = decrypt_response(response, FERNET_KEY)
+decrypted_response_dict = decrypt_response(response.text(), FERNET_KEY)
 ```
 
 
