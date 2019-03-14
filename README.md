@@ -1,12 +1,12 @@
 This is a small server meant to to help add authentication (authn) and
-authorization (authz) to other HTTP servers. It's built on top of the
+authorization (authz) to other HTTP servers. It's built using
 [Tornado](http://www.tornadoweb.org), [SQLAlchemy](https://www.sqlalchemy.org/),
-[PyCA Cryptography](https://cryptography.io),
+[cryptography](https://cryptography.io),
 [passlib](https://passlib.readthedocs.io/en/stable/),
-[argon2-cffi](https://argon2-cffi.readthedocs.io/en/stable/), and the
-[python-diskcache](http://www.grantjenks.com/docs/diskcache/) packages.
+[argon2-cffi](https://argon2-cffi.readthedocs.io/en/stable/), and
+[python-diskcache](http://www.grantjenks.com/docs/diskcache/).
 
-I wrote it to help with the login/logout/signup bits for the
+I wrote it to help with the login/logout/signup flows for the
 [LCC-Server](https://github.com/waqasbhatti) and extracted much of the code from
 there. It builds on the auth bits there and is eventually meant to replace
 them. It can do the following things:
@@ -59,14 +59,75 @@ TBD.
 
 ## HTTP API
 
+All requests are composed of a Python dict containing request parameters. This
+is encoded to JSON, encrypted with the pre-shared key, base64-encoded, and then
+POSTed to the Authnzerver. The response is a base64-encoded string that must be
+base64-decoded, decrypted, and deserialized from JSON into a dict.
 
-### Request structure
+A request is of the form:
 
-All requests use `content-type: text/plain; charset=UTF-8`.
+```python
+{'request': one of the request names below,
+ 'body': a dict containing the arguments for the request,
+ 'reqid': any integer used to keep track of the request flow}
+```
 
-TBD.
+A response, when decrypted and deserialized to a dict, is of the form:
 
-The following Python code generates a valid request:
+```python
+{'success': True or False,
+ 'response': dict containing the response items based on the request,
+ 'messages': a list of str containing informative/warning/error messages}
+```
+
+
+### Session handling
+
+- `session-new`: Create a new session.
+- `session-exists`: Get info about an existing session.
+- `session-delete`: Delete a session.
+- `session-delete-userid`: Delete all sessions for a user ID.
+- `session-setinfo`: Save extra info for an existing session.
+- `user-login`: Perform a user login action.
+- `user-logout`: Perform a user logout action.
+- `user-passcheck`: Perform a user password check.
+
+TBD: parameter details.
+
+
+### User handling
+
+- `user-new`: Create a new user.
+- `user-changepass`: Change an existing user's password.
+- `user-delete`: Delete an existing user.
+- `user-list`: List all users' or a single user's properties.
+- `user-edit`: Edit a user's properties.
+- `user-resetpass`: Reset a user's password.
+- `user-lock`: Lock out an existing user.
+
+TBD: parameter details.
+
+
+### Email actions
+
+- `user-signup-email`: Send a verification email to a new user.
+- `user-verify-email`: Send a verification email to a user for any sensitive
+  operation.
+- `user-forgotpass-email`: Send a verification email to a user who forgot their
+  password.
+
+TBD: parameter details.
+
+
+### API key actions
+
+- `apikey-new`: Create a new API key tied to a user ID.
+- `apikey-verify`: Verify an API key.
+
+TBD: parameter details.
+
+
+### Request example
 
 ```python
 import json
@@ -105,14 +166,8 @@ encrypted_request = encrypt_request(req, FERNET_KEY)
 response = requests.post('http://127.0.0.1:13431',data=encrypted_request)
 ```
 
-### Response structure
 
-All responses are in `content-type: text/plain; charset=UTF-8`.
-
-TBD.
-
-The following code decrypts and interprets a response:
-
+### Response example
 
 ```python
 import json
@@ -151,11 +206,6 @@ decrypted_response_dict = decrypt_response(response,
 ```
 
 
-### Authnzerver API
-
-TBD.
-
-
 ## License
 
-MIT.
+Authnzerver is provided under the MIT License. See the LICENSE file for details.
