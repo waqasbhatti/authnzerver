@@ -6,7 +6,9 @@ Stolen from http://python-packaging.readthedocs.io/en/latest/everything.html and
 modified by me.
 
 '''
-__version__ = '0.0.1'
+
+import versioneer
+__version__ = versioneer.get_version()
 
 from setuptools import setup, find_packages
 
@@ -19,6 +21,7 @@ def readme():
 with open('requirements.txt') as infd:
     INSTALL_REQUIRES = [x.strip('\n') for x in infd.readlines()]
 
+cmdclass = versioneer.get_cmdclass()
 
 ###############
 ## RUN SETUP ##
@@ -27,6 +30,7 @@ with open('requirements.txt') as infd:
 setup(
     name='authnzerver',
     version=__version__,
+    cmdclass=cmdclass,
     description=('A small authentication-authorization server.'),
     long_description=readme(),
     long_description_content_type="text/markdown",

@@ -69,9 +69,10 @@ TBD.
 The following Python code generates a valid request:
 
 ```python
-from cryptography.fernet import Fernet
 import json
 from base64 import b64encode
+import random
+from cryptography.fernet import Fernet
 import requests
 
 FERNET_KEY = "SHARED_SECRET_KEY"
@@ -114,9 +115,9 @@ The following code decrypts and interprets a response:
 
 
 ```python
-from cryptography.fernet import Fernet, InvalidToken
 import json
 from base64 import b64decode
+from cryptography.fernet import Fernet, InvalidToken
 
 FERNET_KEY = "SHARED_SECRET_KEY"
 
