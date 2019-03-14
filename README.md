@@ -205,7 +205,7 @@ def decrypt_response(response_base64, fernetkey):
 
 
 # decrypt the response
-decrypted_response_dict = decrypt_response(response,
+decrypted_response_dict = decrypt_response(response, FERNET_KEY)
 ```
 
 
