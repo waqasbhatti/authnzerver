@@ -175,24 +175,34 @@ define('sessionexpiry',
 ## UTILITY FUNCTIONS ##
 #######################
 
-def get_secret_token(token_environvar,
-                     token_file,
-                     logger):
-    """This loads a secret token from the environment or the specified file.
+def get_secret(secret_environvar,
+               secret_file,
+               read_secret_file=False,
+               logger=None):
+    """This loads a secret from the environment or the specified file.
 
-    If the environmental variable in ``token_environvar`` is available, it will
-    be used to get the token. If it's not available, and ``token_file`` exists,
-    it will be used to get the token. If neither are available, this function
-    will raise an exception.
+    If the environmental variable in ``secret_environvar`` is available, it will
+    be used to get the secret. If it's not available, and ``secret_file``
+    exists, it will be used to get the secret if ``read_secret_file`` is
+    True. If ``read_secret_file`` is False, only the name of the file will be
+    returned if it exists.
+
+    If neither the environmental variable or the file are available, this
+    function will raise an exception.
 
     Parameters
     ----------
 
-    token_environvar : str
-        The environmental variable to get the token from.
+    secret_environvar : str
+        The environmental variable to get the secret from.
 
-    token_file : str
-        Alternatively, the file to get the token from.
+    secret_file : str
+        Alternatively, the file to get the secret from.
+
+    read_secret_file : bool
+        If this is True, will open the ``secret_file`` and read it in as text,
+        returning the secret within. If this is False, will only check if the
+        file exists and return the absolute path to it.
 
     logger : logging.Logger object
         The logger object to use to report problems.
@@ -201,50 +211,70 @@ def get_secret_token(token_environvar,
     -------
 
     str
-        The value of the token as a string.
+        The value of the secret as a string if ``read_secret_file = True``. If
+        this is False, then the absolute path to the secret file will be
+        returned.
 
     """
-    if token_environvar in os.environ:
 
-        secret = os.environ[token_environvar]
+    if secret_environvar in os.environ:
+
+        secret = os.environ[secret_environvar]
         if len(secret.strip()) == 0:
 
             raise EnvironmentError(
                 'Secret from environment is either empty or not valid.'
             )
 
-        logger.info(
-            'Using secret from environment.' % token_environvar
-        )
+        if logger:
+            logger.info(
+                'Using secret from specified environment variable.' %
+                secret_environvar
+            )
+        else:
+            print(
+                'Using secret from specified environment variable' %
+                secret_environvar
+            )
 
-    elif os.path.exists(token_file):
+    elif os.path.exists(secret_file):
 
         # check if this file is readable/writeable by user only
-        fileperm = oct(os.stat(token_file)[stat.ST_MODE])
+        fileperm = oct(os.stat(secret_file)[stat.ST_MODE])
 
         if not (fileperm == '0100400' or fileperm == '0o100400'):
             raise PermissionError('Incorrect file permissions on secret file '
-                                  '(needs chmod 400)')
+                                  '(needs chmod 400 - readable only).')
 
+        # if we're to read and return the secret in the file, do so
+        if read_secret_file:
+            with open(secret_file,'r') as infd:
+                secret = infd.read().strip('\n')
 
-        with open(token_file,'r') as infd:
-            secret = infd.read().strip('\n')
+                if len(secret.strip()) == 0:
 
-        if len(secret.strip()) == 0:
+                    raise ValueError(
+                        'Secret from specified secret file '
+                        'is either empty or not valid, will not continue.'
+                    )
 
-            raise ValueError(
-                'Secret from specified secret file '
-                'is either empty or not valid, will not continue'
-            )
+                if logger:
+                    logger.info(
+                        'Using secret from specified secret file.'
+                    )
+                else:
+                    print(
+                        'Using secret from specified secret file.'
+                    )
 
-        logger.info(
-            'Using secret from specified secret file.'
-        )
+        # otherwise, return the full path to the secret file
+        else:
+            secret = os.path.abspath(secret_file)
 
     else:
 
         raise IOError(
-            'Could not load secret from environment or the specified file.'
+            'Could not load secret from the environment or the specified file.'
         )
 
     return secret
@@ -450,11 +480,11 @@ def main():
             AUTHDB_PATH = 'sqlite:///%s' % AUTHDB_SQLITE
 
     try:
-        FERNETSECRET = get_secret_token(options.secretenv,
-                                        os.path.join(
-                                            options.basedir,
-                                            options.secretfile
-                                        ),LOGGER)
+        FERNETSECRET = get_secret(options.secretenv,
+                                  os.path.join(options.basedir,
+                                               options.secretfile),
+                                  read_secret_file=True,
+                                  logger=LOGGER)
     except Exception as e:
         FERNETSECRET = None
 
@@ -467,9 +497,10 @@ def main():
         )
         AUTHDB_PATH = 'sqlite:///%s' % authdb_p
 
-        FERNETSECRET = get_secret_token(options.secretenv,
-                                        fernet_file,
-                                        LOGGER)
+        FERNETSECRET = get_secret(options.secretenv,
+                                  fernet_file,
+                                  read_secret_file=True,
+                                  logger=LOGGER)
 
     elif (not AUTHDB_PATH or not FERNETSECRET) and not options.autosetup:
         raise IOError(
