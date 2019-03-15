@@ -1,3 +1,5 @@
+[![Build Status](https://ci.wbhatti.org/buildStatus/icon?job=authnzerver)](https://ci.wbhatti.org/job/authnzerver)
+
 This is a small server meant to help add authentication (authn) and
 authorization (authz) to other HTTP servers. It's built using
 [Tornado](http://www.tornadoweb.org), [SQLAlchemy](https://www.sqlalchemy.org/),
@@ -23,12 +25,6 @@ with symmetric encryption using the [cryptography](https://cryptography.io)
 package's [Fernet scheme](https://cryptography.io/en/latest/fernet/), so you'll
 need a pre-shared key that both Authnzerver and your frontend server know.
 
-You must provide the pre-shared key as an environmental variable:
-`AUTHNZERVER_SECRETKEY` (highly recommended) or point to a file on disk
-containing the key using the command-line option:
-`--secretfile='/path/to/secret/key/file.txt'`.
-
-
 ## Installation
 
 Authnzerver is [available at PyPI](https://pypi.org/project/authnzerver/), but
@@ -43,6 +39,23 @@ With that said, it can be installed (preferably in a virtualenv) using `pip`:
 
 
 ## Configuring the server
+
+At a minimum, you must provide:
+
+- a pre-shared key as an environmental variable: `AUTHNZERVER_SECRETKEY` (highly
+recommended) or point to a file on disk containing the key using the
+command-line option: `--secretfile='/path/to/secret/key/file.txt'`.
+- an SQLAlchemy [database
+  URL](https://docs.sqlalchemy.org/en/latest/core/engines.html#database-urls)
+  indicating where the server should store authentication information.
+
+If neither of these are provided, and the command-line option `--autosetup` is
+True, the server will prompt you for admin credentials during the first start
+up, generate a pre-shared secret key and initialize an SQLite authentication
+database in the directory pointed to by the `--basedir` command-line option.
+
+Other settings should be either provided as environmental variables (this is
+highly recommended) or as command-line options.
 
 
 ### Environmental variables (recommended)
@@ -205,7 +218,7 @@ def decrypt_response(response_base64, fernetkey):
 
 
 # decrypt the response
-decrypted_response_dict = decrypt_response(response.text(), FERNET_KEY)
+decrypted_response_dict = decrypt_response(response.text, FERNET_KEY)
 ```
 
 
