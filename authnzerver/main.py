@@ -127,12 +127,6 @@ define('autosetup',
              "present and the value of the authdb option is also None."),
        type=bool)
 
-# the environment variable to get the authentication DB SQLAlchemy URL
-define('authdbenv',
-       default='AUTHNZERVER_AUTHDB',
-       help=('The environment variable used to get '
-             'the authentication DB SQLAlchemy URL.'),
-       type=str)
 
 # the path to the authentication DB
 define('authdb',
@@ -145,20 +139,13 @@ define('authdb',
        type=str)
 
 
-#################
-## SECRET KEYS ##
-#################
-
-# the environment variable to get the secret key that secures HTTP
-# communications between the authnzerver and any other processes.
-define('secretenv',
-       default='AUTHNZERVER_SECRET',
-       help=('The environment variable used to get the secret key.'),
-       type=str)
+##############################
+## SECRET KEYS AND SESSIONS ##
+##############################
 
 # alternatively, the file to get the secret key that secures HTTP communications
 # between the authnzerver and any other processes.
-define('secretfile',
+define('secret',
        default='.authnzerver-secret-key',
        help=('Path to the file containing the secret key. '
              'This is relative to the path given in the basedir option.'),
@@ -422,6 +409,98 @@ def autogen_secrets_authdb(basedir, logger):
 
     return authdb_path, creds, fernet_secret_file
 
+
+#########################################
+## CONFIG FROM ENVIRON AND SUBSTITUTES ##
+#########################################
+
+CONF = {
+    'port':{
+        'env':'AUTHNZERVER_PORT',
+        'cmdline':'port',
+        'file':None,
+        'type':int,
+        'default':13431,
+    },
+    'listen':{
+        'env':'AUTHNZERVER_LISTEN',
+        'cmdline':'serve',
+        'file':None,
+        'type':str,
+        'default':'127.0.0.1',
+    },
+    'basedir':{
+        'env':'AUTHNZERVER_BASEDIR',
+        'cmdline':'basedir',
+        'file':None,
+        'type':str,
+        'default':os.getcwd(),
+    },
+    'cachedir':{
+        'env':'AUTHNZERVER_CACHEDIR',
+        'cmdline':'cachedir',
+        'file':None,
+        'type':str,
+        'default':'/tmp/authnzerver-cache',
+    },
+    'authdb':{
+        'env':'AUTHNZERVER_AUTHDB',
+        'cmdline':'authdb',
+        'file':None,
+        'type':str,
+        'default':'sqlite:///{{basedir}}/.authdb.sqlite',
+    },
+    'secret':{
+        'env':'AUTHNZERVER_SECRET',
+        'cmdline':None,
+        'file':'{{basedir}}/.authnzerver-secret-key',
+        'type':str,
+        'default':None,
+    },
+    'sessionexpiry':{
+        'env':'AUTHNZERVER_SESSIONEXPIRY',
+        'cmdline':'sessionexpiry',
+        'file':None,
+        'type':int,
+        'default':30,
+    },
+    'emailsender':{
+        'env':'AUTHNZERVER_EMAILSENDER',
+        'cmdline':None,
+        'file':None,
+        'type':str,
+        'default':None,
+    },
+    'emailserver':{
+        'env':'AUTHNZERVER_EMAILSERVER',
+        'cmdline':None,
+        'file':None,
+        'type':str,
+        'default':None,
+    },
+    'emailport':{
+        'env':'AUTHNZERVER_EMAILPORT',
+        'cmdline':None,
+        'file':None,
+        'type':int,
+        'default':None,
+    },
+    'emailuser':{
+        'env':'AUTHNZERVER_EMAILUSER',
+        'cmdline':None,
+        'file':None,
+        'type':str,
+        'default':None,
+    },
+    'emailpass':{
+        'env':'AUTHNZERVER_EMAILPASS',
+        'cmdline':None,
+        'file':None,
+        'type':str,
+        'default':None,
+    },
+
+}
 
 
 ##########
