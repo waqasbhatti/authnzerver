@@ -24,12 +24,12 @@ LOGMOD = __name__
 #############
 
 import os
-import stat
 import os.path
 import socket
 import sys
 import signal
 import time
+from datetime import datetime
 from functools import partial
 
 # setup signal trapping on SIGINT
@@ -67,10 +67,26 @@ import multiprocessing as mp
 
 modpath = os.path.abspath(os.path.dirname(__file__))
 
+#
+# BASE DIRECTORY AND CACHE PATH
+#
 
-######################
-## START UP OPTIONS ##
-######################
+# basedir is the directory at the root where this server stores its auth DB and
+# looks for secret keys.
+define('basedir',
+       default=os.getcwd(),
+       help=('The base directory containing secret files and the auth DB.'),
+       type=str)
+
+# the path to the cache directory used to enforce API limits
+define('cachedir',
+       default='/tmp/authnzerver-cache',
+       help=('Path to the cache directory used by the authnzerver.'),
+       type=str)
+
+#
+# START UP OPTIONS
+#
 
 # the port to serve on
 define('port',
@@ -97,27 +113,9 @@ define('backgroundworkers',
        type=int)
 
 
-###################################
-## BASE DIRECTORY AND CACHE PATH ##
-###################################
-
-# basedir is the directory at the root where this server stores its auth DB and
-# looks for secret keys.
-define('basedir',
-       default=os.getcwd(),
-       help=('The base directory containing secret files and the auth DB.'),
-       type=str)
-
-# the path to the cache directory used to enforce API limits
-define('cachedir',
-       default='/tmp/authnzerver-cache',
-       help=('Path to the cache directory used by the authnzerver.'),
-       type=str)
-
-
-##################
-## AUTH DB PATH ##
-##################
+#
+# AUTH DB PATH
+#
 
 # whether to make a new authdb if none exists
 define('autosetup',
@@ -138,15 +136,14 @@ define('authdb',
              '/core/engines.html#database-urls'),
        type=str)
 
-
-##############################
-## SECRET KEYS AND SESSIONS ##
-##############################
+#
+# SECRET KEYS AND SESSIONS
+#
 
 # alternatively, the file to get the secret key that secures HTTP communications
 # between the authnzerver and any other processes.
 define('secret',
-       default='.authnzerver-secret-key',
+       default=None,
        help=('Path to the file containing the secret key. '
              'This is relative to the path given in the basedir option.'),
        type=str)
@@ -158,115 +155,60 @@ define('sessionexpiry',
        type=int)
 
 
+#########################################
+## CONFIG FROM ENVIRON AND SUBSTITUTES ##
+#########################################
+
+CONF = {
+    'port':{
+        'env':'AUTHNZERVER_PORT',
+        'cmdline':'port',
+        'type':int,
+        'default':13431,
+    },
+    'listen':{
+        'env':'AUTHNZERVER_LISTEN',
+        'cmdline':'serve',
+        'type':str,
+        'default':'127.0.0.1',
+    },
+    'basedir':{
+        'env':'AUTHNZERVER_BASEDIR',
+        'cmdline':'basedir',
+        'type':str,
+        'default':os.getcwd(),
+    },
+    'cachedir':{
+        'env':'AUTHNZERVER_CACHEDIR',
+        'cmdline':'cachedir',
+        'type':str,
+        'default':'/tmp/authnzerver-cache',
+    },
+    'authdb':{
+        'env':'AUTHNZERVER_AUTHDB',
+        'cmdline':'authdb',
+        'type':str,
+        'default':None,
+    },
+    'secret':{
+        'env':'AUTHNZERVER_SECRET',
+        'cmdline':'secret',
+        'type':str,
+        'default':None,
+    },
+    'sessionexpiry':{
+        'env':'AUTHNZERVER_SESSIONEXPIRY',
+        'cmdline':'sessionexpiry',
+        'type':int,
+        'default':30,
+    },
+
+}
+
+
 #######################
 ## UTILITY FUNCTIONS ##
 #######################
-
-def get_secret(secret_environvar,
-               secret_file,
-               read_secret_file=False,
-               logger=None):
-    """This loads a secret from the environment or the specified file.
-
-    If the environmental variable in ``secret_environvar`` is available, it will
-    be used to get the secret. If it's not available, and ``secret_file``
-    exists, it will be used to get the secret if ``read_secret_file`` is
-    True. If ``read_secret_file`` is False, only the name of the file will be
-    returned if it exists.
-
-    If neither the environmental variable or the file are available, this
-    function will raise an exception.
-
-    Parameters
-    ----------
-
-    secret_environvar : str
-        The environmental variable to get the secret from.
-
-    secret_file : str
-        Alternatively, the file to get the secret from.
-
-    read_secret_file : bool
-        If this is True, will open the ``secret_file`` and read it in as text,
-        returning the secret within. If this is False, will only check if the
-        file exists and return the absolute path to it.
-
-    logger : logging.Logger object
-        The logger object to use to report problems.
-
-    Returns
-    -------
-
-    str
-        The value of the secret as a string if ``read_secret_file = True``. If
-        this is False, then the absolute path to the secret file will be
-        returned.
-
-    """
-
-    if secret_environvar in os.environ:
-
-        secret = os.environ[secret_environvar]
-        if len(secret.strip()) == 0:
-
-            raise EnvironmentError(
-                'Secret from environment is either empty or not valid.'
-            )
-
-        if logger:
-            logger.info(
-                'Using secret from specified environment variable.' %
-                secret_environvar
-            )
-        else:
-            print(
-                'Using secret from specified environment variable' %
-                secret_environvar
-            )
-
-    elif os.path.exists(secret_file):
-
-        # check if this file is readable/writeable by user only
-        fileperm = oct(os.stat(secret_file)[stat.ST_MODE])
-
-        if not (fileperm == '0100400' or fileperm == '0o100400'):
-            raise PermissionError('Incorrect file permissions on secret file '
-                                  '(needs chmod 400 - readable only).')
-
-        # if we're to read and return the secret in the file, do so
-        if read_secret_file:
-            with open(secret_file,'r') as infd:
-                secret = infd.read().strip('\n')
-
-                if len(secret.strip()) == 0:
-
-                    raise ValueError(
-                        'Secret from specified secret file '
-                        'is either empty or not valid, will not continue.'
-                    )
-
-                if logger:
-                    logger.info(
-                        'Using secret from specified secret file.'
-                    )
-                else:
-                    print(
-                        'Using secret from specified secret file.'
-                    )
-
-        # otherwise, return the full path to the secret file
-        else:
-            secret = os.path.abspath(secret_file)
-
-    else:
-
-        raise IOError(
-            'Could not load secret from the environment or the specified file.'
-        )
-
-    return secret
-
-
 
 def _setup_auth_worker(authdb_path,
                        fernet_secret):
@@ -308,201 +250,6 @@ def _close_authentication_database():
           file=sys.stdout)
 
 
-###########################################
-## AUTO-GENERATION OF SECRETS AND AUTHDB ##
-###########################################
-
-def autogen_secrets_authdb(basedir, logger):
-    '''This automatically generates secrets files and an authentication DB.
-
-    Run this only once on the first start of an authnzerver.
-
-    Parameters
-    ----------
-
-    basedir : str
-        The base directory of the authnzerver.
-        - The authentication database will be written to a file called
-          ``.authdb.sqlite`` in this directory.
-        - The secret token to authenticate HTTP communications between the
-          authnzerver and a frontend server will be written to a file called
-          ``.authnzerver-secret-key`` in this directory.
-        - Credentials for a superuser that can be used to edit various
-          authnzerver options, and users will be written to
-          ``.authnzerver-admin-credentials`` in this directory.
-
-    logger : logging.Logger object
-        The logger object to use to report problems.
-
-    Returns
-    -------
-
-    (authdb_path, creds, secret_file) : tuple of str
-        The names of the files written by this function will be returned as a
-        tuple of strings.
-
-    '''
-
-    import getpass
-    from .authdb import create_sqlite_auth_db, initial_authdb_inserts
-    from cryptography.fernet import Fernet
-
-    # create our authentication database if it doesn't exist
-    authdb_path = os.path.join(basedir, '.authdb.sqlite')
-
-    logger.warning('No existing authentication DB was found, '
-                   'making a new one in authnzerver basedir: %s'
-                   % authdb_path)
-
-    # generate the initial DB
-    create_sqlite_auth_db(authdb_path, echo=False, returnconn=False)
-
-    # ask the user for their email address and password the default
-    # email address will be used for the superuser if the email address
-    # is None, we'll use the user's UNIX ID@localhost if the password is
-    # None, a random one will be generated
-
-    try:
-        userid = '%s@localhost' % getpass.getuser()
-    except Exception as e:
-        userid = 'serveradmin@localhost'
-
-    inp_userid = input(
-        '\nAdmin email address [default: %s]: ' %
-        userid
-    )
-    if inp_userid and len(inp_userid.strip()) > 0:
-        userid = inp_userid
-
-    inp_pass = getpass.getpass(
-        'Admin password [default: randomly generated]: '
-    )
-    if inp_pass and len(inp_pass.strip()) > 0:
-        password = inp_pass
-    else:
-        password = None
-
-    # generate the admin users and initial DB info
-    u, p = initial_authdb_inserts('sqlite:///%s' % authdb_path,
-                                  superuser_email=userid,
-                                  superuser_pass=password)
-
-    creds = os.path.join(basedir,
-                         '.authnzerver-admin-credentials')
-    with open(creds,'w') as outfd:
-        outfd.write('%s %s\n' % (u,p))
-        os.chmod(creds, 0o100400)
-
-    if p:
-        logger.warning('Generated random admin password, written to: %s\n' %
-                       creds)
-
-    # finally, we'll generate the server secrets now so we don't have to deal
-    # with them later
-    logger.info('Generating server secret tokens...')
-    fernet_secret = Fernet.generate_key()
-    fernet_secret_file = os.path.join(basedir,'.authnzerver-secret-key')
-
-    with open(fernet_secret_file,'wb') as outfd:
-        outfd.write(fernet_secret)
-    os.chmod(fernet_secret_file, 0o100400)
-
-    return authdb_path, creds, fernet_secret_file
-
-
-#########################################
-## CONFIG FROM ENVIRON AND SUBSTITUTES ##
-#########################################
-
-CONF = {
-    'port':{
-        'env':'AUTHNZERVER_PORT',
-        'cmdline':'port',
-        'file':None,
-        'type':int,
-        'default':13431,
-    },
-    'listen':{
-        'env':'AUTHNZERVER_LISTEN',
-        'cmdline':'serve',
-        'file':None,
-        'type':str,
-        'default':'127.0.0.1',
-    },
-    'basedir':{
-        'env':'AUTHNZERVER_BASEDIR',
-        'cmdline':'basedir',
-        'file':None,
-        'type':str,
-        'default':os.getcwd(),
-    },
-    'cachedir':{
-        'env':'AUTHNZERVER_CACHEDIR',
-        'cmdline':'cachedir',
-        'file':None,
-        'type':str,
-        'default':'/tmp/authnzerver-cache',
-    },
-    'authdb':{
-        'env':'AUTHNZERVER_AUTHDB',
-        'cmdline':'authdb',
-        'file':None,
-        'type':str,
-        'default':'sqlite:///{{basedir}}/.authdb.sqlite',
-    },
-    'secret':{
-        'env':'AUTHNZERVER_SECRET',
-        'cmdline':None,
-        'file':'{{basedir}}/.authnzerver-secret-key',
-        'type':str,
-        'default':None,
-    },
-    'sessionexpiry':{
-        'env':'AUTHNZERVER_SESSIONEXPIRY',
-        'cmdline':'sessionexpiry',
-        'file':None,
-        'type':int,
-        'default':30,
-    },
-    'emailsender':{
-        'env':'AUTHNZERVER_EMAILSENDER',
-        'cmdline':None,
-        'file':None,
-        'type':str,
-        'default':None,
-    },
-    'emailserver':{
-        'env':'AUTHNZERVER_EMAILSERVER',
-        'cmdline':None,
-        'file':None,
-        'type':str,
-        'default':None,
-    },
-    'emailport':{
-        'env':'AUTHNZERVER_EMAILPORT',
-        'cmdline':None,
-        'file':None,
-        'type':int,
-        'default':None,
-    },
-    'emailuser':{
-        'env':'AUTHNZERVER_EMAILUSER',
-        'cmdline':None,
-        'file':None,
-        'type':str,
-        'default':None,
-    },
-    'emailpass':{
-        'env':'AUTHNZERVER_EMAILPASS',
-        'cmdline':None,
-        'file':None,
-        'type':str,
-        'default':None,
-    },
-
-}
-
-
 ##########
 ## MAIN ##
 ##########
@@ -530,6 +277,7 @@ def main():
     ###################
 
     from .external.futures37.process import ProcessPoolExecutor
+    from .secrets import get_secret, autogen_secrets_authdb
 
 
     ##############
@@ -537,7 +285,6 @@ def main():
     ##############
 
     from .handlers import AuthHandler, EchoHandler
-
     from . import cache
     from . import actions
 
@@ -546,66 +293,147 @@ def main():
     ## SET UP CONFIG ##
     ###################
 
-    MAXWORKERS = options.backgroundworkers
+    maxworkers = options.backgroundworkers
 
-    if options.authdb:
-        AUTHDB_PATH = options.authdb
+    basedir = get_secret(CONF['basedir']['env'],
+                         vartype=CONF['basedir']['type'],
+                         default=CONF['basedir']['default'],
+                         from_options_object=options,
+                         options_object_attr=CONF['basedir']['cmdline'],
+                         secret_file_read=False,
+                         basedir=None)
+    LOGGER.info("The server's base directory is: %s" % os.path.abspath(basedir))
 
-    else:
-        AUTHDB_SQLITE = os.path.join(options.basedir, '.authdb.sqlite')
-        if not os.path.exists(AUTHDB_SQLITE):
-            AUTHDB_PATH = None
-        else:
-            AUTHDB_PATH = 'sqlite:///%s' % AUTHDB_SQLITE
+    cachedir = get_secret(CONF['cachedir']['env'],
+                          vartype=CONF['cachedir']['type'],
+                          default=CONF['cachedir']['default'],
+                          from_options_object=options,
+                          options_object_attr=CONF['cachedir']['cmdline'],
+                          secret_file_read=False,
+                          basedir=basedir)
+    LOGGER.info("The server's cache directory is: %s" %
+                os.path.abspath(cachedir))
+
+    port = get_secret(CONF['port']['env'],
+                      vartype=CONF['port']['type'],
+                      default=CONF['port']['default'],
+                      from_options_object=options,
+                      options_object_attr=CONF['port']['cmdline'],
+                      secret_file_read=False,
+                      basedir=basedir)
+
+    listen = get_secret(CONF['listen']['env'],
+                        vartype=CONF['listen']['type'],
+                        default=CONF['listen']['default'],
+                        from_options_object=options,
+                        options_object_attr=CONF['listen']['cmdline'],
+                        secret_file_read=False,
+                        basedir=basedir)
+
+    sessionexpiry = get_secret(
+        CONF['sessionexpiry']['env'],
+        vartype=CONF['sessionexpiry']['type'],
+        default=CONF['sessionexpiry']['default'],
+        from_options_object=options,
+        options_object_attr=CONF['sessionexpiry']['cmdline'],
+        secret_file_read=False,
+        basedir=basedir
+    )
+    LOGGER.info('Session cookie expiry is set to: %s days' % sessionexpiry)
+
+
+    #
+    # set up the authdb and secret
+    #
 
     try:
-        FERNETSECRET = get_secret(options.secretenv,
-                                  os.path.join(options.basedir,
-                                               options.secretfile),
-                                  read_secret_file=True,
-                                  logger=LOGGER)
+        authdb = get_secret(CONF['authdb']['env'],
+                            vartype=CONF['authdb']['type'],
+                            default=CONF['authdb']['default'],
+                            from_options_object=options,
+                            options_object_attr=CONF['authdb']['cmdline'],
+                            secret_file_read=False,
+                            basedir=basedir)
     except Exception as e:
-        FERNETSECRET = None
+        authdb = None
 
+    try:
+        secret = get_secret(CONF['secret']['env'],
+                            vartype=CONF['secret']['type'],
+                            default=CONF['secret']['default'],
+                            from_options_object=options,
+                            options_object_attr=CONF['secret']['cmdline'],
+                            secret_file_read=True,
+                            basedir=basedir)
+    except Exception as e:
+        secret = None
 
-    if (not AUTHDB_PATH or not FERNETSECRET) and options.autosetup:
+    # authdb and secret not provided but basedir was auto-setup in the past
+    if ((not authdb) and
+        (not secret) and
+        (os.path.exists(os.path.join(basedir,'authnzerver-autosetup-done')))):
 
-        authdb_p, creds, fernet_file = autogen_secrets_authdb(
-            options.basedir,
-            LOGGER
+        authdb = 'sqlite:///%s' % os.path.abspath(
+            os.path.join(basedir, '.authdb.sqlite')
         )
-        AUTHDB_PATH = 'sqlite:///%s' % authdb_p
+        with open(os.path.join(basedir, '.authnzerver-secret-key'),'r') as infd:
+            secret = infd.read().strip('\n')
 
-        FERNETSECRET = get_secret(options.secretenv,
-                                  fernet_file,
-                                  read_secret_file=True,
-                                  logger=LOGGER)
+    # authdb and secret not provided and this is a completely new run
+    elif ((not authdb) and
+          (not secret) and
+          (options.autosetup is True) and
+          (not os.path.exists(os.path.join(basedir,
+                                           'authnzerver-autosetup-done')))):
 
-    elif (not AUTHDB_PATH or not FERNETSECRET) and not options.autosetup:
-        raise IOError(
+        authdb_path, admin_credentials, secret_file = autogen_secrets_authdb(
+            options.basedir
+        )
+
+        authdb = 'sqlite:///%s' % authdb_path
+        with open(secret_file,'r') as infd:
+            secret = infd.read().strip('\n')
+
+        with open(os.path.join(basedir,
+                               'authnzerver-autosetup-done'),'w') as outfd:
+
+            outfd.write('auto-setup run on: %sZ\n' % datetime.utcnow())
+            outfd.write('authdb path: %s\n' % authdb_path)
+            outfd.write('secret file: %s\n' % secret_file)
+
+
+    # otherwise, we need authdb and secret from the user
+    elif (((not authdb) or (not secret)) and
+          (not os.path.exists(os.path.join(basedir,
+                                           'authnzerver-autosetup-done')))):
+
+        raise ValueError(
             "Can't find either an existing authentication DB or\n"
             "the secret token and the `autosetup` option was set to False.\n"
             "Please provide a valid SQLAlchemy DB connection string in the\n"
-            "`authdb` option, and make sure you have set the\n"
-            "`secretenv` or `secretfile` options as well."
+            "`%s` environ var or `%s` command-line option,\n"
+            "and make sure you have set the `%s` environ var or\n"
+            "the `%s` command-line option." %
+            (CONF['authdb']['env'], CONF['authdb']['cmdline'],
+             CONF['secret']['env'], CONF['secret']['cmdline'])
         )
+
 
     #
     # this is the background executor we'll pass over to the handler
     #
     executor = ProcessPoolExecutor(
-        max_workers=MAXWORKERS,
+        max_workers=maxworkers,
         initializer=_setup_auth_worker,
-        initargs=(AUTHDB_PATH,
-                  FERNETSECRET),
+        initargs=(authdb, secret),
         finalizer=_close_authentication_database
     )
 
     # we only have one actual endpoint, the other one is for testing
     handlers = [
         (r'/', AuthHandler,
-         {'authdb':AUTHDB_PATH,
-          'fernet_secret':FERNETSECRET,
+         {'authdb':authdb,
+          'fernet_secret':secret,
           'executor':executor}),
     ]
 
@@ -613,8 +441,8 @@ def main():
         # put in the echo handler for debugging
         handlers.append(
             (r'/echo', EchoHandler,
-             {'authdb':AUTHDB_PATH,
-              'fernet_secret':FERNETSECRET,
+             {'authdb':authdb,
+              'fernet_secret':secret,
               'executor':executor})
         )
 
@@ -641,13 +469,14 @@ def main():
     ######################################################
 
     removed_items = cache.cache_flush(
-        cache_dirname=options.cachedir
+        cache_dirname=cachedir
     )
-    LOGGER.info('Removed %s stale items from authdb cache' % removed_items)
+    LOGGER.info('Removed %s stale items from authnzerver cache.' %
+                removed_items)
 
     session_killer = partial(actions.auth_kill_old_sessions,
-                             session_expiry_days=options.sessionexpiry,
-                             override_authdb_path=AUTHDB_PATH)
+                             session_expiry_days=sessionexpiry,
+                             override_authdb_path=authdb)
 
     # run once at start up
     session_killer()
@@ -663,16 +492,16 @@ def main():
     # make sure the port we're going to listen on is ok
     # inspired by how Jupyter notebook does this
     portok = False
-    serverport = options.port
+    serverport = port
     maxtries = 10
     thistry = 0
     while not portok and thistry < maxtries:
         try:
-            http_server.listen(serverport, options.serve)
+            http_server.listen(serverport, listen)
             portok = True
         except socket.error as e:
             LOGGER.warning('%s:%s is already in use, trying port %s' %
-                           (options.serve, serverport, serverport + 1))
+                           (listen, serverport, serverport + 1))
             serverport = serverport + 1
 
     if not portok:
@@ -694,11 +523,10 @@ def main():
         )
         periodic_session_kill.start()
 
-        LOGGER.info('Starting authnzerver. listening on http://%s:%s' %
-                    (options.serve, serverport))
-        LOGGER.info('Background worker processes: %s. IOLoop in use: %s' %
-                    (MAXWORKERS, IOLOOP_SPEC))
-        LOGGER.info('Base directory is: %s' % os.path.abspath(options.basedir))
+        LOGGER.info('Starting authnzerver. Listening on http://%s:%s.' %
+                    (listen, serverport))
+        LOGGER.info('Background worker processes: %s. IOLoop in use: %s.' %
+                    (maxworkers, IOLOOP_SPEC))
 
         # start the IOLoop
         loop.start()

@@ -155,7 +155,7 @@ request_functions = {
     'session-new':actions.auth_session_new,
     'session-exists':actions.auth_session_exists,
     'session-delete':actions.auth_session_delete,
-    'session-delete-userid':actions.auth_sessions_delete_userid,
+    'session-delete-userid':actions.auth_delete_sessions_userid,
     'session-setinfo':actions.auth_session_set_extrainfo,
     'user-login':actions.auth_user_login,
     'user-logout':actions.auth_user_logout,
