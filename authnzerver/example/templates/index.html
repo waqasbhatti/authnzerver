@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block pagecontent %}
+
+<!-- flash messages for errors and warnings from the backend go here -->
+{% raw flash_messages %}
+
+
+{% if current_user['user_role'] not in authenticated_roles %}
+
+<p>
+  Hello! Please <a href="/auth/login" >sign in to your user account</a>
+  to continue.
+</p>
+
+{% else %}
+
+<p>Hello {{ current_user['email'] }}! You are signed in.</p>
+
+<form action="/auth/logout" method="post">
+  {% module xsrf_form_html() %}
+    <button type="submit">Sign out of your account</button>
+  </fieldset>
+
+</form>
+
+{% end %}
+
+
+{% end %}

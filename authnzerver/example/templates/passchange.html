@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block pagecontent %}
+
+<!-- flash messages for errors and warnings from the backend go here -->
+{% raw flash_messages %}
+
+{% if logins_allowed %}
+
+<form action="/auth/password-change" method="post">
+  {% module xsrf_form_html() %}
+
+  <fieldset>
+    <legend>Change your account password</legend>
+
+    <label for="currpass" >Current password</label>
+    <input type="password" name="currpass" id="currpass" required
+           minlength="12" maxlength="1024"
+           autocomplete="current-password"
+           placeholder="Enter your current password">
+
+    <label for="password" >New password</label>
+    <input type="password" name="password" id="password" required
+           minlength="12" maxlength="1024"
+           autocomplete="new-password"
+           placeholder="Enter a new password">
+    <small>
+      Must be at least 12 characters long and can't match your old password.
+    </small>
+
+    <button type="submit">Change password</button>
+
+  </fieldset>
+
+</form>
+
+{% else %}
+
+<p>Sorry, the admins of this server have disabled user sign-ins.</p>
+
+{% end %}
+
+{% end %}

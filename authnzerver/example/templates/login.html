@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block pagecontent %}
+
+<!-- flash messages for errors and warnings from the backend go here -->
+{% raw flash_messages %}
+
+{% if logins_allowed %}
+
+<form action="/auth/login" method="post">
+  {% module xsrf_form_html() %}
+
+  <fieldset>
+    <legend>Sign in to your account</legend>
+
+    <label for="email" >Email address</label>
+    <input type="email" name="email" id="email" required
+           minlength="4" maxlength="280"
+           placeholder="user@example.org">
+
+    <label for="password" >Password</label>
+    <input type="password" autocomplete="current-password"
+           minlength="12" maxlength="1024"
+           name="password" id="password" required
+           placeholder="Type in your password">
+
+    <button type="submit">Sign in</button>
+
+  </fieldset>
+
+</form>
+
+<p>
+  <a href="/auth/forgot-password-step1" >Forgot your password? Reset it.</a>
+</p>
+
+{% if signups_allowed %}
+<p>
+  <a href="/auth/new-user" >New user? Create an account.</a>
+</p>
+{% end %}
+
+{% else %}
+
+<p>Sorry, the admins of this server have disabled user sign-ins.</p>
+
+{% end %}
+
+{% end %}

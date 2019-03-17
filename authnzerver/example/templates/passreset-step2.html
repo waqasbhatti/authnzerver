@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block pagecontent %}
+
+<!-- flash messages for errors and warnings from the backend go here -->
+{% raw flash_messages %}
+
+{% if logins_allowed %}
+
+<form action="/auth/passreset-step2" method="post">
+  {% module xsrf_form_html() %}
+
+  <fieldset>
+    <legend>Reset your account password</legend>
+
+    <label for="verifycode" >Verification code</label>
+    <input type="text" name="verifycode" id="verifycode" required
+           minlength="4" maxlength="280"
+           placeholder="Enter the verification code you received">
+
+    <label for="email" >Email address</label>
+    <input type="email" name="email" id="email" required
+           minlength="4" maxlength="280"
+           placeholder="Enter your email address">
+
+    <label for="password" >New password</label>
+    <input type="password" name="password" id="password" required
+           minlength="12" maxlength="1024"
+           autocomplete="new-password"
+           placeholder="Enter a new password">
+
+    <small>Must be at least 12 characters long.</small>
+
+    <button type="submit">Reset password</button>
+
+  </fieldset>
+
+</form>
+
+{% else %}
+
+<p>Sorry, the admins of this server have disabled user sign-ins.</p>
+
+{% end %}
+
+{% end %}

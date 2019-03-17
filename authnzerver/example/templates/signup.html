@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block pagecontent %}
+
+<!-- flash messages for errors and warnings from the backend go here -->
+{% raw flash_messages %}
+
+{% if signups_allowed %}
+
+<form action="/auth/new-user" method="post">
+  {% module xsrf_form_html() %}
+
+  <fieldset>
+    <legend>Sign up for a user account</legend>
+
+    <label for="email" >Email address</label>
+    <input type="email" name="email" id="email" required
+           minlength="4" maxlength="280"
+           placeholder="user@example.org">
+
+    <label for="password" >Password</label>
+    <input type="password" autocomplete="new-password"
+           minlength="12" maxlength="1024"
+           name="password" id="password" required
+           placeholder="Type in your password">
+    <small>Must be at least 12 characters long.</small>
+
+    <button type="submit">Sign up</button>
+
+  </fieldset>
+
+</form>
+
+{% if logins_allowed %}
+<p>
+  <a href="/auth/login" >Already have an account? Sign in.</a>
+</p>
+{% end %}
+
+{% else %}
+
+<p>Sorry, the admins of this server have disabled new user account sign-ups.</p>
+
+{% end %}
+
+{% end %}

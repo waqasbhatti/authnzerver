@@ -429,6 +429,11 @@ def main():
         finalizer=_close_authentication_database
     )
 
+
+    ###################
+    ## HANDLER SETUP ##
+    ###################
+
     # we only have one actual endpoint, the other one is for testing
     handlers = [
         (r'/', AuthHandler,
@@ -445,6 +450,7 @@ def main():
               'fernet_secret':secret,
               'executor':executor})
         )
+
 
     ########################
     ## APPLICATION SET UP ##

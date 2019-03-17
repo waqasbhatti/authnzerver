@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block pagecontent %}
+
+<!-- flash messages for errors and warnings from the backend go here -->
+{% raw flash_messages %}
+
+{% if logins_allowed %}
+
+<form action="/auth/passreset-step1" method="post">
+  {% module xsrf_form_html() %}
+
+  <fieldset>
+    <legend>Reset your account password</legend>
+
+    <label for="email" >Email address</label>
+    <input type="email" name="email" id="email" required
+           minlength="4" maxlength="280"
+           placeholder="Enter the email address you used to sign up">
+
+    <button type="submit">Send verification code</button>
+
+  </fieldset>
+
+</form>
+
+{% else %}
+
+<p>Sorry, the admins of this server have disabled user sign-ins.</p>
+
+{% end %}
+
+{% end %}
