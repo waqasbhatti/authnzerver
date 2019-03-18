@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 import os
 import os.path
-from configparse import ConfigParser
+from configparser import ConfigParser
 from itertools import chain
 
 
@@ -127,16 +127,16 @@ def get_secret(secret_environvar,
         if (secret is None or len(secret.strip()) == 0) and default is None:
 
             raise EnvironmentError(
-                'Secret from environment is either empty or not valid '
-                'and no default was provided.'
+                'Environment variable `%s` is invalid/missing, '
+                'no default provided.' % secret_environvar
             )
 
         elif ((secret is None or len(secret.strip()) == 0) and
               default is not None):
 
             LOGGER.info(
-                'Specified environment variable is invalid, '
-                'using provided default.'
+                'Environment variable `%s` is invalid/missing, '
+                'using provided default.' % secret_environvar
             )
 
             secret = default
@@ -178,15 +178,15 @@ def get_secret(secret_environvar,
         if not secret and not default:
 
             raise ValueError(
-                "Secret from command line options is empty or not valid and no"
-                "default was provided."
+                'Command-line option `--%s` is invalid/missing, '
+                'no default provided.' % options_object_attr
             )
 
         elif not secret and default is not None:
 
             LOGGER.info(
-                'Specified command-line option is invalid, '
-                'using provided default.'
+                'Command-line option `--%s` is invalid/missing, '
+                'using provided default.' % options_object_attr
             )
 
             secret = default

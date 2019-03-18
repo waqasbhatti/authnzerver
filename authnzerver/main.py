@@ -400,7 +400,7 @@ def main():
     # authdb and secret not provided but basedir was auto-setup in the past
     if ((not authdb) and
         (not secret) and
-        (os.path.exists(os.path.join(basedir,'authnzerver-autosetup-done')))):
+        (os.path.exists(os.path.join(basedir,'.authnzerver-autosetup-done')))):
 
         authdb = 'sqlite:///%s' % os.path.abspath(
             os.path.join(basedir, '.authdb.sqlite')
@@ -413,7 +413,7 @@ def main():
           (not secret) and
           (options.autosetup is True) and
           (not os.path.exists(os.path.join(basedir,
-                                           'authnzerver-autosetup-done')))):
+                                           '.authnzerver-autosetup-done')))):
 
         authdb_path, admin_credentials, secret_file = autogen_secrets_authdb(
             options.basedir
@@ -424,7 +424,7 @@ def main():
             secret = infd.read().strip('\n')
 
         with open(os.path.join(basedir,
-                               'authnzerver-autosetup-done'),'w') as outfd:
+                               '.authnzerver-autosetup-done'),'w') as outfd:
 
             outfd.write('auto-setup run on: %sZ\n' % datetime.utcnow())
             outfd.write('authdb path: %s\n' % authdb_path)
@@ -434,7 +434,7 @@ def main():
     # otherwise, we need authdb and secret from the user
     elif (((not authdb) or (not secret)) and
           (not os.path.exists(os.path.join(basedir,
-                                           'authnzerver-autosetup-done')))):
+                                           '.authnzerver-autosetup-done')))):
 
         raise ValueError(
             "Can't find either an existing authentication DB or\n"
