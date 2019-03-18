@@ -416,7 +416,8 @@ def main():
                                            '.authnzerver-autosetup-done')))):
 
         authdb_path, admin_credentials, secret_file = autogen_secrets_authdb(
-            options.basedir
+            options.basedir,
+            interactive=False
         )
 
         authdb = 'sqlite:///%s' % authdb_path

@@ -300,18 +300,23 @@ def autogen_secrets_authdb(basedir,
     except Exception as e:
         userid = 'serveradmin@localhost'
 
-    inp_userid = input(
-        '\nAdmin email address [default: %s]: ' %
-        userid
-    )
-    if inp_userid and len(inp_userid.strip()) > 0:
-        userid = inp_userid
+    if interactive:
 
-    inp_pass = getpass.getpass(
-        'Admin password [default: randomly generated]: '
-    )
-    if inp_pass and len(inp_pass.strip()) > 0:
-        password = inp_pass
+        inp_userid = input(
+            '\nAdmin email address [default: %s]: ' %
+            userid
+        )
+        if inp_userid and len(inp_userid.strip()) > 0:
+            userid = inp_userid
+
+        inp_pass = getpass.getpass(
+            'Admin password [default: randomly generated]: '
+        )
+        if inp_pass and len(inp_pass.strip()) > 0:
+            password = inp_pass
+        else:
+            password = None
+
     else:
         password = None
 
@@ -327,7 +332,8 @@ def autogen_secrets_authdb(basedir,
         os.chmod(creds, 0o100400)
 
     if p:
-        LOGGER.warning('Generated random admin password, written to: %s\n' %
+        LOGGER.warning('Generated random admin password, '
+                       'credentials written to: %s\n' %
                        creds)
 
     # finally, we'll generate the server secrets now so we don't have to deal
