@@ -228,7 +228,9 @@ def get_secret(secret_environvar,
 
 
 
-def autogen_secrets_authdb(basedir):
+def autogen_secrets_authdb(basedir,
+                           database_url=None,
+                           interactive=False):
     '''This automatically generates secrets files and an authentication DB.
 
     Run this only once on the first start of an authnzerver.
@@ -247,6 +249,16 @@ def autogen_secrets_authdb(basedir):
           authnzerver options, and users will be written to
           ``.authnzerver-admin-credentials`` in this directory.
 
+    database_url : str or None
+        If this is a str, must be a valid SQLAlchemy database URL to use to
+        connect to a database and make the necessary tables for authentication
+        info. If this is None, will create a new SQLite database in the
+        ``<basedir>/.authdb.sqlite`` file.
+
+    interactive : bool
+        If True, will ask the user for an admin email address and
+        password. Otherwise, will auto-generate both.
+
     Returns
     -------
 
@@ -257,18 +269,26 @@ def autogen_secrets_authdb(basedir):
     '''
 
     import getpass
-    from .authdb import create_sqlite_auth_db, initial_authdb_inserts
+    from .authdb import (
+        create_sqlite_auth_db, initial_authdb_inserts, create_authdb
+    )
     from cryptography.fernet import Fernet
 
-    # create our authentication database if it doesn't exist
-    authdb_path = os.path.join(basedir, '.authdb.sqlite')
+    if database_url is None:
 
-    LOGGER.warning('No existing authentication DB was found, '
-                   'making a new one in authnzerver basedir: %s'
-                   % authdb_path)
+        # create our authentication database if it doesn't exist
+        authdb_path = os.path.join(basedir, '.authdb.sqlite')
 
-    # generate the initial DB
-    create_sqlite_auth_db(authdb_path, echo=False, returnconn=False)
+        LOGGER.warning('No existing authentication DB was found, '
+                       'making a new one in authnzerver basedir: %s'
+                       % authdb_path)
+
+        # generate the initial DB
+        create_sqlite_auth_db(authdb_path, echo=False, returnconn=False)
+
+    else:
+
+        create_authdb(database_url, echo=False, returnconn=False)
 
     # ask the user for their email address and password the default
     # email address will be used for the superuser if the email address
@@ -320,4 +340,7 @@ def autogen_secrets_authdb(basedir):
         outfd.write(fernet_secret)
     os.chmod(fernet_secret_file, 0o100400)
 
-    return authdb_path, creds, fernet_secret_file
+    if database_url is not None:
+        return database_url, creds, fernet_secret_file
+    else:
+        return authdb_path, creds, fernet_secret_file

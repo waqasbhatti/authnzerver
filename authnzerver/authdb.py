@@ -236,6 +236,23 @@ def create_sqlite_auth_db(
     os.chmod(auth_db_path, 0o100600)
 
 
+def create_authdb(authdb_url,
+                  echo=False,
+                  returnconn=False):
+    '''
+    This creates an authentication database for an arbitrary SQLAlchemy DB URL.
+
+    '''
+
+    engine = create_engine(authdb_url, echo=echo)
+    AUTHDB_META.create_all(engine)
+
+    if returnconn:
+        return engine, AUTHDB_META
+    else:
+        engine.dispose()
+        del engine
+
 
 def get_auth_db(auth_db_path, echo=False):
     '''
