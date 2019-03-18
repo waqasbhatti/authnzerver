@@ -68,7 +68,7 @@ import multiprocessing as mp
 modpath = os.path.abspath(os.path.dirname(__file__))
 
 #
-# BASE DIRECTORY AND CACHE PATH
+# BASE DIRECTORY, CACHE PATH, ENV PATH
 #
 
 # basedir is the directory at the root where this server stores its auth DB and
@@ -83,6 +83,14 @@ define('cachedir',
        default='/tmp/authnzerver-cache',
        help=('Path to the cache directory used by the authnzerver.'),
        type=str)
+
+# the path to an env file containing environment variables
+define('envfile',
+       default=None,
+       help=('Path to a file containing environ variables '
+             'for testing/development.'),
+       type=str)
+
 
 #
 # START UP OPTIONS
@@ -295,13 +303,28 @@ def main():
 
     maxworkers = options.backgroundworkers
 
+    envfile = options.envfile
+
+    if envfile is not None and os.path.exists(envfile):
+        from configparser import ConfigParser
+        from itertools import chain
+        with open(envfile,'r') as infd:
+            envfd = chain(('[DEFAULT]',),infd)
+            c = ConfigParser()
+            c.read_file(envfd)
+            env = c['DEFAULT']
+
+    else:
+        env = None
+
     basedir = get_secret(CONF['basedir']['env'],
                          vartype=CONF['basedir']['type'],
                          default=CONF['basedir']['default'],
                          from_options_object=options,
                          options_object_attr=CONF['basedir']['cmdline'],
                          secret_file_read=False,
-                         basedir=None)
+                         basedir=None,
+                         envfile=env)
     LOGGER.info("The server's base directory is: %s" % os.path.abspath(basedir))
 
     cachedir = get_secret(CONF['cachedir']['env'],
@@ -310,7 +333,8 @@ def main():
                           from_options_object=options,
                           options_object_attr=CONF['cachedir']['cmdline'],
                           secret_file_read=False,
-                          basedir=basedir)
+                          basedir=basedir,
+                          envfile=env)
     LOGGER.info("The server's cache directory is: %s" %
                 os.path.abspath(cachedir))
 
@@ -320,7 +344,8 @@ def main():
                       from_options_object=options,
                       options_object_attr=CONF['port']['cmdline'],
                       secret_file_read=False,
-                      basedir=basedir)
+                      basedir=basedir,
+                      envfile=env)
 
     listen = get_secret(CONF['listen']['env'],
                         vartype=CONF['listen']['type'],
@@ -328,7 +353,8 @@ def main():
                         from_options_object=options,
                         options_object_attr=CONF['listen']['cmdline'],
                         secret_file_read=False,
-                        basedir=basedir)
+                        basedir=basedir,
+                        envfile=env)
 
     sessionexpiry = get_secret(
         CONF['sessionexpiry']['env'],
@@ -337,7 +363,8 @@ def main():
         from_options_object=options,
         options_object_attr=CONF['sessionexpiry']['cmdline'],
         secret_file_read=False,
-        basedir=basedir
+        basedir=basedir,
+        envfile=env
     )
     LOGGER.info('Session cookie expiry is set to: %s days' % sessionexpiry)
 
@@ -353,7 +380,8 @@ def main():
                             from_options_object=options,
                             options_object_attr=CONF['authdb']['cmdline'],
                             secret_file_read=False,
-                            basedir=basedir)
+                            basedir=basedir,
+                            envfile=env)
     except Exception as e:
         authdb = None
 
@@ -364,7 +392,8 @@ def main():
                             from_options_object=options,
                             options_object_attr=CONF['secret']['cmdline'],
                             secret_file_read=True,
-                            basedir=basedir)
+                            basedir=basedir,
+                            envfile=env)
     except Exception as e:
         secret = None
 

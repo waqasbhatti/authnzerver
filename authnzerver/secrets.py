@@ -24,6 +24,9 @@ LOGGER = logging.getLogger(__name__)
 
 import os
 import os.path
+from configparse import ConfigParser
+from itertools import chain
+
 
 
 ###############################
@@ -36,12 +39,13 @@ def get_secret(secret_environvar,
                from_options_object=None,
                options_object_attr=None,
                secret_file_read=False,
-               basedir=None):
+               basedir=None,
+               envfile=None):
     """This loads a secret from the environment or command-line options.
 
     The order of precedence is:
 
-    1. environment variable
+    1. environment or envfile if that is provided
     2. command-line option
 
     Parameters
@@ -53,7 +57,7 @@ def get_secret(secret_environvar,
     vartype : Python type object: float, str, int, etc.
         The type to use to coerce the input variable to a specific Python type.
 
-    default: Any
+    default : Any
         The default value of the secret.
 
     from_options_object : Tornado options object
@@ -76,6 +80,15 @@ def get_secret(secret_environvar,
         '{{basedir}}' template values in any secret. By default, this is the
         current working directory.
 
+    envfile : str or ConfigParser object
+        Path to a file or a ConfigParser object generated from the a file that
+        contains environment variable definitions of the form::
+
+            VAR_NAME=var_value
+
+        This will be used to substitute for the environment. Useful for
+        development situations.
+
     Returns
     -------
 
@@ -87,21 +100,39 @@ def get_secret(secret_environvar,
     if not basedir:
         basedir = os.getcwd()
 
+
+    # get the environ
+    if isinstance(envfile, str) and os.path.exists(envfile):
+
+        # inspired by: https://stackoverflow.com/a/26859985
+        with open(envfile,'r') as infd:
+            conflines = chain(('[DEFAULT]',), infd)
+            c = ConfigParser()
+            c.read_file(conflines)
+            environ = c['DEFAULT']
+
+    elif isinstance(envfile, ConfigParser):
+        environ = envfile['DEFAULT']
+
+    else:
+        environ = os.environ
+
     #
     # 1. check the environment variable
     #
-    if secret_environvar is not None and secret_environvar in os.environ:
+    if secret_environvar is not None:
 
-        secret = os.environ[secret_environvar]
+        secret = environ.get(secret_environvar)
 
-        if len(secret.strip()) == 0 and default is None:
+        if (secret is None or len(secret.strip()) == 0) and default is None:
 
             raise EnvironmentError(
                 'Secret from environment is either empty or not valid '
                 'and no default was provided.'
             )
 
-        elif len(secret.strip()) == 0 and default is not None:
+        elif ((secret is None or len(secret.strip()) == 0) and
+              default is not None):
 
             LOGGER.info(
                 'Specified environment variable is invalid, '
@@ -138,7 +169,7 @@ def get_secret(secret_environvar,
     #
     # 2. check the command-line options
     #
-    elif ((secret_environvar is None or secret_environvar not in os.environ) and
+    elif ((secret_environvar is None) and
           (from_options_object is not None) and
           (options_object_attr is not None)):
 
