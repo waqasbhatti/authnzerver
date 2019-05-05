@@ -24,7 +24,8 @@ from sqlalchemy import (
     Boolean, DateTime, ForeignKey, MetaData
 )
 
-from passlib.context import CryptContext
+from argon2 import PasswordHasher
+
 
 ##########################
 ## JSON type for SQLite ##
@@ -58,15 +59,6 @@ class JSONEncodedDict(TypeDecorator):
             value = json.loads(value)
         return value
 
-
-
-#############################
-## PASSWORD HASHING POLICY ##
-#############################
-
-# https://passlib.readthedocs.io/en/stable/narr/quickstart.html
-password_context = CryptContext(schemes=['argon2','bcrypt'],
-                                deprecated='auto')
 
 
 ########################
@@ -337,7 +329,9 @@ def initial_authdb_inserts(auth_db_path,
     else:
         superuser_pass_auto = False
 
-    hashed_password = password_context.hash(superuser_pass)
+    hasher = PasswordHasher()
+
+    hashed_password = hasher.hash(superuser_pass)
 
     result = conn.execute(
         users.insert().values([
@@ -350,7 +344,7 @@ def initial_authdb_inserts(auth_db_path,
              'created_on':datetime.utcnow(),
              'last_updated':datetime.utcnow()},
             # the anonuser
-            {'password':password_context.hash(secrets.token_urlsafe(32)),
+            {'password':hasher.hash(secrets.token_urlsafe(32)),
              'email':'anonuser@localhost',
              'email_verified':True,
              'is_active':True,
@@ -358,7 +352,7 @@ def initial_authdb_inserts(auth_db_path,
              'created_on':datetime.utcnow(),
              'last_updated':datetime.utcnow()},
             # the dummyuser to fail passwords for nonexistent users against
-            {'password':password_context.hash(secrets.token_urlsafe(32)),
+            {'password':hasher.hash(secrets.token_urlsafe(32)),
              'email':'dummyuser@localhost',
              'email_verified':True,
              'is_active':False,
