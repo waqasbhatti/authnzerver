@@ -54,7 +54,9 @@ from sqlalchemy import select
 
 from .. import authdb
 
+from argon2 import PasswordHasher
 
+pass_hasher = PasswordHasher()
 
 ################################
 ## SESSION HANDLING FUNCTIONS ##
@@ -723,8 +725,12 @@ def auth_password_check(payload,
 
         dummy_password = dummy_results.fetchone()['password']
         dummy_results.close()
-        authdb.password_context.verify('nope',
-                                       dummy_password)
+
+        try:
+            pass_hasher.verify(dummy_password, 'nope')
+        except Exception as e:
+            pass
+
         # always get the dummy user's password from the DB
         dummy_sel = select([
             users.c.password
@@ -732,8 +738,11 @@ def auth_password_check(payload,
         dummy_results = currproc.connection.execute(dummy_sel)
         dummy_password = dummy_results.fetchone()['password']
         dummy_results.close()
-        authdb.password_context.verify('nope',
-                                       dummy_password)
+
+        try:
+            pass_hasher.verify(dummy_password, 'nope')
+        except Exception as e:
+            pass
 
         return {
             'success':False,
@@ -760,8 +769,12 @@ def auth_password_check(payload,
             dummy_results = currproc.connection.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
-            authdb.password_context.verify('nope',
-                                           dummy_password)
+
+            try:
+                pass_hasher.verify(dummy_password, 'nope')
+            except Exception as e:
+                pass
+
             # always get the dummy user's password from the DB
             dummy_sel = select([
                 users.c.password
@@ -769,8 +782,11 @@ def auth_password_check(payload,
             dummy_results = currproc.connection.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
-            authdb.password_context.verify('nope',
-                                           dummy_password)
+
+            try:
+                pass_hasher.verify(dummy_password, 'nope')
+            except Exception as e:
+                pass
 
             return {
                 'success':False,
@@ -789,8 +805,11 @@ def auth_password_check(payload,
             dummy_results = currproc.connection.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
-            authdb.password_context.verify('nope',
-                                           dummy_password)
+
+            try:
+                pass_hasher.verify(dummy_password, 'nope')
+            except Exception as e:
+                pass
 
             # look up the provided user
             user_sel = select([
@@ -807,15 +826,28 @@ def auth_password_check(payload,
 
             if user_info:
 
-                pass_ok = authdb.password_context.verify(
-                    payload['password'][:1024],
-                    user_info['password']
-                )
+                try:
+
+                    pass_ok = pass_hasher.verify(
+                        user_info['password'],
+                        payload['password'][:1024],
+                    )
+
+                except Exception as e:
+
+                    LOGGER.error(
+                        "Password mismatch for user: %s, exception type: %s" %
+                        (user_info['user_id'], e)
+                    )
+                    pass_ok = False
 
             else:
 
-                authdb.password_context.verify('nope',
-                                               dummy_password)
+                try:
+                    pass_hasher.verify(dummy_password, 'nope')
+                except Exception as e:
+                    pass
+
                 pass_ok = False
 
             if not pass_ok:
@@ -927,8 +959,12 @@ def auth_user_login(payload,
 
         dummy_password = dummy_results.fetchone()['password']
         dummy_results.close()
-        authdb.password_context.verify('nope',
-                                       dummy_password)
+
+        try:
+            pass_hasher.verify(dummy_password, 'nope')
+        except Exception as e:
+            pass
+
         # always get the dummy user's password from the DB
         dummy_sel = select([
             users.c.password
@@ -936,8 +972,11 @@ def auth_user_login(payload,
         dummy_results = currproc.connection.execute(dummy_sel)
         dummy_password = dummy_results.fetchone()['password']
         dummy_results.close()
-        authdb.password_context.verify('nope',
-                                       dummy_password)
+
+        try:
+            pass_hasher.verify(dummy_password, 'nope')
+        except Exception as e:
+            pass
 
         # run a fake session delete
         auth_session_delete({'session_token':'nope'},
@@ -969,8 +1008,12 @@ def auth_user_login(payload,
             dummy_results = currproc.connection.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
-            authdb.password_context.verify('nope',
-                                           dummy_password)
+
+            try:
+                pass_hasher.verify(dummy_password,'nope')
+            except Exception as e:
+                pass
+
             # always get the dummy user's password from the DB
             dummy_sel = select([
                 users.c.password
@@ -978,8 +1021,11 @@ def auth_user_login(payload,
             dummy_results = currproc.connection.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
-            authdb.password_context.verify('nope',
-                                           dummy_password)
+
+            try:
+                pass_hasher.verify(dummy_password, 'nope')
+            except Exception as e:
+                pass
 
             # run a fake session delete
             auth_session_delete(
@@ -1005,8 +1051,11 @@ def auth_user_login(payload,
             dummy_results = currproc.connection.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
-            authdb.password_context.verify('nope',
-                                           dummy_password)
+
+            try:
+                pass_hasher.verify(dummy_password, 'nope')
+            except Exception as e:
+                pass
 
             # look up the provided user
             user_sel = select([
@@ -1021,15 +1070,28 @@ def auth_user_login(payload,
 
             if user_info:
 
-                pass_ok = authdb.password_context.verify(
-                    payload['password'][:1024],
-                    user_info['password']
-                )
+                try:
+
+                    pass_ok = pass_hasher.verify(
+                        user_info['password'],
+                        payload['password'][:1024],
+                    )
+
+                except Exception as e:
+
+                    LOGGER.error(
+                        "Password mismatch for user: %s, exception type: %s" %
+                        (user_info['user_id'], e)
+                    )
+                    pass_ok = False
 
             else:
 
-                authdb.password_context.verify('nope',
-                                               dummy_password)
+                try:
+                    pass_hasher.verify(dummy_password, 'nope')
+                except Exception as e:
+                    pass
+
                 pass_ok = False
 
             # run a session delete on the provided token. the frontend will

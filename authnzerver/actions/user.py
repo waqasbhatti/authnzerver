@@ -241,8 +241,8 @@ def change_user_password(payload,
     new_password = payload['new_password'][:1024]
 
     try:
-        pass_check = pass_hasher.verify(current_password,
-                                        rows['password'])
+        pass_check = pass_hasher.verify(rows['password'],
+                                        current_password)
     except Exception as e:
         pass_check = False
 
@@ -258,11 +258,9 @@ def change_user_password(payload,
     # check if the new hashed password is the same as the old hashed password,
     # meaning that the new password is just the old one
     try:
-        same_check = pass_hasher.verify(new_password,
-                                        rows['password'])
+        same_check = pass_hasher.verify(rows['password'], new_password)
     except Exception as e:
         same_check = False
-
 
     if same_check:
         return {
@@ -646,11 +644,13 @@ def delete_user(payload,
 
     # check if the user's password is valid and matches the one on record
     try:
-        pass_ok = pass_hasher.verify(
-            payload['password'][:1024],
-            row['password']
-        )
+        pass_ok = pass_hasher.verify(row['password'],
+                                     payload['password'][:1024])
     except Exception as e:
+        LOGGER.error(
+            "Password mismatch for user: %s, exception type: %s" %
+            (payload['user_id'], e)
+        )
         pass_ok = False
 
     if not pass_ok:
@@ -795,8 +795,8 @@ def verify_password_reset(payload,
 
     try:
         pass_same = pass_hasher.verify(
+            user_info['password'],
             new_password,
-            user_info['password']
         )
     except Exception as e:
         pass_same = False

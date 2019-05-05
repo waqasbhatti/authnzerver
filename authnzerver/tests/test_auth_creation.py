@@ -59,7 +59,7 @@ def test_create_user():
             in user_created['messages'])
     assert ('Your password is too similar to either '
             'the domain name of this LCC-Server or your '
-            'own email address.' in user_created['messages'])
+            'own name or email address.' in user_created['messages'])
     assert ('Your password is not complex enough. '
             'One or more characters appear appear too frequently.'
             in user_created['messages'])
@@ -109,9 +109,6 @@ def test_create_user():
     assert user_created['user_email'] is 'testuser@test.org'
     assert user_created['user_id'] is None
     assert user_created['send_verification'] is False
-    assert ('Your password is not complex enough. '
-            'One or more characters appear appear too frequently.'
-            in user_created['messages'])
     assert ('Your password is too similar to either '
             'the domain name of this LCC-Server or your '
             'own name or email address.' in user_created['messages'])
