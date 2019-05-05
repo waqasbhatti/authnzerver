@@ -44,7 +44,8 @@ def test_login():
     get_test_authdb()
 
     # create the user
-    user_payload = {'email':'testuser2@test.org',
+    user_payload = {'full_name':'Test User',
+                    'email':'testuser2@test.org',
                     'password':'aROwQin9L8nNtPTEMLXd'}
     user_created = actions.create_new_user(
         user_payload,

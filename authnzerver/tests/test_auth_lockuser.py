@@ -44,7 +44,8 @@ def test_user_lock():
     get_test_authdb()
 
     # create the user
-    user_payload = {'email':'testuser-userlock@test.org',
+    user_payload = {'full_name':'Test User',
+                    'email':'testuser-userlock@test.org',
                     'password':'aROwQin9L8nNtPTEMLXd'}
     user_created = actions.create_new_user(
         user_payload,

@@ -44,7 +44,8 @@ def test_create_user():
     get_test_authdb()
 
     # 1. dumb password
-    payload = {'email':'testuser@test.org',
+    payload = {'full_name':'Test User',
+               'email':'testuser@test.org',
                'password':'password'}
     user_created = actions.create_new_user(
         payload,
@@ -64,7 +65,8 @@ def test_create_user():
             in user_created['messages'])
 
     # 2. all numeric password
-    payload = {'email':'testuser@test.org',
+    payload = {'full_name':'Test User',
+               'email':'testuser@test.org',
                'password':'239420349823904802398402375025'}
     user_created = actions.create_new_user(
         payload,
@@ -76,8 +78,9 @@ def test_create_user():
     assert user_created['send_verification'] is False
     assert ('Your password cannot be all numbers.' in user_created['messages'])
 
-    # 3. password == user name
-    payload = {'email':'testuser@test.org',
+    # 3a. password ~= email address
+    payload = {'full_name': 'Test User',
+               'email':'testuser@test.org',
                'password':'testuser'}
     user_created = actions.create_new_user(
         payload,
@@ -92,10 +95,30 @@ def test_create_user():
             in user_created['messages'])
     assert ('Your password is too similar to either '
             'the domain name of this LCC-Server or your '
-            'own email address.' in user_created['messages'])
+            'own name or email address.' in user_created['messages'])
+
+    # 3b. password ~= full name
+    payload = {'full_name': 'Test User',
+               'email':'testuser@test.org',
+               'password':'TestUser123'}
+    user_created = actions.create_new_user(
+        payload,
+        override_authdb_path='sqlite:///test-creation.authdb.sqlite'
+    )
+    assert user_created['success'] is False
+    assert user_created['user_email'] is 'testuser@test.org'
+    assert user_created['user_id'] is None
+    assert user_created['send_verification'] is False
+    assert ('Your password is not complex enough. '
+            'One or more characters appear appear too frequently.'
+            in user_created['messages'])
+    assert ('Your password is too similar to either '
+            'the domain name of this LCC-Server or your '
+            'own name or email address.' in user_created['messages'])
 
     # 4. password is OK
-    payload = {'email':'testuser@test.org',
+    payload = {'full_name': 'Test User',
+               'email':'testuser@test.org',
                'password':'aROwQin9L8nNtPTEMLXd'}
     user_created = actions.create_new_user(
         payload,
@@ -109,7 +132,8 @@ def test_create_user():
             in user_created['messages'])
 
     # 5. try to create a new user with an existing email address
-    payload = {'email':'testuser@test.org',
+    payload = {'full_name': 'Test User',
+               'email':'testuser@test.org',
                'password':'aROwQin9L8nNtPTEMLXd'}
     user_created = actions.create_new_user(
         payload,
