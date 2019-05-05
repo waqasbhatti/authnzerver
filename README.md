@@ -4,9 +4,9 @@ This is a small server meant to help add authentication (authn) and
 authorization (authz) to other HTTP servers. It's built using
 [Tornado](http://www.tornadoweb.org), [SQLAlchemy](https://www.sqlalchemy.org/),
 [cryptography](https://cryptography.io),
-[passlib](https://passlib.readthedocs.io/en/stable/),
-[argon2-cffi](https://argon2-cffi.readthedocs.io/en/stable/), and
-[python-diskcache](http://www.grantjenks.com/docs/diskcache/).
+[argon2-cffi](https://argon2-cffi.readthedocs.io/en/stable/),
+[python-diskcache](http://www.grantjenks.com/docs/diskcache/), and
+[uvloop](https://github.com/MagicStack/uvloop).
 
 I wrote it to help with the login/logout/signup flows for the
 [LCC-Server](https://github.com/waqasbhatti) and extracted much of the code from
