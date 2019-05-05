@@ -3,7 +3,6 @@
 # actions_user.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-
 '''This contains functions to drive user account related auth actions.
 
 '''
@@ -317,7 +316,7 @@ def create_new_user(payload,
                     override_authdb_path=None):
     '''This makes a new user.
 
-    payload keys: email, password
+    payload keys: full_name, email, password
 
     Returns the user_id and email if successful.
 
@@ -341,6 +340,15 @@ def create_new_user(payload,
     user_role will be set to 'authenticated'.
 
     '''
+
+    if 'full_name' not in payload:
+        return {
+            'success':False,
+            'user_email':None,
+            'user_id':None,
+            'send_verification':False,
+            'messages':["Invalid user creation request."]
+        }
 
     if 'email' not in payload:
         return {
@@ -406,6 +414,7 @@ def create_new_user(payload,
     try:
 
         ins = users.insert({
+            'full_name':payload['full_name'],
             'password':hashed_password,
             'email':payload['email'],
             'email_verified':False,
