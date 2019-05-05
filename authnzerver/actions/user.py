@@ -56,20 +56,32 @@ from fuzzywuzzy.fuzz import UQRatio
 from .. import authdb
 from .session import auth_session_exists
 
+from argon2 import PasswordHasher
+
+
+######################
+## PASSWORD CONTEXT ##
+######################
+
+pass_hasher = PasswordHasher()
+
 
 #######################
 ## PASSWORD HANDLING ##
 #######################
 
-def validate_input_password(email,
-                            password,
-                            min_length=12,
-                            max_match_threshold=20):
+def validate_input_password(
+        full_name,
+        email,
+        password,
+        min_length=12,
+        max_match_threshold=20
+):
     '''This validates user input passwords.
 
     1. must be at least min_length characters (we'll truncate the password at
        1024 characters since we don't want to store entire novels)
-    2. must not match within max_match_threshold of their email
+    2. must not match within max_match_threshold of their email or full_name
     3. must not match within max_match_threshold of the site's FQDN
     4. must not have a single case-folded character take up more than 20% of the
        length of the password
@@ -94,17 +106,19 @@ def validate_input_password(email,
     fqdn = socket.getfqdn()
     fqdn_match = UQRatio(password, fqdn)
     email_match = UQRatio(password, email)
+    name_match = UQRatio(password, full_name)
 
     fqdn_ok = fqdn_match < max_match_threshold
     email_ok = email_match < max_match_threshold
+    name_ok = name_match < max_match_threshold
 
-    if not fqdn_ok or not email_ok:
+    if not fqdn_ok or not email_ok or not name_ok:
         LOGGER.warning('password for new account: %s matches FQDN '
                        '(similarity: %s) or their email address '
                        '(similarity: %s)' % (email, fqdn_match, email_match))
         messages.append('Your password is too similar to either '
                         'the domain name of this LCC-Server or your '
-                        'own email address.')
+                        'own name or email address.')
 
     # next, check if the password is complex enough
     histogram = {}
@@ -135,7 +149,8 @@ def validate_input_password(email,
         numeric_ok = True
 
     return (
-        (passlen_ok and email_ok and fqdn_ok and hist_ok and numeric_ok),
+        (passlen_ok and email_ok and name_ok and
+         fqdn_ok and hist_ok and numeric_ok),
         messages
     )
 
@@ -149,6 +164,7 @@ def change_user_password(payload,
     '''This changes the user's password.
 
     '''
+
     if 'user_id' not in payload:
         return {
             'success':False,
@@ -157,6 +173,16 @@ def change_user_password(payload,
             'messages':['Invalid password change request. '
                         'Some args are missing.'],
         }
+
+    if 'full_name' not in payload:
+        return {
+            'success':False,
+            'user_id':None,
+            'email':None,
+            'messages':['Invalid password change request. '
+                        'Some args are missing.'],
+        }
+
     if 'email' not in payload:
         return {
             'success':False,
@@ -165,6 +191,7 @@ def change_user_password(payload,
             'messages':['Invalid password change request. '
                         'Some args are missing.'],
         }
+
     if 'current_password' not in payload:
         return {
             'success':False,
@@ -173,6 +200,7 @@ def change_user_password(payload,
             'messages':['Invalid password change request. '
                         'Some args are missing.'],
         }
+
     if 'new_password' not in payload:
         return {
             'success':False,
@@ -212,8 +240,11 @@ def change_user_password(payload,
     current_password = payload['current_password'][:1024]
     new_password = payload['new_password'][:1024]
 
-    pass_check = authdb.password_context.verify(current_password,
-                                                rows['password'])
+    try:
+        pass_check = pass_hasher.verify(current_password,
+                                        rows['password'])
+    except Exception as e:
+        pass_check = False
 
     if not pass_check:
         return {
@@ -226,8 +257,13 @@ def change_user_password(payload,
 
     # check if the new hashed password is the same as the old hashed password,
     # meaning that the new password is just the old one
-    same_check = authdb.password_context.verify(new_password,
-                                                rows['password'])
+    try:
+        same_check = pass_hasher.verify(new_password,
+                                        rows['password'])
+    except Exception as e:
+        same_check = False
+
+
     if same_check:
         return {
             'success':False,
@@ -238,12 +274,13 @@ def change_user_password(payload,
         }
 
     # hash the user's password
-    hashed_password = authdb.password_context.hash(new_password)
+    hashed_password = pass_hasher.hash(new_password)
 
     # validate the input password to see if it's OK
     # do this here to make sure the password hash completes at least once
     # verify the new password is OK
     passok, messages = validate_input_password(
+        payload['full_name'],
         payload['email'],
         new_password,
         min_length=min_pass_length,
@@ -388,11 +425,12 @@ def create_new_user(payload,
     input_password = payload['password'][:1024]
 
     # hash the user's password
-    hashed_password = authdb.password_context.hash(input_password)
+    hashed_password = pass_hasher.hash(input_password)
 
     # validate the input password to see if it's OK
     # do this here to make sure the password hash completes at least once
     passok, messages = validate_input_password(
+        payload['full_name'],
         payload['email'],
         input_password,
         min_length=min_pass_length,
@@ -607,10 +645,13 @@ def delete_user(payload,
         }
 
     # check if the user's password is valid and matches the one on record
-    pass_ok = authdb.password_context.verify(
-        payload['password'][:1024],
-        row['password']
-    )
+    try:
+        pass_ok = pass_hasher.verify(
+            payload['password'][:1024],
+            row['password']
+        )
+    except Exception as e:
+        pass_ok = False
 
     if not pass_ok:
         return {
@@ -727,6 +768,7 @@ def verify_password_reset(payload,
 
     sel = select([
         users.c.user_id,
+        users.c.full_name,
         users.c.email,
         users.c.password,
     ]).select_from(
@@ -751,10 +793,13 @@ def verify_password_reset(payload,
     # let's hash the new password against the current password
     new_password = payload['new_password'][:1024]
 
-    pass_same = authdb.password_context.verify(
-        new_password,
-        user_info['password']
-    )
+    try:
+        pass_same = pass_hasher.verify(
+            new_password,
+            user_info['password']
+        )
+    except Exception as e:
+        pass_same = False
 
     # don't fail here, but note that the user is re-using the password they
     # forgot. FIXME: should we actually fail here?
@@ -764,11 +809,12 @@ def verify_password_reset(payload,
                        user_info['email_address'])
 
     # hash the user's password
-    hashed_password = authdb.password_context.hash(new_password)
+    hashed_password = pass_hasher.hash(new_password)
 
     # validate the input password to see if it's OK
     # do this here to make sure the password hash completes at least once
     passok, messages = validate_input_password(
+        user_info['full_name'],
         payload['email_address'],
         new_password,
         min_length=min_pass_length,
