@@ -3,10 +3,10 @@
 # authdb.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''
+"""
 This contains SQLAlchemy models for the authnzerver.
 
-'''
+"""
 
 import os.path
 import os
@@ -37,6 +37,7 @@ from argon2 import PasswordHasher
 from sqlalchemy.types import TypeDecorator, TEXT
 import json
 
+
 class JSONEncodedDict(TypeDecorator):
     """Represents an immutable structure as a json-encoded string.
 
@@ -60,14 +61,14 @@ class JSONEncodedDict(TypeDecorator):
         return value
 
 
-
 ########################
 ## AUTHNZERVER TABLES ##
 ########################
 
 AUTHDB_META = MetaData()
 
-# this lists all possible roles in the system
+
+# This lists all possible roles in the system
 Roles = Table(
     'roles',
     AUTHDB_META,
@@ -76,7 +77,7 @@ Roles = Table(
 )
 
 
-# the sessions table storing client sessions
+# This is the sessions table storing client sessions
 Sessions = Table(
     'sessions',
     AUTHDB_META,
@@ -95,13 +96,27 @@ Sessions = Table(
 )
 
 
-# this is the main users table
+# This is the main users table
 Users = Table(
     'users',
     AUTHDB_META,
+
+    # The primary key of this table. Should NOT be made public, not even to the
+    # frontend. Primary use for this is as a foreign key to other tables.
     Column('user_id', Integer(), primary_key=True, nullable=False),
-    Column('password', Text(), nullable=False),
+
+    # This is the system ID to expose to JS frontends, etc and is a UUID4. We
+    # try to never expose the user_id pk to avoid user enumeration. The
+    # system_id is also used for autocompletes on the frontend to map to
+    # full_name if a user indicates their name can be public or is shared in a
+    # group.
+    Column('system_id', String(length=50), index=True, nullable=False),
+
+    # This is what the user calls themselves, freeform. Never exposed to other
+    # users unless we have explicit permission.
     Column('full_name', String(length=280), index=True),
+
+    Column('password', Text(), nullable=False),
     Column('email', String(length=280), nullable=False, unique=True),
     Column('email_verified',Boolean(), default=False,
            nullable=False, index=True),
@@ -186,7 +201,6 @@ APIKeys = Table(
 )
 
 
-
 #######################
 ## UTILITY FUNCTIONS ##
 #######################
@@ -196,15 +210,16 @@ pragma journal_mode = 'wal';
 pragma journal_size_limit = 5242880;
 '''
 
+
 def create_sqlite_auth_db(
         auth_db_path,
         echo=False,
         returnconn=False
 ):
-    '''
+    """
     This creates the local SQLite auth DB.
 
-    '''
+    """
 
     engine = create_engine('sqlite:///%s' % os.path.abspath(auth_db_path),
                            echo=echo)
@@ -231,10 +246,10 @@ def create_sqlite_auth_db(
 def create_authdb(authdb_url,
                   echo=False,
                   returnconn=False):
-    '''
+    """
     This creates an authentication database for an arbitrary SQLAlchemy DB URL.
 
-    '''
+    """
 
     engine = create_engine(authdb_url, echo=echo)
     AUTHDB_META.create_all(engine)
@@ -247,10 +262,10 @@ def create_authdb(authdb_url,
 
 
 def get_auth_db(auth_db_path, echo=False):
-    '''
+    """
     This just gets a connection to the auth DB.
 
-    '''
+    """
 
     # if this is an SQLite DB, make sure to check the auth DB permissions before
     # we load it so we can be sure no one else messes with it
@@ -276,12 +291,11 @@ def get_auth_db(auth_db_path, echo=False):
     return engine, conn, AUTHDB_META
 
 
-
 def initial_authdb_inserts(auth_db_path,
                            superuser_email=None,
                            superuser_pass=None,
                            echo=False):
-    '''
+    """
     This does initial set up of the auth DB.
 
     - adds an anonymous user
@@ -292,7 +306,7 @@ def initial_authdb_inserts(auth_db_path,
 
     Returns the superuser userid and password.
 
-    '''
+    """
 
     engine, conn, meta = get_auth_db(auth_db_path,
                                      echo=echo)
@@ -300,16 +314,16 @@ def initial_authdb_inserts(auth_db_path,
     # get the roles table and fill it in
     roles = meta.tables['roles']
     res = conn.execute(roles.insert(),[
-        {'name':'superuser',
-         'desc':'Accounts that can do anything.'},
-        {'name':'staff',
-         'desc':'Users with basic admin privileges.'},
-        {'name':'authenticated',
-         'desc':'Logged in regular users.'},
-        {'name':'anonymous',
-         'desc':'The anonymous user role.'},
-        {'name':'locked',
-         'desc':'An account that has been disabled.'},
+        {'name': 'superuser',
+         'desc': 'Accounts that can do anything.'},
+        {'name': 'staff',
+         'desc': 'Users with basic admin privileges.'},
+        {'name': 'authenticated',
+         'desc': 'Logged in regular users.'},
+        {'name': 'anonymous',
+         'desc': 'The anonymous user role.'},
+        {'name': 'locked',
+         'desc': 'An account that has been disabled.'},
     ])
     res.close()
 
@@ -336,29 +350,29 @@ def initial_authdb_inserts(auth_db_path,
     result = conn.execute(
         users.insert().values([
             # the superuser
-            {'password':hashed_password,
-             'email':superuser_email,
-             'email_verified':True,
-             'is_active':True,
-             'user_role':'superuser',
-             'created_on':datetime.utcnow(),
-             'last_updated':datetime.utcnow()},
+            {'password': hashed_password,
+             'email': superuser_email,
+             'email_verified': True,
+             'is_active': True,
+             'user_role': 'superuser',
+             'created_on': datetime.utcnow(),
+             'last_updated': datetime.utcnow()},
             # the anonuser
-            {'password':hasher.hash(secrets.token_urlsafe(32)),
-             'email':'anonuser@localhost',
-             'email_verified':True,
-             'is_active':True,
-             'user_role':'anonymous',
-             'created_on':datetime.utcnow(),
-             'last_updated':datetime.utcnow()},
+            {'password': hasher.hash(secrets.token_urlsafe(32)),
+             'email': 'anonuser@localhost',
+             'email_verified': True,
+             'is_active': True,
+             'user_role': 'anonymous',
+             'created_on': datetime.utcnow(),
+             'last_updated': datetime.utcnow()},
             # the dummyuser to fail passwords for nonexistent users against
-            {'password':hasher.hash(secrets.token_urlsafe(32)),
-             'email':'dummyuser@localhost',
-             'email_verified':True,
-             'is_active':False,
-             'user_role':'locked',
-             'created_on':datetime.utcnow(),
-             'last_updated':datetime.utcnow()},
+            {'password': hasher.hash(secrets.token_urlsafe(32)),
+             'email': 'dummyuser@localhost',
+             'email_verified': True,
+             'is_active': False,
+             'user_role': 'locked',
+             'created_on': datetime.utcnow(),
+             'last_updated': datetime.utcnow()},
         ])
     )
     result.close()
