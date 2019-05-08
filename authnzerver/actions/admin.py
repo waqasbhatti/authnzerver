@@ -195,7 +195,7 @@ def edit_user(payload,
         Only these items can be edited::
 
             {'full_name', 'email',     <- by user and superuser
-             'is_active','user_role'}  <- by superuser only
+             'is_active','user_role', 'email_verified'}  <- by superuser only
 
         User IDs 2 and 3 are reserved for the system-wide anonymous and locked
         users respectively, and can't be edited.
@@ -335,7 +335,8 @@ def edit_user(payload,
                 session_info['session_info']['user_role'] == user_role):
 
                 editeable_elements = {'full_name','email',
-                                      'is_active','user_role'}
+                                      'is_active','user_role',
+                                      'email_verified'}
                 update_check = set(update_dict.keys()) - editeable_elements
 
                 # check if the update keys are valid
