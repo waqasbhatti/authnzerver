@@ -48,6 +48,7 @@ except Exception as e:
 
 import multiprocessing as mp
 import socket
+import uuid
 
 from tornado.escape import squeeze
 from sqlalchemy import select, desc
@@ -469,8 +470,13 @@ def create_new_user(payload,
 
     try:
 
+        # create a system_id for this user
+        system_id = uuid.uuid4()
+
+
         ins = users.insert({
             'full_name':full_name,
+            'system_id':system_id,
             'password':hashed_password,
             'email':email,
             'email_verified':False,
