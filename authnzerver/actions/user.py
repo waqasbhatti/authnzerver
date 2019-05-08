@@ -58,6 +58,7 @@ from .session import auth_session_exists
 
 from argon2 import PasswordHasher
 
+from .. import validators
 
 ######################
 ## PASSWORD CONTEXT ##
@@ -403,6 +404,25 @@ def create_new_user(payload,
             'messages':["Invalid user creation request."]
         }
 
+    # validate the email provided
+    email_ok = validators.validate_confusables_email(payload['email'])
+
+    if not email_ok:
+
+        return {
+            'success':False,
+            'user_email':None,
+            'user_id':None,
+            'send_verification':False,
+            'messages':["The email address provided cannot be used "
+                        "to sign up for an account on this server."]
+        }
+
+
+    email = validators.normalize_value(payload['email'])
+    full_name = validators.normalize_value(payload['full_name'])
+    password = payload['password']
+
     # this checks if the database connection is live
     currproc = mp.current_process()
     engine = getattr(currproc, 'engine', None)
@@ -420,7 +440,7 @@ def create_new_user(payload,
 
     users = currproc.table_meta.tables['users']
 
-    input_password = payload['password'][:1024]
+    input_password = password[:1024]
 
     # hash the user's password
     hashed_password = pass_hasher.hash(input_password)
@@ -428,8 +448,8 @@ def create_new_user(payload,
     # validate the input password to see if it's OK
     # do this here to make sure the password hash completes at least once
     passok, messages = validate_input_password(
-        payload['full_name'],
-        payload['email'],
+        full_name,
+        email,
         input_password,
         min_length=min_pass_length,
         max_match_threshold=max_similarity
@@ -438,7 +458,7 @@ def create_new_user(payload,
     if not passok:
         return {
             'success':False,
-            'user_email':payload['email'],
+            'user_email':email,
             'user_id':None,
             'send_verification':False,
             'messages':messages
@@ -450,9 +470,9 @@ def create_new_user(payload,
     try:
 
         ins = users.insert({
-            'full_name':payload['full_name'],
+            'full_name':full_name,
             'password':hashed_password,
-            'email':payload['email'],
+            'email':email,
             'email_verified':False,
             'is_active':False,
             'emailverify_sent_datetime':datetime.utcnow(),
@@ -486,7 +506,7 @@ def create_new_user(payload,
         users.c.is_active,
         users.c.emailverify_sent_datetime,
     ]).select_from(users).where(
-        users.c.email == payload['email']
+        users.c.email == email
     )
     result = currproc.connection.execute(sel)
     rows = result.fetchone()
@@ -515,7 +535,7 @@ def create_new_user(payload,
 
         LOGGER.warning(
             'attempt to create new user with existing email: %s'
-            % payload['email']
+            % email
         )
 
         # check the timedelta between now and the emailverify_sent_datetime
