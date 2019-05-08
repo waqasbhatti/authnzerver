@@ -298,3 +298,38 @@ def validate_unique_value(value, check_list):
         return False
     else:
         return True
+
+
+########################
+## NORMALIZING VALUES ##
+########################
+
+def normalize_value(value):
+    '''
+    This normalizes a given value and casefolds it.
+
+    Assumes that the value has already passed validation.
+
+    '''
+
+    if '@' in value:
+        local_part, domain = value.split('@')
+
+    else:
+        local_part = value
+        domain = ''
+
+    if len(local_part) > 0:
+
+        local_part = unicodedata.normalize('NFKC',local_part)
+        local_part = local_part.casefold()
+
+    if len(domain) > 0:
+
+        domain = unicodedata.normalize('NFKC',domain)
+        domain = domain.casefold()
+
+    if '@' in value:
+        return '@'.join([local_part, domain])
+    else:
+        return local_part
