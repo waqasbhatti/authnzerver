@@ -471,7 +471,7 @@ def create_new_user(payload,
     try:
 
         # create a system_id for this user
-        system_id = uuid.uuid4()
+        system_id = str(uuid.uuid4())
 
 
         ins = users.insert({
