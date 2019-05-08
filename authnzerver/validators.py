@@ -54,16 +54,9 @@ LOGGER = logging.getLogger(__name__)
 #############
 
 import unicodedata
+import re
 
 from confusable_homoglyphs import confusables
-
-
-#######################
-## EXCEPTION CLASSES ##
-#######################
-
-class ValidationError(Exception):
-    pass
 
 
 ####################
@@ -226,70 +219,39 @@ OTHER_SENSITIVE_NAMES = [
 ]
 
 
-DEFAULT_RESERVED_NAMES = (
+DEFAULT_RESERVED_NAMES = set(
     SPECIAL_HOSTNAMES + PROTOCOL_HOSTNAMES + CA_ADDRESSES + RFC_2142 +
     NOREPLY_ADDRESSES + SENSITIVE_FILENAMES + OTHER_SENSITIVE_NAMES
 )
 
 
-class ReservedNameValidator(object):
-    """
-    Validator which disallows many reserved names as form field
-    values.
+def validate_reserved_name(value):
+    '''
+    This validates if the value is not one of the reserved names.
 
-    """
-    def __init__(self, reserved_names=DEFAULT_RESERVED_NAMES):
-        self.reserved_names = reserved_names
+    '''
 
-    def __call__(self, value):
-        # GH issue 82: this validator only makes sense when the
-        # username field is a string type.
-        if not isinstance(value, six.text_type):
-            return
-        if value in self.reserved_names or \
-           value.startswith('.well-known'):
-            raise ValidationError(
-                RESERVED_NAME, code='invalid'
-            )
+    if (value in DEFAULT_RESERVED_NAMES or
+        '.well-known' in value):
 
+        return False
 
-class CaseInsensitiveUnique(object):
-    """
-    Validator which performs a case-insensitive uniqueness check.
+    else:
 
-    """
-    def __init__(self, model, field_name, error_message):
-        self.model = model
-        self.field_name = field_name
-        self.error_message = error_message
-
-    def __call__(self, value):
-        # Only run if the username is a string.
-        if not isinstance(value, six.text_type):
-            return
-        value = unicodedata.normalize('NFKC', value)
-        if hasattr(value, 'casefold'):
-            value = value.casefold()  # pragma: no cover
-        if self.model._default_manager.filter(**{
-                '{}__iexact'.format(self.field_name): value
-        }).exists():
-            raise ValidationError(self.error_message, code='unique')
+        return True
 
 
 def validate_confusables(value):
-    """
-    Validator which disallows 'dangerous' usernames likely to
-    represent homograph attacks.
+    '''
+    This validates if the value is not a confusable homoglyph.
 
-    A username is 'dangerous' if it is mixed-script (as defined by
-    Unicode 'Script' property) and contains one or more characters
-    appearing in the Unicode Visually Confusable Characters file.
+    '''
 
-    """
-    if not isinstance(value, six.text_type):
-        return
     if confusables.is_dangerous(value):
-        raise ValidationError(CONFUSABLE, code='invalid')
+        return False
+
+    else:
+        return True
 
 
 def validate_confusables_email(value):
@@ -303,9 +265,36 @@ def validate_confusables_email(value):
     Characters file.
 
     """
-    if '@' not in value:
-        return
+
+    # we need a single @ in the email
+    at_symbols = re.findall(r'@', value)
+    if len(at_symbols) != 1:
+        return False
+
     local_part, domain = value.split('@')
-    if confusables.is_dangerous(local_part) or \
-       confusables.is_dangerous(domain):
-        raise ValidationError(CONFUSABLE_EMAIL, code='invalid')
+    if confusables.is_dangerous(local_part) or confusables.is_dangerous(domain):
+        return False
+
+    if local_part in DEFAULT_RESERVED_NAMES:
+        return False
+
+    return True
+
+
+def validate_unique_value(value, check_list):
+    '''This checks if the input value does not already exist in the check_list.
+
+    The check_list comes from the DB and should contain user names, etc. that
+    have been already normalized and casefolded.
+
+    '''
+
+    normalized_value = unicodedata.normalize('NFKC', value)
+
+    if hasattr(normalized_value, 'casefold'):
+        normalized_value = normalized_value.casefold()
+
+    if normalized_value in set(check_list):
+        return False
+    else:
+        return True
