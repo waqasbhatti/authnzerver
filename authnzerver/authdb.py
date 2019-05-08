@@ -15,6 +15,7 @@ from datetime import datetime
 import sqlite3
 import secrets
 import getpass
+import uuid
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -352,6 +353,7 @@ def initial_authdb_inserts(auth_db_path,
             # the superuser
             {'password': hashed_password,
              'email': superuser_email,
+             'system_id':str(uuid.uuid4()),
              'email_verified': True,
              'is_active': True,
              'user_role': 'superuser',
@@ -360,6 +362,7 @@ def initial_authdb_inserts(auth_db_path,
             # the anonuser
             {'password': hasher.hash(secrets.token_urlsafe(32)),
              'email': 'anonuser@localhost',
+             'system_id':str(uuid.uuid4()),
              'email_verified': True,
              'is_active': True,
              'user_role': 'anonymous',
@@ -368,6 +371,7 @@ def initial_authdb_inserts(auth_db_path,
             # the dummyuser to fail passwords for nonexistent users against
             {'password': hasher.hash(secrets.token_urlsafe(32)),
              'email': 'dummyuser@localhost',
+             'system_id':str(uuid.uuid4()),
              'email_verified': True,
              'is_active': False,
              'user_role': 'locked',

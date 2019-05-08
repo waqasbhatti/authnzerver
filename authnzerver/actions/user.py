@@ -473,8 +473,7 @@ def create_new_user(payload,
         # create a system_id for this user
         system_id = str(uuid.uuid4())
 
-
-        ins = users.insert({
+        new_user_dict = {
             'full_name':full_name,
             'system_id':system_id,
             'password':hashed_password,
@@ -485,8 +484,8 @@ def create_new_user(payload,
             'created_on':datetime.utcnow(),
             'user_role':'locked',
             'last_updated':datetime.utcnow(),
-        })
-
+        }
+        ins = users.insert(new_user_dict)
         result = currproc.connection.execute(ins)
         result.close()
 
