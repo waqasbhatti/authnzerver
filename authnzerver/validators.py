@@ -254,6 +254,26 @@ def validate_confusables(value):
         return True
 
 
+def validate_email_address(emailaddr):
+    '''This validates an email address using the HTML5 specification,
+    which is good enough for most purposes.
+
+    The regex is taken from here:
+
+    http://blog.gerv.net/2011/05/html5_email_address_regexp/
+
+    And was transformed to Python using the excellent https://regex101.com.
+
+    '''
+
+    match_regex = (
+        r"^[a-zA-Z0-9.!#$%&’*+\/=?^_`{|}~-]+@"
+        r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])"
+        r"?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?)*$"
+    )
+    return re.match(match_regex, emailaddr) is not None
+
+
 def validate_confusables_email(value):
     """
     Validator which disallows 'dangerous' email addresses likely to
@@ -282,6 +302,7 @@ def validate_confusables_email(value):
 
 
 def validate_unique_value(value, check_list):
+
     '''This checks if the input value does not already exist in the check_list.
 
     The check_list comes from the DB and should contain user names, etc. that

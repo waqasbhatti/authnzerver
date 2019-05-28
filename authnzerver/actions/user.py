@@ -406,7 +406,11 @@ def create_new_user(payload,
         }
 
     # validate the email provided
-    email_ok = validators.validate_confusables_email(payload['email'])
+    email_confusables_ok = (
+        validators.validate_confusables_email(payload['email'])
+    )
+    email_regex_ok = validators.validate_email_address(payload['email'])
+    email_ok = email_regex_ok and email_confusables_ok
 
     if not email_ok:
 
@@ -415,10 +419,10 @@ def create_new_user(payload,
             'user_email':None,
             'user_id':None,
             'send_verification':False,
-            'messages':["The email address provided cannot be used "
+            'messages':["The email address provided doesn't "
+                        "seem to be a valid email address and cannot be used "
                         "to sign up for an account on this server."]
         }
-
 
     email = validators.normalize_value(payload['email'])
     full_name = validators.normalize_value(payload['full_name'])
