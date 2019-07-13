@@ -17,7 +17,6 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-
 #############
 ## IMPORTS ##
 #############
@@ -27,7 +26,7 @@ try:
     from datetime import datetime, timezone, timedelta
     utc = timezone.utc
 
-except Exception as e:
+except Exception:
 
     from datetime import datetime, timedelta, tzinfo
     ZERO = timedelta(0)
@@ -51,7 +50,7 @@ import socket
 import uuid
 
 from tornado.escape import squeeze
-from sqlalchemy import select, desc
+from sqlalchemy import select
 from fuzzywuzzy.fuzz import UQRatio
 
 from .. import authdb
@@ -157,7 +156,6 @@ def validate_input_password(
     )
 
 
-
 def change_user_password(payload,
                          raiseonfail=False,
                          override_authdb_path=None,
@@ -245,7 +243,7 @@ def change_user_password(payload,
     try:
         pass_check = pass_hasher.verify(rows['password'],
                                         current_password)
-    except Exception as e:
+    except Exception:
         pass_check = False
 
     if not pass_check:
@@ -261,7 +259,7 @@ def change_user_password(payload,
     # meaning that the new password is just the old one
     try:
         same_check = pass_hasher.verify(rows['password'], new_password)
-    except Exception as e:
+    except Exception:
         same_check = False
 
     if same_check:
@@ -339,7 +337,6 @@ def change_user_password(payload,
             'email':payload['email'],
             'messages': messages
         }
-
 
 
 ###################
@@ -499,14 +496,13 @@ def create_new_user(payload,
 
     # this will catch stuff like people trying to sign up again with their email
     # address
-    except Exception as e:
+    except Exception:
 
         LOGGER.warning('could not create a new user with '
                        'email: %s probably because they exist already'
                        % payload['email'])
 
         user_added = False
-
 
     # get back the user ID
     sel = select([
@@ -592,7 +588,6 @@ def create_new_user(payload,
             'send_verification':False,
             'messages':messages
         }
-
 
 
 def delete_user(payload,
@@ -749,7 +744,6 @@ def delete_user(payload,
         }
 
 
-
 def verify_password_reset(payload,
                           raiseonfail=False,
                           override_authdb_path=None,
@@ -779,7 +773,6 @@ def verify_password_reset(payload,
             'success':False,
             'messages':["Session token not provided."]
         }
-
 
     # this checks if the database connection is live
     currproc = mp.current_process()
@@ -846,7 +839,7 @@ def verify_password_reset(payload,
             user_info['password'],
             new_password,
         )
-    except Exception as e:
+    except Exception:
         pass_same = False
 
     # don't fail here, but note that the user is re-using the password they

@@ -291,7 +291,10 @@ ITEM_PERMISSIONS = {
 ## GENERATING PERMISSION AND ROLE MODELS ##
 ###########################################
 
+def generate_permissions():
+    '''FIXME: implement this.'''
 
+    pass
 
 
 ##########################
@@ -353,7 +356,6 @@ def get_item_permissions(role_name,
             print('%s invalid_roles: %r' %
                   (target_name, target_invalid_roles))
 
-
         # if the role is not allowed into this target, return
         if role_name in target_invalid_roles:
             return set({})
@@ -387,7 +389,7 @@ def get_item_permissions(role_name,
 
         return available_permissions
 
-    except Exception as e:
+    except Exception:
         return set({})
 
 
@@ -447,7 +449,7 @@ def check_user_access(userid=2,
                     userid == target_owner
                 )
 
-        except Exception as e:
+        except Exception:
             shared_or_owned_ok = False
 
     # unlisted objects are OK to view
@@ -462,7 +464,6 @@ def check_user_access(userid=2,
     else:
 
         shared_or_owned_ok = False
-
 
     if debug:
         print('target shared or owned test passed = %s' % shared_or_owned_ok)
@@ -500,7 +501,6 @@ def check_user_access(userid=2,
         print("user action: '%s', permitted actions: %s" % (action, perms))
 
     return ((action in perms) and shared_or_owned_ok)
-
 
 
 def check_role_limits(role,

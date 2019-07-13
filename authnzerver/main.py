@@ -32,6 +32,7 @@ import time
 from datetime import datetime
 from functools import partial
 
+
 # setup signal trapping on SIGINT
 def _recv_sigint(signum, stack):
     '''
@@ -50,7 +51,7 @@ try:
     import uvloop
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     IOLOOP_SPEC = 'uvloop'
-except Exception as e:
+except Exception:
     HAVE_UVLOOP = False
     IOLOOP_SPEC = 'asyncio'
 
@@ -234,7 +235,6 @@ def _setup_auth_worker(authdb_path,
     currproc.fernet_secret = fernet_secret
 
 
-
 def _close_authentication_database():
 
     '''This is used to close the authentication database when the worker loop
@@ -287,7 +287,6 @@ def main():
     from .external.futures37.process import ProcessPoolExecutor
     from .secrets import get_secret, autogen_secrets_authdb
 
-
     ##############
     ## HANDLERS ##
     ##############
@@ -295,7 +294,6 @@ def main():
     from .handlers import AuthHandler, EchoHandler
     from . import cache
     from . import actions
-
 
     ###################
     ## SET UP CONFIG ##
@@ -368,7 +366,6 @@ def main():
     )
     LOGGER.info('Session cookie expiry is set to: %s days' % sessionexpiry)
 
-
     #
     # set up the authdb and secret
     #
@@ -382,7 +379,7 @@ def main():
                             secret_file_read=False,
                             basedir=basedir,
                             envfile=env)
-    except Exception as e:
+    except Exception:
         authdb = None
 
     try:
@@ -394,7 +391,7 @@ def main():
                             secret_file_read=True,
                             basedir=basedir,
                             envfile=env)
-    except Exception as e:
+    except Exception:
         secret = None
 
     # authdb and secret not provided but basedir was auto-setup in the past
@@ -431,7 +428,6 @@ def main():
             outfd.write('authdb path: %s\n' % authdb_path)
             outfd.write('secret file: %s\n' % secret_file)
 
-
     # otherwise, we need authdb and secret from the user
     elif (((not authdb) or (not secret)) and
           (not os.path.exists(os.path.join(basedir,
@@ -448,7 +444,6 @@ def main():
              CONF['secret']['env'], CONF['secret']['cmdline'])
         )
 
-
     #
     # this is the background executor we'll pass over to the handler
     #
@@ -458,7 +453,6 @@ def main():
         initargs=(authdb, secret),
         finalizer=_close_authentication_database
     )
-
 
     ###################
     ## HANDLER SETUP ##
@@ -481,7 +475,6 @@ def main():
               'executor':executor})
         )
 
-
     ########################
     ## APPLICATION SET UP ##
     ########################
@@ -498,7 +491,6 @@ def main():
 
     # start up the HTTP server and our application
     http_server = tornado.httpserver.HTTPServer(app)
-
 
     ######################################################
     ## CLEAR THE CACHE AND REAP OLD SESSIONS ON STARTUP ##
@@ -535,7 +527,7 @@ def main():
         try:
             http_server.listen(serverport, listen)
             portok = True
-        except socket.error as e:
+        except socket.error:
             LOGGER.warning('%s:%s is already in use, trying port %s' %
                            (listen, serverport, serverport + 1))
             serverport = serverport + 1

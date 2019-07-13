@@ -17,7 +17,6 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-
 #############
 ## IMPORTS ##
 #############
@@ -27,6 +26,7 @@ import time
 from datetime import datetime
 
 from diskcache import FanoutCache
+
 
 ##############################
 ## CACHE HANDLING FUNCTIONS ##
@@ -49,7 +49,6 @@ def cache_add(key, value,
     return added
 
 
-
 def cache_get(key,
               timeout_seconds=0.3,
               cache_dirname='/tmp/authnzerver-cache'):
@@ -63,7 +62,6 @@ def cache_get(key,
     cache.close()
 
     return val
-
 
 
 def cache_pop(key,
@@ -81,7 +79,6 @@ def cache_pop(key,
     return val
 
 
-
 def cache_delete(key,
                  timeout_seconds=0.3,
                  cache_dirname='/tmp/authnzerver-cache'):
@@ -95,7 +92,6 @@ def cache_delete(key,
     cache.close()
 
     return deleted
-
 
 
 def cache_increment(key,
@@ -124,7 +120,6 @@ def cache_increment(key,
     return key_count
 
 
-
 def cache_decrement(key,
                     timeout_seconds=0.3,
                     cache_dirname='/tmp/authnzerver-cache'):
@@ -144,7 +139,6 @@ def cache_decrement(key,
 
     cache.close()
     return decremented_val
-
 
 
 def cache_getrate(key,

@@ -17,7 +17,6 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-
 #############
 ## IMPORTS ##
 #############
@@ -27,7 +26,7 @@ try:
     from datetime import datetime, timezone, timedelta
     utc = timezone.utc
 
-except Exception as e:
+except Exception:
 
     from datetime import datetime, timedelta, tzinfo
     ZERO = timedelta(0)
@@ -57,6 +56,7 @@ from .. import authdb
 from argon2 import PasswordHasher
 
 pass_hasher = PasswordHasher()
+
 
 ################################
 ## SESSION HANDLING FUNCTIONS ##
@@ -151,7 +151,7 @@ def auth_session_new(payload,
                         "Session initiated."]
         }
 
-    except Exception as e:
+    except Exception:
         LOGGER.exception('could not create a new session')
 
         if raiseonfail:
@@ -264,7 +264,7 @@ def auth_session_set_extrainfo(payload,
                 'messages':["Session extra_info update successful."],
             }
 
-        except Exception as e:
+        except Exception:
 
             return {
                 'success':False,
@@ -272,7 +272,7 @@ def auth_session_set_extrainfo(payload,
                 'messages':["Session extra_info update failed."],
             }
 
-    except Exception as e:
+    except Exception:
 
         LOGGER.warning('Session token not found or '
                        'could not check if it exists')
@@ -366,7 +366,7 @@ def auth_session_exists(payload,
                 'messages':["Session look up successful."],
             }
 
-        except Exception as e:
+        except Exception:
 
             return {
                 'success':False,
@@ -374,7 +374,7 @@ def auth_session_exists(payload,
                 'messages':["Session look up failed."],
             }
 
-    except Exception as e:
+    except Exception:
 
         LOGGER.warning('session token not found or '
                        'could not check if it exists')
@@ -384,7 +384,6 @@ def auth_session_exists(payload,
             'session_info':None,
             'messages':["Session look up failed."],
         }
-
 
 
 def auth_session_delete(payload,
@@ -442,7 +441,7 @@ def auth_session_delete(payload,
             'messages':["Session deleted successfully."],
         }
 
-    except Exception as e:
+    except Exception:
 
         LOGGER.exception('could not delete the session')
 
@@ -505,7 +504,6 @@ def auth_delete_sessions_userid(payload,
                         "auth_delete_sessions_userid."],
         }
 
-
     user_id = payload['user_id']
     session_token = payload['session_token']
     keep_current_session = payload['session_token']
@@ -526,7 +524,6 @@ def auth_delete_sessions_userid(payload,
                     echo=raiseonfail
                 )
             )
-
 
         sessions = currproc.table_meta.tables['sessions']
 
@@ -550,7 +547,7 @@ def auth_delete_sessions_userid(payload,
             'messages':["Sessions deleted successfully."],
         }
 
-    except Exception as e:
+    except Exception:
 
         LOGGER.exception('could not delete the requested sessions.')
 
@@ -561,7 +558,6 @@ def auth_delete_sessions_userid(payload,
             'success':False,
             'messages':["Sessions could not be deleted."],
         }
-
 
 
 def auth_kill_old_sessions(
@@ -639,8 +635,6 @@ def auth_kill_old_sessions(
             'messages':['No sessions older than %sZ found to delete' %
                         earliest_date.isoformat()]
         }
-
-
 
 
 ###################################
@@ -728,7 +722,7 @@ def auth_password_check(payload,
 
         try:
             pass_hasher.verify(dummy_password, 'nope')
-        except Exception as e:
+        except Exception:
             pass
 
         # always get the dummy user's password from the DB
@@ -741,7 +735,7 @@ def auth_password_check(payload,
 
         try:
             pass_hasher.verify(dummy_password, 'nope')
-        except Exception as e:
+        except Exception:
             pass
 
         return {
@@ -772,7 +766,7 @@ def auth_password_check(payload,
 
             try:
                 pass_hasher.verify(dummy_password, 'nope')
-            except Exception as e:
+            except Exception:
                 pass
 
             # always get the dummy user's password from the DB
@@ -785,7 +779,7 @@ def auth_password_check(payload,
 
             try:
                 pass_hasher.verify(dummy_password, 'nope')
-            except Exception as e:
+            except Exception:
                 pass
 
             return {
@@ -808,7 +802,7 @@ def auth_password_check(payload,
 
             try:
                 pass_hasher.verify(dummy_password, 'nope')
-            except Exception as e:
+            except Exception:
                 pass
 
             # look up the provided user
@@ -845,7 +839,7 @@ def auth_password_check(payload,
 
                 try:
                     pass_hasher.verify(dummy_password, 'nope')
-                except Exception as e:
+                except Exception:
                     pass
 
                 pass_ok = False
@@ -885,7 +879,6 @@ def auth_password_check(payload,
                         'messages':["Sorry, that user ID and "
                                     "password combination didn't work."]
                     }
-
 
 
 def auth_user_login(payload,
@@ -962,7 +955,7 @@ def auth_user_login(payload,
 
         try:
             pass_hasher.verify(dummy_password, 'nope')
-        except Exception as e:
+        except Exception:
             pass
 
         # always get the dummy user's password from the DB
@@ -975,7 +968,7 @@ def auth_user_login(payload,
 
         try:
             pass_hasher.verify(dummy_password, 'nope')
-        except Exception as e:
+        except Exception:
             pass
 
         # run a fake session delete
@@ -1011,7 +1004,7 @@ def auth_user_login(payload,
 
             try:
                 pass_hasher.verify(dummy_password,'nope')
-            except Exception as e:
+            except Exception:
                 pass
 
             # always get the dummy user's password from the DB
@@ -1024,7 +1017,7 @@ def auth_user_login(payload,
 
             try:
                 pass_hasher.verify(dummy_password, 'nope')
-            except Exception as e:
+            except Exception:
                 pass
 
             # run a fake session delete
@@ -1054,7 +1047,7 @@ def auth_user_login(payload,
 
             try:
                 pass_hasher.verify(dummy_password, 'nope')
-            except Exception as e:
+            except Exception:
                 pass
 
             # look up the provided user
@@ -1095,7 +1088,7 @@ def auth_user_login(payload,
 
                 try:
                     pass_hasher.verify(dummy_password, 'nope')
-                except Exception as e:
+                except Exception:
                     pass
 
                 pass_ok = False
@@ -1144,7 +1137,6 @@ def auth_user_login(payload,
                         'messages':["Sorry, that user ID and "
                                     "password combination didn't work."]
                     }
-
 
 
 def auth_user_logout(payload,

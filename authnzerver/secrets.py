@@ -28,7 +28,6 @@ from configparser import ConfigParser
 from itertools import chain
 
 
-
 ###############################
 ## SECRET HANDLING FUNCTIONS ##
 ###############################
@@ -100,7 +99,6 @@ def get_secret(secret_environvar,
     if not basedir:
         basedir = os.getcwd()
 
-
     # get the environ
     if isinstance(envfile, str) and os.path.exists(envfile):
 
@@ -165,7 +163,6 @@ def get_secret(secret_environvar,
 
         return vartype(secret)
 
-
     #
     # 2. check the command-line options
     #
@@ -215,7 +212,6 @@ def get_secret(secret_environvar,
 
         return secret
 
-
     #
     # if nothing worked, complain
     #
@@ -225,7 +221,6 @@ def get_secret(secret_environvar,
             'Could not load secret from the environment or '
             'command-line options.'
         )
-
 
 
 def autogen_secrets_authdb(basedir,
@@ -297,7 +292,7 @@ def autogen_secrets_authdb(basedir,
 
     try:
         userid = '%s@localhost' % getpass.getuser()
-    except Exception as e:
+    except Exception:
         userid = 'serveradmin@localhost'
 
     if interactive:

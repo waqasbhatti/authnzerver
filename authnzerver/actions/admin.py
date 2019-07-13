@@ -18,7 +18,6 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-
 #############
 ## IMPORTS ##
 #############
@@ -145,7 +144,7 @@ def list_users(payload,
                 'messages':["User look up successful."],
             }
 
-        except Exception as e:
+        except Exception:
 
             if raiseonfail:
                 raise
@@ -156,7 +155,7 @@ def list_users(payload,
                 'messages':["User look up failed."],
             }
 
-    except Exception as e:
+    except Exception:
 
         if raiseonfail:
             raise
@@ -373,7 +372,6 @@ def edit_user(payload,
                                 "for this user edit attempt."],
                 }
 
-
         # any other case is a failure
         else:
 
@@ -423,7 +421,7 @@ def edit_user(payload,
                 'messages':["User update successful."],
             }
 
-        except Exception as e:
+        except Exception:
 
             if raiseonfail:
                 raise
@@ -434,7 +432,7 @@ def edit_user(payload,
                 'messages':["User update failed."],
             }
 
-    except Exception as e:
+    except Exception:
 
         if raiseonfail:
             raise
@@ -447,7 +445,6 @@ def edit_user(payload,
             'user_info':None,
             'messages':["User update failed."],
         }
-
 
 
 def internal_toggle_user_lock(payload,
@@ -592,7 +589,7 @@ def internal_toggle_user_lock(payload,
                 'messages':["User lock toggle successful."],
             }
 
-        except Exception as e:
+        except Exception:
 
             if raiseonfail:
                 raise
@@ -603,7 +600,7 @@ def internal_toggle_user_lock(payload,
                 'messages':["User lock toggle failed."],
             }
 
-    except Exception as e:
+    except Exception:
 
         if raiseonfail:
             raise
@@ -616,7 +613,6 @@ def internal_toggle_user_lock(payload,
             'user_info':None,
             'messages':["User lock toggle failed."],
         }
-
 
 
 def toggle_user_lock(payload,
@@ -773,7 +769,7 @@ def toggle_user_lock(payload,
         )
         return res
 
-    except Exception as e:
+    except Exception:
 
         if raiseonfail:
             raise

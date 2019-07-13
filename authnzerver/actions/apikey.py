@@ -18,7 +18,6 @@ import json
 LOGGER = logging.getLogger(__name__)
 
 
-
 #############
 ## IMPORTS ##
 #############
@@ -28,7 +27,7 @@ try:
     from datetime import datetime, timezone, timedelta
     utc = timezone.utc
 
-except Exception as e:
+except Exception:
 
     from datetime import datetime, timedelta, tzinfo
     ZERO = timedelta(0)
@@ -54,7 +53,6 @@ from sqlalchemy import select
 
 from .. import authdb
 from .session import auth_session_exists
-
 
 
 ######################
@@ -206,7 +204,6 @@ def issue_new_apikey(payload,
             messages
         ])
     }
-
 
 
 def verify_apikey(payload,

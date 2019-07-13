@@ -24,6 +24,7 @@ LOGGER = logging.getLogger(__name__)
 import json
 from datetime import datetime
 
+
 class FrontendEncoder(json.JSONEncoder):
 
     def default(self, obj):
@@ -36,6 +37,7 @@ class FrontendEncoder(json.JSONEncoder):
             return (obj.real, obj.imag)
         else:
             return json.JSONEncoder.default(self, obj)
+
 
 # this replaces the default encoder and makes it so Tornado will do the right
 # thing when it converts dicts to JSON when a
@@ -94,7 +96,7 @@ def decrypt_request(requestbody_base64, fernet_key):
         LOGGER.error('invalid request could not be decrypted')
         return None
 
-    except Exception as e:
+    except Exception:
 
         LOGGER.exception('could not understand incoming request')
         return None
@@ -139,7 +141,7 @@ def auth_echo(payload):
     s = select([permissions])
     result = currproc.engine.execute(s)
     # add the result to the outgoing payload
-    serializable_result = list(dict(x) for x in result)
+    serializable_result = [dict(x) for x in result]
     payload['dbtest'] = serializable_result
     result.close()
 
@@ -204,7 +206,6 @@ class EchoHandler(tornado.web.RequestHandler):
         self.fernet_secret = fernet_secret
         self.executor = executor
 
-
     async def post(self):
         '''
         Handles the incoming POST request.
@@ -249,11 +250,10 @@ class EchoHandler(tornado.web.RequestHandler):
             else:
                 raise tornado.web.HTTPError(status_code=401)
 
-        except Exception as e:
+        except Exception:
 
             LOGGER.exception('failed to understand request')
             raise tornado.web.HTTPError(status_code=400)
-
 
 
 class AuthHandler(tornado.web.RequestHandler):
@@ -274,7 +274,6 @@ class AuthHandler(tornado.web.RequestHandler):
         self.authdb = authdb
         self.fernet_secret = fernet_secret
         self.executor = executor
-
 
     async def post(self):
         '''
@@ -327,7 +326,7 @@ class AuthHandler(tornado.web.RequestHandler):
             self.write(encrypted_base64)
             self.finish()
 
-        except Exception as e:
+        except Exception:
 
             LOGGER.exception('failed to understand request')
             raise tornado.web.HTTPError(status_code=400)

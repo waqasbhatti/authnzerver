@@ -207,8 +207,8 @@ APIKeys = Table(
 #######################
 
 WAL_MODE_SCRIPT = '''\
-pragma journal_mode = 'wal';
-pragma journal_size_limit = 5242880;
+pragma journal_mode=WAL;
+pragma journal_size_limit=5242880;
 '''
 
 
@@ -335,7 +335,7 @@ def initial_authdb_inserts(auth_db_path,
     if not superuser_email:
         try:
             superuser_email = '%s@localhost' % getpass.getuser()
-        except Exception as e:
+        except Exception:
             superuser_email = 'admin@localhost'
 
     if not superuser_pass:

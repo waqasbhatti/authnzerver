@@ -17,7 +17,6 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-
 #############
 ## IMPORTS ##
 #############
@@ -27,7 +26,7 @@ try:
     from datetime import datetime, timezone, timedelta
     utc = timezone.utc
 
-except Exception as e:
+except Exception:
 
     from datetime import datetime, timedelta, tzinfo
     ZERO = timedelta(0)
@@ -56,7 +55,6 @@ from sqlalchemy import select
 
 from .. import authdb
 from .session import auth_session_exists
-
 
 
 ####################
@@ -215,7 +213,7 @@ def authnzerver_send_email(
                 server.quit()
                 return True
 
-            except Exception as e:
+            except Exception:
 
                 LOGGER.exception(
                     "could not send the email to %s, "
@@ -231,7 +229,7 @@ def authnzerver_send_email(
             server.quit()
             return False
 
-    except Exception as e:
+    except Exception:
 
         LOGGER.exception(
             "could not send the email to %s, "
@@ -240,7 +238,6 @@ def authnzerver_send_email(
         )
         server.quit()
         return False
-
 
 
 def send_signup_verification_email(payload,
@@ -370,7 +367,6 @@ def send_signup_verification_email(payload,
             ])
         }
 
-
     # check the session
     session_info = auth_session_exists(
         {'session_token':payload['session_token']},
@@ -466,7 +462,6 @@ def send_signup_verification_email(payload,
                 % recipients
             ])
         }
-
 
 
 def verify_user_email_address(payload,
@@ -687,7 +682,6 @@ def send_forgotpass_verification_email(payload,
             ])
         }
 
-
     # check the session
     session_info = auth_session_exists(
         {'session_token':payload['session_token']},
@@ -706,7 +700,6 @@ def send_forgotpass_verification_email(payload,
                 "Invalid verification email request."
             ])
         }
-
 
     #
     # finally! we'll process the email sending request

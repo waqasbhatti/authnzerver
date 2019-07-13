@@ -12,9 +12,11 @@ __version__ = versioneer.get_version()
 
 from setuptools import setup, find_packages
 
+
 def readme():
     with open('README.md') as f:
         return f.read()
+
 
 # let's be lazy and put requirements in one place
 # what could possibly go wrong?
