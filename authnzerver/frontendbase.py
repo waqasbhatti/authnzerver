@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# basehandler.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Sep 2018
+# frontendbase.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Sep 2018
 
 '''This is an example Tornado BaseHandler that knows how to authenticate users
 and verify API keys using HTTP and the pre-shared secret key to talk to the
@@ -26,7 +26,6 @@ from hmac import compare_digest
 from cryptography.fernet import Fernet, InvalidToken
 
 
-
 ######################################
 ## CUSTOM JSON ENCODER FOR FRONTEND ##
 ######################################
@@ -36,6 +35,7 @@ from cryptography.fernet import Fernet, InvalidToken
 # - ndarray
 # - datetime
 import json
+
 
 class FrontendEncoder(json.JSONEncoder):
 
@@ -56,6 +56,7 @@ class FrontendEncoder(json.JSONEncoder):
             return int(obj)
         else:
             return json.JSONEncoder.default(self, obj)
+
 
 # this replaces the default encoder and makes it so Tornado will do the right
 # thing when it converts dicts to JSON when a
@@ -115,7 +116,7 @@ def decrypt_response(response_base64, fernetkey):
         LOGGER.error('invalid response could not be decrypted')
         return None
 
-    except Exception as e:
+    except Exception:
 
         LOGGER.exception('could not understand incoming response')
         return None
@@ -140,17 +141,19 @@ def encrypt_request(request_dict, fernetkey):
 
 class BaseHandler(tornado.web.RequestHandler):
 
-    def initialize(self,
-                   authnzerver,
-                   fernetkey,
-                   executor,
-                   session_expiry,
-                   session_cookiename,
-                   session_cookiesecure,
-                   ratelimit,
-                   cachedir,
-                   email_settings,
-                   apiversion):
+    def initialize(
+            self,
+            authnzerver,
+            fernetkey,
+            executor,
+            session_expiry,
+            session_cookiename,
+            session_cookiesecure,
+            ratelimit,
+            cachedir,
+            email_settings,
+            apiversion
+    ):
         '''
         This just sets up some stuff.
 
@@ -179,8 +182,6 @@ class BaseHandler(tornado.web.RequestHandler):
         # apikey verification info
         self.apikey_verified = False
         self.apikey_info = None
-
-
 
     def set_cookie(self, name, value, domain=None, expires=None, path="/",
                    expires_days=None, **kwargs):
@@ -241,11 +242,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
             morsel[k] = v
 
-
     @gen.coroutine
-    def authnzerver_request(self,
-                            request_type,
-                            request_body):
+    def authnzerver_request(self, request_type, request_body):
         '''
         This talks to the authnzerver.
 
@@ -289,19 +287,17 @@ class BaseHandler(tornado.web.RequestHandler):
 
             return success, response, messages
 
-
-
     @gen.coroutine
-    def new_session_token(self,
-                          user_id=2,
-                          expires_days=7,
-                          extra_info=None):
+    def new_session_token(self, user_id, expires_days=None, extra_info=None):
         '''
         This is a shortcut function to request a new session token.
 
         Also sets the session cookie.
 
         '''
+
+        if not expires_days:
+            expires_days = self.session_expiry
 
         user_agent = self.request.headers.get('User-Agent')
         if not user_agent:
@@ -350,11 +346,9 @@ class BaseHandler(tornado.web.RequestHandler):
 
             self.current_user = None
             self.clear_all_cookies()
-            LOGGER.error('could not talk to the backend authnzerver. '
+            LOGGER.error('Could not talk to the backend authnzerver. '
                          'Will fail this request.')
             raise tornado.web.HTTPError(statuscode=401)
-
-
 
     @gen.coroutine
     def email_current_user(self,
@@ -413,7 +407,6 @@ class BaseHandler(tornado.web.RequestHandler):
 
         else:
             return False
-
 
     @gen.coroutine
     def check_auth_header_apikey(self):
@@ -525,7 +518,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 self.set_status(401)
                 return retdict
 
-        except Exception as e:
+        except Exception:
 
             LOGGER.exception('could not verify API key.')
             retdict = {
@@ -538,8 +531,6 @@ class BaseHandler(tornado.web.RequestHandler):
             self.apikey_info = None
             self.set_status(401)
             return retdict
-
-
 
     def tornado_check_xsrf_cookie(self):
         '''This is the original Tornado XSRF token checker.
@@ -582,7 +573,6 @@ class BaseHandler(tornado.web.RequestHandler):
             self.set_status(401)
             return retdict
 
-
         if not compare_digest(utf8(token), utf8(expected_token)):
 
             retdict = {
@@ -603,8 +593,6 @@ class BaseHandler(tornado.web.RequestHandler):
             }
             LOGGER.warning(retdict['message'])
             return retdict
-
-
 
     def check_xsrf_cookie(self):
         '''This overrides the usual Tornado XSRF checker.
@@ -681,8 +669,6 @@ class BaseHandler(tornado.web.RequestHandler):
                 ),
                 'result':None
             }
-
-
 
     @gen.coroutine
     def prepare(self):
@@ -875,7 +861,6 @@ class BaseHandler(tornado.web.RequestHandler):
                     # smart enough to accept the set-cookie response header
                     self.redirect(self.request.uri)
 
-
         # if using the API Key
         else:
 
@@ -995,7 +980,6 @@ class BaseHandler(tornado.web.RequestHandler):
                             )
                         })
                         raise tornado.web.Finish()
-
 
     def on_finish(self):
         '''
