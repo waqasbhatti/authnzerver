@@ -142,6 +142,35 @@ command-line option.
 See [API](https://github.com/waqasbhatti/authnzerver/blob/master/API.md) for
 details.
 
+If you'll be using this with a Tornado based server, there is an example
+frontend client BaseHandler class available in
+[frontendbase.py](https://github.com/waqasbhatti/authnzerver/blob/master/authnzerver/frontendbase.py). You
+can use this like so:
+
+```python
+from authnzerver.frontendbase import BaseHandler
+
+class MyFrontendHandler(BaseHandler):
+
+    async def post(self):
+        """This is an auth-enabled POST handler."""
+
+        # check if we have the required 'Authorization'
+        # bearer token value provided as an API key
+        if not self.keycheck['status'] == 'ok':
+
+            self.set_status(403)
+            retdict = {
+                'status':'failed',
+                'result':None,
+                'message':"Sorry, you don't have access."
+            }
+            self.write(retdict)
+            raise tornado.web.Finish()
+
+        # do other stuff here if all is well
+```
+
 
 ## License
 
