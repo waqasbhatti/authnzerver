@@ -30,7 +30,8 @@ Requires the following `body` items in a request:
 - `user_agent` (str): the user agent of the client
 - `user_id` (int): a user ID associated with the client
 - `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `extra_info_json` (dict): a dict containing arbitrary session associated
+  information
 
 Returns a `response` with the following items:
 - `session_token` (str): a session token suitable for use in a session cookie
@@ -39,93 +40,71 @@ Returns a `response` with the following items:
 ## `session-exists`: Get info about an existing session
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `session_token` (str): the session token to check
 
 Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- `session_info` (dict): a dict containing session info if it exists,
+  None otherwise
 
 ## `session-delete`: Delete a session
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `session_token` (str): the session token to delete
 
 Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- None. Check the `success` item in the returned dict.
 
 ## `session-delete-userid`: Delete all sessions for a user ID
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
+- `session_token` (str): the current session token
 - `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `keep_current_session` (bool): whether to keep the currently logged-in session
 
 Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- None. Check the `success` item in the returned dict.
 
 ## `session-setinfo`: Save extra info for an existing session
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `session_token` (str): the session token to update
+- `extra_info_json` (dict): a dict containing arbitrary session associated
+  information
 
 Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- `session_info` (dict): all session related information
 
 ## `user-login`: Perform a user login action
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `session_token` (str): the session token associated with the `user_id`
+- `email` (str): the email address associated with the `user_id`
+- `password` (str): the password associated with the `user_id`
 
 Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- `user_id` (int): a user ID associated with the logged-in user or None if login
+  failed.
 
 ## `user-logout`: Perform a user logout action
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `user_id` (int): a user ID associated with the logged-in user or None if login
+  failed.
+- `session_token` (str): the session token associated with the `user_id`
 
 Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- `user_id` (int): a user ID associated with the logged-in user or None if
+  logout failed.
 
 ## `user-passcheck`: Perform a user password check
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `session_token` (str): the session token associated with the `user_id`
+- `password` (str): the password associated with the `user_id`
 
 Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- `user_id` (int): a user ID associated with the logged-in user or None if
+  password check failed.
 
 
 # User handling
