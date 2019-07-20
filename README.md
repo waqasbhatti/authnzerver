@@ -139,7 +139,7 @@ command-line option.
 
 ## HTTP API and example frontend client
 
-See [API](https://github.com/waqasbhatti/authnzerver/blob/master/API.md) for
+See [API.md](https://github.com/waqasbhatti/authnzerver/blob/master/docs/API.md) for
 details.
 
 If you'll be using this with a Tornado based server, there is an example
