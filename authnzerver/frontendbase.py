@@ -146,16 +146,51 @@ class BaseHandler(tornado.web.RequestHandler):
             authnzerver,
             fernetkey,
             executor,
-            session_expiry,
-            session_cookiename,
-            session_cookiesecure,
-            ratelimit,
-            cachedir,
+            session_settings,
+            api_settings,
             email_settings,
-            apiversion
+            cachedir,
     ):
         '''
         This just sets up some stuff.
+
+        Parameters
+        ----------
+
+        authnzerver : str
+            The address of the backend authnzerver to talk to.
+
+        fernetkey : str
+            The key to use to encrypt communication between this frontend and
+            the backend authnzerver.
+
+        executor : Executor instance
+            A concurrent.futures.ProcessPoolExecutor or
+            concurrent.futures.ThreadPoolExecutor instance that will run
+            background queries to the authnzerver.
+
+        session_settings : dict
+            This is a dict containing various session settings::
+
+                {'expiry': the number of days after which user sessions expire,
+                 'cookiename': the name of the cookie to use for sessions,
+                 'cookiesecure': whether the session cookie has secure=true}
+
+        api_settings : dict
+            This is a dict containing various API settings::
+
+                {'ratelimit': number of requests allowed per 60 seconds,
+                 'version': the API version to match against for requests,
+                 'expiry': the number of days an API key is valid for,
+                 'issuer': the API key issuer to match against}
+
+        email_settings : dict
+            This is a dict containing various email server settings::
+
+                {'email_server': the address of the email server to use,
+                 'email_port': the SMTP port of the email server,
+                 'email_user': the SMTP user name to use to login,
+                 'email_pass': the SMTP password to use to login}
 
         '''
 
@@ -168,12 +203,14 @@ class BaseHandler(tornado.web.RequestHandler):
         self.cachedir = cachedir
         self.email_settings = email_settings
 
-        self.session_expiry = session_expiry
-        self.session_cookiename = session_cookiename
-        self.session_cookiesecure = session_cookiesecure
+        self.session_expiry = session_settings['expiry']
+        self.session_cookiename = session_settings['cookiename']
+        self.session_cookiesecure = session_settings['cookiesecure']
 
-        self.ratelimit = ratelimit
-        self.apiversion
+        self.apikey_apiversion = api_settings['version']
+        self.apikey_expiry = api_settings['expiry']
+        self.apikey_issuer = api_settings['issuer']
+        self.ratelimit = api_settings['ratelimit']
 
         # initialize this to None
         # we'll set this later in self.prepare()
@@ -181,7 +218,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
         # apikey verification info
         self.apikey_verified = False
-        self.apikey_info = None
+        self.apikey_dict = None
 
     def set_cookie(self, name, value, domain=None, expires=None, path="/",
                    expires_days=None, **kwargs):
@@ -300,7 +337,7 @@ class BaseHandler(tornado.web.RequestHandler):
             expires_days = self.session_expiry
 
         user_agent = self.request.headers.get('User-Agent')
-        if not user_agent:
+        if not user_agent or len(user_agent.strip()) == 0:
             user_agent = 'no-user-agent'
 
         # ask authnzerver for a session cookie
@@ -425,10 +462,10 @@ class BaseHandler(tornado.web.RequestHandler):
                 # backend
                 key = authorization.split()[1].strip()
 
-                # do the Fernet decrypt using TTL = self.session_expiry
+                # do the Fernet decrypt using TTL = self.apikey_expiry
                 decrypted_bytes = self.ferneter.decrypt(
                     key.encode(),
-                    ttl=self.session_expiry*86400.0
+                    ttl=self.apikey_expiry*86400.0
                 )
 
                 # if decrypt OK, JSON load the apikey dict
@@ -445,7 +482,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 )
 
                 # check the apikey version against the current one
-                apiversion_ok = self.apiversion == apikey_dict['ver']
+                apiversion_ok = self.apikey_apiversion == apikey_dict['ver']
 
                 # check the apikey audience against the host of our server
                 audience_ok = self.request.host == apikey_dict['aud']
@@ -455,13 +492,21 @@ class BaseHandler(tornado.web.RequestHandler):
                 subject_ok = (self.request.uri == apikey_dict['sub'] or
                               apikey_dict['sub'] == 'all')
 
+                # check the issuer (this is usually the authnzerver's name or
+                # actual address)
+                issuer_ok = self.apikey_issuer == apikey_dict['iss']
+
                 # pass apikey dict to the backend to check for:
                 # 1. not-before,
                 # 2. expiry again,
                 # 3. match to the user ID
                 # 4. match to the user role,
                 # 5. match to the actual apikey token
-                if ipaddr_ok and apiversion_ok and audience_ok and subject_ok:
+                if (ipaddr_ok and
+                    apiversion_ok and
+                    audience_ok and
+                    subject_ok and
+                    issuer_ok):
 
                     verify_ok, resp, msgs = yield self.authnzerver_request(
                         'apikey-verify',
@@ -510,7 +555,7 @@ class BaseHandler(tornado.web.RequestHandler):
                          apikey_dict['sub'],
                          apikey_dict['aud'],
                          self.request.remote_ip,
-                         self.apiversion,
+                         self.apikey_apiversion,
                          self.request.host,
                          self.request.uri)
                     )
@@ -553,7 +598,7 @@ class BaseHandler(tornado.web.RequestHandler):
             }
 
             self.apikey_verified = False
-            self.apikey_info = None
+            self.apikey_dict = None
             self.set_status(401)
             return retdict
 
@@ -890,11 +935,11 @@ class BaseHandler(tornado.web.RequestHandler):
         else:
 
             # check if the API key is valid
-            apikey_info = yield self.check_auth_header_apikey()
+            apikey_check = yield self.check_auth_header_apikey()
 
-            if not apikey_info['status'] == 'ok':
+            if not apikey_check['status'] == 'ok':
 
-                message = apikey_info['message']
+                message = apikey_check['message']
 
                 self.keycheck = {
                     'status':'failed',
@@ -913,11 +958,11 @@ class BaseHandler(tornado.web.RequestHandler):
             # from there
             else:
 
-                message = apikey_info['message']
+                message = apikey_check['message']
                 self.keycheck = {
                     'status':'ok',
                     'message': message,
-                    'result':apikey_info['result']
+                    'result':apikey_check['result']
                 }
 
                 #
