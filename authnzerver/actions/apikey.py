@@ -238,10 +238,7 @@ def verify_apikey(payload,
 
     payload requires the following keys:
 
-    apikey dict, user_id, user_role, expires_days, ip_address, user_agent,
-    apiversion
-
-    apikey_dict is a decrypted and verified API key info dict from a frontend.
+    - apikey dict: the decrypted and verified API key info dict from frontend.
 
     '''
     if 'apikey_dict' not in payload:

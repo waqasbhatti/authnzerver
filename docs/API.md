@@ -33,16 +33,17 @@ Requires the following `body` items in a request:
 - `extra_info_json` (dict): a dict containing arbitrary session associated
   information
 
-Returns a `response` with the following items:
+Returns a `response` with the following items if successful:
 - `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- `expires` (str): a UTC datetime in ISO format indicating when the session
+  expires
 
 ## `session-exists`: Get info about an existing session
 
 Requires the following `body` items in a request:
 - `session_token` (str): the session token to check
 
-Returns a `response` with the following items:
+Returns a `response` with the following items if successful:
 - `session_info` (dict): a dict containing session info if it exists,
   None otherwise
 
@@ -71,7 +72,7 @@ Requires the following `body` items in a request:
 - `extra_info_json` (dict): a dict containing arbitrary session associated
   information
 
-Returns a `response` with the following items:
+Returns a `response` with the following items if successful:
 - `session_info` (dict): all session related information
 
 ## `user-login`: Perform a user login action
@@ -81,7 +82,7 @@ Requires the following `body` items in a request:
 - `email` (str): the email address associated with the `user_id`
 - `password` (str): the password associated with the `user_id`
 
-Returns a `response` with the following items:
+Returns a `response` with the following items if successful:
 - `user_id` (int): a user ID associated with the logged-in user or None if login
   failed.
 
@@ -92,7 +93,7 @@ Requires the following `body` items in a request:
   failed.
 - `session_token` (str): the session token associated with the `user_id`
 
-Returns a `response` with the following items:
+Returns a `response` with the following items if successful:
 - `user_id` (int): a user ID associated with the logged-in user or None if
   logout failed.
 
@@ -102,7 +103,7 @@ Requires the following `body` items in a request:
 - `session_token` (str): the session token associated with the `user_id`
 - `password` (str): the password associated with the `user_id`
 
-Returns a `response` with the following items:
+Returns a `response` with the following items if successful:
 - `user_id` (int): a user ID associated with the logged-in user or None if
   password check failed.
 
@@ -112,135 +113,144 @@ Returns a `response` with the following items:
 ## `user-new`: Create a new user
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `full_name` (str): the user's full name
+- `email` (str): the user's email address
+- `password` (str): the user's password
 
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+Returns a `response` with the following items if successful:
+- `user_email` (str): the user's email address
+- `user_id` (int): the user's integer user ID
+- `send_verification` (bool): whether or not an email for user signup
+  verification should be sent to this user
 
 ## `user-changepass`: Change an existing user's password
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `user_id` (int): the integer user ID of the user
+- `full_name` (str): the full name of the user
+- `email` (str): the email address of the user
+- `current_password` (str): the current password that will be changed
+- `new_password` (str): the new password that will be used from now on
 
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+Returns a `response` with the following items if successful:
+- `user_id` (int): the user ID of the user
+- `email` (str): the email address of the user
 
 ## `user-delete`: Delete an existing user
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `email` (str): the email address of the user
+- `user_id` (int): the user ID of the user
+- `password` (str): the password of the user to confirm account deletion if the
+  user initiates this request themselves. optional if request was initiated by a
+  superuser.
 
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+Returns a `response` with the following items if successful:
+- `user_id` (str): the user ID of the just deleted user
+- `email` (str): the email address of the just deleted user
 
 ## `user-list`: List all users' or a single user's properties
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `user_id` (int): the user ID of the user to look up. If None, will list all
+  users.
 
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+ Returns a `response` with the following items if successful:
+- `user_info` (list of dicts): a list containing all user info as a dict per
+  user
 
 ## `user-edit`: Edit a user's properties
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `user_id` (int): the user ID of the user initiating this request
+- `user_role` (str): the role of the user initiating this request
+- `session_token` (str): the session token of the user initiating this request
+- `target_userid` (int): the user ID that will be the subject of this request
+- `update_dict` (dict): the items to update. keys allowed for all users:
+  `full_name`, `email`. keys allowed for superusers only: `is_active`,
+  `user_role`.
 
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+Returns a `response` with the following items if successful:
+- `user_info` (dict): dict containing the user's updated information
 
 ## `user-resetpass`: Reset a user's password
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `email_address` (str): the email address of the user whose password will be
+  reset
+- `new_password` (str): the new password provided by the user
+- `session_token` (str): the session token of the session initiating the request
 
 Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- None, check the `success` key to see if the request succeeded.
 
-## `user-lock`: Lock out an existing user
+## `user-lock`: Toggle a lock out for an existing user
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `user_id` (int): the user ID initiating this request
+- `user_role` (str): the role of the user initiating this request
+- `session_token` (str): the session token of the user initiating this request
+- `target_userid` (int): the user ID of the subject of this request
+- `action` (str): either `unlock` or `lock`
 
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+Returns a `response` with the following items if successful:
+- `user_info` (dict): a dict with user info related to current lock and account
+  status.
 
+This request can only be initiated by users with the `superuser` role.
 
 # Email actions
 
 ## `user-signup-email`: Send a verification email to a new user
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `email_address` (str): the email address of the new user
+- `session_token` (str): the session token of the session initiating this
+  request
+- `created_info` (dict): the dict returned from the `user-new` request
+- `server_baseurl` (str): the base URL of the frontend server initiating the
+  request (used in the email sent to the user).
+- `server_name` (str): a name associated with the frontend server initiating the
+  request (used in the email sent to the user)
+- `fernet_verification_token` (str): a time-stamped Fernet verification token
+  generated by the frontend (this will be used as the verification token in the
+  email text)
+- `smtp_sender` (str): the email address of the SMTP user sending this email
+- `smtp_server` (str): the SMTP email server's address
+- `smtp_user` (str): the SMTP server username to use for the email server
+- `smtp_pass` (str): the password to use to login to the email server
+- `smtp_port` (int): the SMTP port to use for the email server
 
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
-
-## `user-verify-email`: Send a verification email to a user for any sensitive operation
-
-Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
-
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+Returns a `response` with the following items if successful:
+- `user_id` (int): the user ID of the user the email was sent to
+- `email_address` (str): the email address the email was sent to
+- `verifyemail_sent_datetime` (str): the UTC datetime the email was sent on in
+  ISO format
 
 ## `user-forgotpass-email`: Send a verification email to a user who forgot their password
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `email_address` (str): the email address of the new user
+- `session_token` (str): the session token of the session initiating this
+  request
+- `server_baseurl` (str): the base URL of the frontend server initiating the
+  request (used in the email sent to the user).
+- `server_name` (str): a name associated with the frontend server initiating the
+  request (used in the email sent to the user)
+- `fernet_verification_token` (str): a time-stamped Fernet verification token
+  generated by the frontend (this will be used as the verification token in the
+  email text)
+- `smtp_sender` (str): the email address of the SMTP user sending this email
+- `smtp_server` (str): the SMTP email server's address
+- `smtp_user` (str): the SMTP server username to use for the email server
+- `smtp_pass` (str): the password to use to login to the email server
+- `smtp_port` (int): the SMTP port to use for the email server
 
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+Returns a `response` with the following items if successful:
+- `user_id` (int): the user ID of the user the email was sent to
+- `email_address` (str): the email address the email was sent to
+- `forgotemail_sent_datetime` (str): the UTC datetime the email was sent on in
+  ISO format
 
 
 # API key actions
@@ -248,28 +258,32 @@ Returns a `response` with the following items:
 ## `apikey-new`: Create a new API key tied to a user ID, role, and IP address
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `audience` (str): the service this API key is being issued for (usually the host
+  name of the frontend server)
+- `subject` (list of str): the specific API endpoint(s) this API key is being
+  issued for (usually a list of URIs for specific service endpoints)
+- `apiversion` (int): the version of the API this key is valid for
+- `expires_days` (int): the number of days that the API key will be valid for
+- `not_valid_before` (int): the number of seconds after the current UTC time
+  required before the API key becomes valid
+- `user_id` (int): the user ID of the user that this API key is tied to
+- `user_role` (str): the role of the user that this API key is tied to
+- `ip_address` (str): the IP address that this API key is tied to
+- `session_token` (str): the session token of the user requesting this API key
 
-Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+Returns a `response` with the following items if successful:
+- `apikey` (str): the API key information dict dumped to JSON
+- `expires` (str): a UTC datetime in ISO format indicating when the API key
+  expires
 
-## `apikey-verify`: Verify an API key
+## `apikey-verify`: Verify an API key's user ID, role, expiry, and token
 
 Requires the following `body` items in a request:
-- `ip_address` (str): the IP address of the client
-- `user_agent` (str): the user agent of the client
-- `user_id` (int): a user ID associated with the client
-- `expires` (int): the number of days after which the token is invalid
-- `extra_info_json` (dict): a dict containing arbitrary session associate information
+- `apikey_dict` (dict): the decrypted and validated API key information dict
+  from the frontend.
 
 Returns a `response` with the following items:
-- `session_token` (str): a session token suitable for use in a session cookie
-- `expires` (str): a datetime in ISO format indicating when the session expires
+- None, check the value of `success` to see if the the API key is valid
 
 
 # Request example

@@ -163,6 +163,14 @@ def change_user_password(payload,
                          max_similarity=30):
     '''This changes the user's password.
 
+    payload requires the following keys:
+
+    - user_id
+    - full_name
+    - email
+    - current_password
+    - new_password
+
     '''
 
     if 'user_id' not in payload:
@@ -602,6 +610,12 @@ def delete_user(payload,
 
     Superuser accounts cannot be deleted.
 
+    payload must contain:
+
+    - email
+    - user_id
+    - password
+
     '''
     if 'email' not in payload:
         return {
@@ -751,6 +765,12 @@ def verify_password_reset(payload,
                           max_similarity=30):
     '''
     This verifies a password reset request.
+
+    payload must contain:
+
+    - email_address
+    - new_password
+    - session_token
 
     '''
     if 'email_address' not in payload:
