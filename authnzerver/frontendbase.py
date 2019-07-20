@@ -192,6 +192,9 @@ class BaseHandler(tornado.web.RequestHandler):
                  'email_user': the SMTP user name to use to login,
                  'email_pass': the SMTP password to use to login}
 
+        cachedir : str
+            The directory to be used for the cache and rate-limit data.
+
         '''
 
         self.authnzerver = authnzerver
