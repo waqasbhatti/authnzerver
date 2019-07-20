@@ -388,7 +388,7 @@ def send_signup_verification_email(payload,
 
     # get the IP address and browser ID from the session
     ip_addr = session_info['session_info']['ip_address']
-    browser = session_info['session_info']['client_header']
+    browser = session_info['session_info']['user_agent']
 
     # TODO: we'll use geoip to get the location of the person who initiated the
     # request.
@@ -707,7 +707,7 @@ def send_forgotpass_verification_email(payload,
 
     # get the IP address and browser ID from the session
     ip_addr = session_info['session_info']['ip_address']
-    browser = session_info['session_info']['client_header']
+    browser = session_info['session_info']['user_agent']
 
     # TODO: we'll use geoip to get the location of the person who initiated the
     # request.

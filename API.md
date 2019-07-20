@@ -245,7 +245,7 @@ Returns a `response` with the following items:
 
 # API key actions
 
-## `apikey-new`: Create a new API key tied to a user ID
+## `apikey-new`: Create a new API key tied to a user ID, role, and IP address
 
 Requires the following `body` items in a request:
 - `ip_address` (str): the IP address of the client

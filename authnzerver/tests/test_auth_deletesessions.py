@@ -59,7 +59,7 @@ def test_sessions_delete_userid():
     # create a new session token
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -91,7 +91,7 @@ def test_sessions_delete_userid():
     # make a new session token
     session_payload = {
         'user_id':emailverify['user_id'],
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -105,7 +105,7 @@ def test_sessions_delete_userid():
     # make a new session token
     session_payload = {
         'user_id':emailverify['user_id'],
-        'client_header':'Searchzilla Oxide',
+        'user_agent':'Searchzilla Oxide',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.2',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -120,7 +120,7 @@ def test_sessions_delete_userid():
     # make a new session token
     session_payload = {
         'user_id':emailverify['user_id'],
-        'client_header':'Pear Adventure',
+        'user_agent':'Pear Adventure',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.3',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -176,7 +176,7 @@ def test_sessions_delete_userid():
     # make a new session token
     session_payload = {
         'user_id':emailverify['user_id'],
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -190,7 +190,7 @@ def test_sessions_delete_userid():
     # make a new session token
     session_payload = {
         'user_id':emailverify['user_id'],
-        'client_header':'Searchzilla Oxide',
+        'user_agent':'Searchzilla Oxide',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.2',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -205,7 +205,7 @@ def test_sessions_delete_userid():
     # make a new session token
     session_payload = {
         'user_id':emailverify['user_id'],
-        'client_header':'Pear Adventure',
+        'user_agent':'Pear Adventure',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.3',
         'extra_info_json':{'pref_datasets_always_private':True}

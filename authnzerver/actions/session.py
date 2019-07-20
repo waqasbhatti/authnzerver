@@ -72,7 +72,7 @@ def auth_session_new(payload,
 
     Request payload keys required:
 
-    ip_address, client_header, user_id, expires, extra_info_json
+    ip_address, user_agent, user_id, expires, extra_info_json
 
     Returns:
 
@@ -82,7 +82,7 @@ def auth_session_new(payload,
 
     # fail immediately if the required payload items are not present
     for item in ('ip_address',
-                 'client_header',
+                 'user_agent',
                  'user_id',
                  'expires',
                  'extra_info_json'):
@@ -242,7 +242,7 @@ def auth_session_set_extrainfo(payload,
         s = select([
             sessions.c.session_token,
             sessions.c.ip_address,
-            sessions.c.client_header,
+            sessions.c.user_agent,
             sessions.c.created,
             sessions.c.expires,
             sessions.c.extra_info_json
@@ -344,7 +344,7 @@ def auth_session_exists(payload,
             users.c.user_role,
             sessions.c.session_token,
             sessions.c.ip_address,
-            sessions.c.client_header,
+            sessions.c.user_agent,
             sessions.c.created,
             sessions.c.expires,
             sessions.c.extra_info_json

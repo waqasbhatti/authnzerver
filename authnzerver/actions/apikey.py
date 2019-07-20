@@ -77,7 +77,7 @@ def issue_new_apikey(payload,
     user_id: the user ID of the user requesting the API key
     user_role: the user role of the user requesting the API key
     ip_address: the IP address to tie the API key to
-    client_header: the browser user agent requesting the API key
+    user_agent: the browser user agent requesting the API key
     session_token: the session token of the user requesting the API key
 
     API keys are tied to an IP address and client header combination. This will
@@ -95,7 +95,7 @@ def issue_new_apikey(payload,
                 'audience',
                 'subject',
                 'ip_address',
-                'client_header',
+                'user_agent',
                 'session_token',
                 'apiversion'):
 
@@ -146,7 +146,7 @@ def issue_new_apikey(payload,
     session_ok = (
         (session['user_id'] == payload['user_id']) and
         (session['ip_address'] == payload['ip_address']) and
-        (session['client_header'] == payload['client_header']) and
+        (session['user_agent'] == payload['user_agent']) and
         (session['user_role'] == payload['user_role'])
     )
 
@@ -157,7 +157,7 @@ def issue_new_apikey(payload,
             'apikey':None,
             'expires':None,
             'messages':([
-                "DB session user_id, ip_address, client_header, "
+                "DB session user_id, ip_address, user_agent, "
                 "user_role does not match provided session info."
             ])
         }
@@ -182,7 +182,7 @@ def issue_new_apikey(payload,
         'ver':payload['apiversion'],
         'uid':payload['user_id'],
         'rol':payload['user_role'],
-        'clt':payload['client_header'],
+        'clt':payload['user_agent'],
         'aud':payload['audience'],
         'sub':payload['subject'],
         'ipa':payload['ip_address'],
@@ -238,7 +238,7 @@ def verify_apikey(payload,
 
     payload requires the following keys:
 
-    apikey dict, user_id, user_role, expires_days, ip_address, client_header,
+    apikey dict, user_id, user_role, expires_days, ip_address, user_agent,
     apiversion
 
     apikey_dict is a decrypted and verified API key info dict from a frontend.

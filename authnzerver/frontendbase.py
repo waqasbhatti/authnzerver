@@ -307,7 +307,7 @@ class BaseHandler(tornado.web.RequestHandler):
         ok, resp, msgs = yield self.authnzerver_request(
             'session-new',
             {'ip_address': self.request.remote_ip,
-             'client_header': user_agent,
+             'user_agent': user_agent,
              'user_id': user_id,
              'expires': (datetime.utcnow() +
                          timedelta(days=expires_days)),
@@ -705,7 +705,7 @@ class BaseHandler(tornado.web.RequestHandler):
            populate the self.current_user variable with the session dict.
 
         3. if cannot get cookie, then ask authnzerver for a new session token by
-           giving it the remote_ip, client_header, and an expiry date. set the
+           giving it the remote_ip, user_agent, and an expiry date. set the
            cookie with this session token and set self.current_user variable
            with session dict.
 
@@ -934,7 +934,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 # - is_active
                 # - user_role
                 # - ip_address <- get from the current self.request
-                # - client_header <- get from the current self.request
+                # - user_agent <- get from the current self.request
                 # - session_token <- set this to the API key itself
                 # - created <- set this to the API key created time
                 # - expires <- set this to the API key expiry time
@@ -944,7 +944,7 @@ class BaseHandler(tornado.web.RequestHandler):
                     'is_active':True,
                     'user_role':self.apikey_dict['rol'],
                     'ip_address':self.request.remote_ip,
-                    'client_header':user_agent,
+                    'user_agent':user_agent,
                     'session_token':self.apikey_dict['tkn'],
                     'created':self.apikey_dict['iat'],
                     'expires':self.apikey_dict['exp'],

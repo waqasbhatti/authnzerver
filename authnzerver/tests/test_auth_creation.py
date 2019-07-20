@@ -186,7 +186,7 @@ def test_sessions():
     # session token payload
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.2.3.4',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -217,7 +217,7 @@ def test_sessions():
     # new session token payload
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.2.3.4',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -244,7 +244,7 @@ def test_sessions():
                 'emailverify_sent_datetime','is_active',
                 'last_login_try','last_login_success','created_on',
                 'user_role','session_token','ip_address',
-                'client_header','created','expires',
+                'user_agent','created','expires',
                 'extra_info_json'):
         assert key in check['session_info']
 
@@ -261,8 +261,8 @@ def test_sessions():
     ] == session_token2['session_token']
     assert check['session_info']['ip_address'] == session_payload['ip_address']
     assert check['session_info'][
-        'client_header'
-    ] == session_payload['client_header']
+        'user_agent'
+    ] == session_payload['user_agent']
     assert check['session_info']['expires'] == session_payload['expires']
     assert check['session_info'][
         'extra_info_json'
@@ -271,7 +271,7 @@ def test_sessions():
     # new session token payload
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(seconds=5),
         'ip_address': '1.2.3.4',
         'extra_info_json':{'pref_datasets_always_private':True}

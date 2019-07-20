@@ -86,7 +86,7 @@ Sessions = Table(
     Column('ip_address', String(length=280), nullable=False),
     # some annoying people send zero-length client-headers
     # we won't allow them to initiate a session
-    Column('client_header', String(length=280), nullable=False),
+    Column('user_agent', String(length=280), nullable=False),
     Column('user_id', Integer, ForeignKey("users.user_id", ondelete="CASCADE"),
            nullable=False),
     Column('created', DateTime(),

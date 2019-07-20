@@ -66,7 +66,7 @@ def test_login_timing():
     # create a new session token
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -108,7 +108,7 @@ def test_login_timing():
     # now make a new session token
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -142,7 +142,7 @@ def test_login_timing():
         # now make a new session token
         session_payload = {
             'user_id':2,
-            'client_header':'Mozzarella Killerwhale',
+            'user_agent':'Mozzarella Killerwhale',
             'expires':datetime.utcnow()+timedelta(hours=1),
             'ip_address': '1.1.1.1',
             'extra_info_json':{'pref_datasets_always_private':True}
@@ -172,7 +172,7 @@ def test_login_timing():
         # now make a new session token
         session_payload = {
             'user_id':2,
-            'client_header':'Mozzarella Killerwhale',
+            'user_agent':'Mozzarella Killerwhale',
             'expires':datetime.utcnow()+timedelta(hours=1),
             'ip_address': '1.1.1.1',
             'extra_info_json':{'pref_datasets_always_private':True}
@@ -202,7 +202,7 @@ def test_login_timing():
         # now make a new session token
         session_payload = {
             'user_id':2,
-            'client_header':'Mozzarella Killerwhale',
+            'user_agent':'Mozzarella Killerwhale',
             'expires':datetime.utcnow()+timedelta(hours=1),
             'ip_address': '1.1.1.1',
             'extra_info_json':{'pref_datasets_always_private':True}
@@ -232,7 +232,7 @@ def test_login_timing():
         # now make a new session token
         session_payload = {
             'user_id':2,
-            'client_header':'Mozzarella Killerwhale',
+            'user_agent':'Mozzarella Killerwhale',
             'expires':datetime.utcnow()+timedelta(hours=1),
             'ip_address': '1.1.1.1',
             'extra_info_json':{'pref_datasets_always_private':True}

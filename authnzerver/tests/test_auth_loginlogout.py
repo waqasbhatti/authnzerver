@@ -62,7 +62,7 @@ def test_login_logout():
     # create a new session token
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -107,7 +107,7 @@ def test_login_logout():
     # now make a new session token
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -144,7 +144,7 @@ def test_login_logout():
     # start a new session with this user's user ID
     authenticated_session_token = actions.auth_session_new(
         {'user_id':login['user_id'],
-         'client_header':'Mozzarella Killerwhale',
+         'user_agent':'Mozzarella Killerwhale',
          'expires':datetime.utcnow()+timedelta(hours=1),
          'ip_address': '1.1.1.1',
          'extra_info_json':{'pref_datasets_always_private':True}},

@@ -59,7 +59,7 @@ def test_user_lock():
     # create a new session token
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -90,7 +90,7 @@ def test_user_lock():
     # now make a new session token
     session_payload = {
         'user_id':emailverify['user_id'],
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -129,7 +129,7 @@ def test_user_lock():
     # try to login as this user using another session
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
@@ -172,7 +172,7 @@ def test_user_lock():
     # try to login
     session_payload = {
         'user_id':2,
-        'client_header':'Mozzarella Killerwhale',
+        'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
         'extra_info_json':{'pref_datasets_always_private':True}
