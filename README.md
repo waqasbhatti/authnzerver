@@ -146,10 +146,10 @@ If you'll be using this with a Tornado based server, there is an example
 frontend client BaseHandler class available in
 [frontendbase.py](https://github.com/waqasbhatti/authnzerver/blob/master/authnzerver/frontendbase.py).
 
-See the [docstring for the initialize function]() for details on how to pass
+See the [docstring for the initialize function](https://github.com/waqasbhatti/authnzerver/blob/518a9d396910feaa9dae5c8eb31330b186919c9e/authnzerver/frontendbase.py#L155) for details on how to pass
 settings bits to the BaseHandler.
 
-You can use this like so:
+You can use the `BaseHandler` class like so:
 
 ```python
 from authnzerver.frontendbase import BaseHandler
