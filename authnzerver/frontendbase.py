@@ -489,8 +489,15 @@ class BaseHandler(tornado.web.RequestHandler):
 
                 # check the apikey subject against the current URL or if it's
                 # 'all', allow it in
-                subject_ok = (self.request.uri == apikey_dict['sub'] or
-                              apikey_dict['sub'] == 'all')
+                if isinstance(apikey_dict['sub'], (tuple, list)):
+                    subject_ok = (
+                        self.request.uri in apikey_dict['sub']
+                    )
+                elif (isinstance(apikey_dict['sub'], str) and
+                      apikey_dict['sub'] == 'all'):
+                    subject_ok = True
+                else:
+                    subject_ok = False
 
                 # check the issuer (this is usually the authnzerver's name or
                 # actual address)
