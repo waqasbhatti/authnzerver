@@ -439,13 +439,29 @@ class BaseHandler(tornado.web.RequestHandler):
                 # does, send the dict on to the backend for additional
                 # verification.
 
+                # check the apikey IP address against the current one
                 ipaddr_ok = (
                     self.request.remote_ip == apikey_dict['ipa']
                 )
+
+                # check the apikey version against the current one
                 apiversion_ok = self.apiversion == apikey_dict['ver']
 
-                # pass dict to the backend
-                if ipaddr_ok and apiversion_ok:
+                # check the apikey audience against the host of our server
+                audience_ok = self.request.host == apikey_dict['aud']
+
+                # check the apikey subject against the current URL or if it's
+                # 'all', allow it in
+                subject_ok = (self.request.uri == apikey_dict['sub'] or
+                              apikey_dict['sub'] == 'all')
+
+                # pass apikey dict to the backend to check for:
+                # 1. not-before,
+                # 2. expiry again,
+                # 3. match to the user ID
+                # 4. match to the user role,
+                # 5. match to the actual apikey token
+                if ipaddr_ok and apiversion_ok and audience_ok and subject_ok:
 
                     verify_ok, resp, msgs = yield self.authnzerver_request(
                         'apikey-verify',
@@ -481,20 +497,29 @@ class BaseHandler(tornado.web.RequestHandler):
                 # request immediately
                 else:
 
-                    message = ('Provided API key IP address = %s, '
-                               'API version = %s, does not match '
-                               'current request IP address = %s or '
-                               'the current API version = %s.' %
-                               (apikey_dict['ipa'], apikey_dict['ver'],
-                                self.request.remote_ip, self.apiversion))
+                    message = (
+                        'One of the provided API key IP address = %s, '
+                        'API version = %s, subject = %s, audience = %s '
+                        'do not match the '
+                        'current request IP address = %s, '
+                        'current API version = %s, '
+                        'current request subject = %s, '
+                        'current request audience = %s' %
+                        (apikey_dict['ipa'],
+                         apikey_dict['ver'],
+                         apikey_dict['sub'],
+                         apikey_dict['aud'],
+                         self.request.remote_ip,
+                         self.apiversion,
+                         self.request.host,
+                         self.request.uri)
+                    )
 
                     LOGGER.error(message)
                     self.set_status(401)
                     retdict = {
                         'status':'failed',
-                        'message':(
-                            "Your API key appears to be invalid or has expired."
-                        ),
+                        'message':message,
                         'result':None
                     }
                     self.apikey_verified = False

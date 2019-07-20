@@ -66,7 +66,19 @@ def issue_new_apikey(payload,
 
     payload must have the following keys:
 
-    user_id, user_role, expires_days, ip_address, client_header, session_token
+    audience: the service this API key is being issued for
+    subject: the specific API endpoint this API key is being issued for
+    apiversion: the API version that the API key is valid for
+
+    expires_days: the number of days after which the API key will expire
+    not_valid_before: the amount of seconds after utcnow() when the API key
+                      becomes valid
+
+    user_id: the user ID of the user requesting the API key
+    user_role: the user role of the user requesting the API key
+    ip_address: the IP address to tie the API key to
+    client_header: the browser user agent requesting the API key
+    session_token: the session token of the user requesting the API key
 
     API keys are tied to an IP address and client header combination. This will
     return an signed and encrypted Fernet API key that contains the user_id,
@@ -79,6 +91,9 @@ def issue_new_apikey(payload,
     for key in ('user_id',
                 'user_role',
                 'expires_days',
+                'not_valid_before',
+                'audience',
+                'subject',
                 'ip_address',
                 'client_header',
                 'session_token',
@@ -158,14 +173,22 @@ def issue_new_apikey(payload,
     issued = datetime.utcnow()
     expires = datetime.utcnow() + timedelta(days=payload['expires_days'])
 
+    notvalidbefore = (
+        datetime.utcnow() +
+        timedelta(seconds=payload['not_valid_before'])
+    )
+
     apikey_dict = {
         'ver':payload['apiversion'],
         'uid':payload['user_id'],
         'rol':payload['user_role'],
         'clt':payload['client_header'],
+        'aud':payload['audience'],
+        'sub':payload['subject'],
         'ipa':payload['ip_address'],
         'tkn':random_token,
         'iat':issued.isoformat(),
+        'nbf':notvalidbefore.isoformat(),
         'exp':expires.isoformat()
     }
     apikey_json = json.dumps(apikey_dict)
@@ -180,7 +203,9 @@ def issue_new_apikey(payload,
         'apikey':random_token,
         'issued':issued,
         'expires':expires,
+        'not_valid_before':notvalidbefore,
         'user_id':payload['user_id'],
+        'user_role':payload['user_role'],
         'session_token':payload['session_token'],
     })
 
@@ -242,6 +267,13 @@ def verify_apikey(payload,
         )
 
     apikeys = currproc.table_meta.tables['apikeys']
+
+    # the apikey sent to us must match the stored apikey's properties:
+    # - token
+    # - userid
+    # - expired must be in the future
+    # - issued must be in the past
+    # - not_valid_before must be in the past
     sel = select([
         apikeys.c.apikey,
         apikeys.c.expires,
@@ -250,7 +282,13 @@ def verify_apikey(payload,
     ).where(
         apikeys.c.user_id == apikey_dict['uid']
     ).where(
+        apikeys.c.user_role == apikey_dict['rol']
+    ).where(
         apikeys.c.expires > datetime.utcnow()
+    ).where(
+        apikeys.c.issued < datetime.utcnow()
+    ).where(
+        apikeys.c.not_valid_before < datetime.utcnow()
     )
     result = currproc.connection.execute(sel)
     row = result.fetchone()
