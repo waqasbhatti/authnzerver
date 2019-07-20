@@ -137,15 +137,19 @@ authentication database in the directory pointed to by the `--basedir`
 command-line option.
 
 
-## HTTP API
+## HTTP API and example frontend client
 
 See [API](https://github.com/waqasbhatti/authnzerver/blob/master/API.md) for
 details.
 
 If you'll be using this with a Tornado based server, there is an example
 frontend client BaseHandler class available in
-[frontendbase.py](https://github.com/waqasbhatti/authnzerver/blob/master/authnzerver/frontendbase.py). You
-can use this like so:
+[frontendbase.py](https://github.com/waqasbhatti/authnzerver/blob/master/authnzerver/frontendbase.py).
+
+See the [docstring for the initialize function]() for details on how to pass
+settings bits to the BaseHandler.
+
+You can use this like so:
 
 ```python
 from authnzerver.frontendbase import BaseHandler
