@@ -93,14 +93,14 @@ def list_users(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
+            currproc.engine, currproc.connection, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
                 )
             )
 
-        users = currproc.table_meta.tables['users']
+        users = currproc.authdb_meta.tables['users']
 
         if user_id is None:
 
@@ -263,7 +263,7 @@ def edit_user(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
+            currproc.engine, currproc.connection, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -388,7 +388,7 @@ def edit_user(payload,
         # all update checks, passed, do the update
         #
 
-        users = currproc.table_meta.tables['users']
+        users = currproc.authdb_meta.tables['users']
 
         # execute the update
         upd = users.update(
@@ -526,7 +526,7 @@ def internal_toggle_user_lock(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
+            currproc.engine, currproc.connection, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -537,7 +537,7 @@ def internal_toggle_user_lock(payload,
         # all update checks, passed, do the update
         #
 
-        users = currproc.table_meta.tables['users']
+        users = currproc.authdb_meta.tables['users']
 
         if payload['action'] == 'lock':
             update_dict = {'is_active': False,
@@ -698,7 +698,7 @@ def toggle_user_lock(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
+            currproc.engine, currproc.connection, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail

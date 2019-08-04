@@ -226,14 +226,14 @@ def change_user_password(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    users = currproc.table_meta.tables['users']
+    users = currproc.authdb_meta.tables['users']
 
     # get the current password
     sel = select([
@@ -441,14 +441,14 @@ def create_new_user(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    users = currproc.table_meta.tables['users']
+    users = currproc.authdb_meta.tables['users']
 
     input_password = password[:1024]
 
@@ -647,15 +647,15 @@ def delete_user(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    users = currproc.table_meta.tables['users']
-    sessions = currproc.table_meta.tables['sessions']
+    users = currproc.authdb_meta.tables['users']
+    sessions = currproc.authdb_meta.tables['sessions']
 
     # check if the incoming email address actually belongs to the user making
     # the request
@@ -802,14 +802,14 @@ def verify_password_reset(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    users = currproc.table_meta.tables['users']
+    users = currproc.authdb_meta.tables['users']
 
     # check the session
     session_info = auth_session_exists(

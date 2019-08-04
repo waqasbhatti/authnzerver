@@ -129,8 +129,8 @@ def test_passcheck():
     assert pass_check['user_id'] is None
 
     currproc = mp.current_process()
-    if getattr(currproc, 'table_meta', None):
-        del currproc.table_meta
+    if getattr(currproc, 'authdb_meta', None):
+        del currproc.authdb_meta
 
     if getattr(currproc, 'connection', None):
         currproc.connection.close()

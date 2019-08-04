@@ -115,7 +115,7 @@ def issue_new_apikey(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -194,7 +194,7 @@ def issue_new_apikey(payload,
     apikey_json = json.dumps(apikey_dict)
 
     # we'll also store this dict in the apikeys table
-    apikeys = currproc.table_meta.tables['apikeys']
+    apikeys = currproc.authdb_meta.tables['apikeys']
 
     # NOTE: we store only the random token. this will later be checked for
     # equality against the value stored in the API key dict['tkn'] when we send
@@ -256,14 +256,14 @@ def verify_apikey(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    apikeys = currproc.table_meta.tables['apikeys']
+    apikeys = currproc.authdb_meta.tables['apikeys']
 
     # the apikey sent to us must match the stored apikey's properties:
     # - token

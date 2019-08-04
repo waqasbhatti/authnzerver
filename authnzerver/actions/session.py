@@ -124,7 +124,7 @@ def auth_session_new(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
+            currproc.engine, currproc.connection, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -138,7 +138,7 @@ def auth_session_new(payload,
         payload['created'] = datetime.utcnow()
 
         # get the insert object from sqlalchemy
-        sessions = currproc.table_meta.tables['sessions']
+        sessions = currproc.authdb_meta.tables['sessions']
         insert = sessions.insert().values(**payload)
         result = currproc.connection.execute(insert)
         result.close()
@@ -224,14 +224,14 @@ def auth_session_set_extrainfo(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
+            currproc.engine, currproc.connection, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
                 )
             )
 
-        sessions = currproc.table_meta.tables['sessions']
+        sessions = currproc.authdb_meta.tables['sessions']
 
         upd = sessions.update(
         ).where(
@@ -322,15 +322,15 @@ def auth_session_exists(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
+            currproc.engine, currproc.connection, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
                 )
             )
 
-        sessions = currproc.table_meta.tables['sessions']
-        users = currproc.table_meta.tables['users']
+        sessions = currproc.authdb_meta.tables['sessions']
+        users = currproc.authdb_meta.tables['users']
         s = select([
             users.c.user_id,
             users.c.full_name,
@@ -422,14 +422,14 @@ def auth_session_delete(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
+            currproc.engine, currproc.connection, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
                 )
             )
 
-        sessions = currproc.table_meta.tables['sessions']
+        sessions = currproc.authdb_meta.tables['sessions']
         delete = sessions.delete().where(
             sessions.c.session_token == session_token
         )
@@ -518,14 +518,14 @@ def auth_delete_sessions_userid(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.table_meta = (
+            currproc.engine, currproc.connection, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
                 )
             )
 
-        sessions = currproc.table_meta.tables['sessions']
+        sessions = currproc.authdb_meta.tables['sessions']
 
         if keep_current_session:
             delete = sessions.delete().where(
@@ -585,14 +585,14 @@ def auth_kill_old_sessions(
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    sessions = currproc.table_meta.tables['sessions']
+    sessions = currproc.authdb_meta.tables['sessions']
 
     sel = select(
         [sessions.c.session_token,
@@ -688,14 +688,14 @@ def auth_password_check(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    users = currproc.table_meta.tables['users']
+    users = currproc.authdb_meta.tables['users']
 
     #
     # check if the request is OK
@@ -921,14 +921,14 @@ def auth_user_login(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    users = currproc.table_meta.tables['users']
+    users = currproc.authdb_meta.tables['users']
 
     #
     # check if the request is OK

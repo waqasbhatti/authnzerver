@@ -198,8 +198,8 @@ def test_user_lock():
     assert login['success'] is True
 
     currproc = mp.current_process()
-    if getattr(currproc, 'table_meta', None):
-        del currproc.table_meta
+    if getattr(currproc, 'authdb_meta', None):
+        del currproc.authdb_meta
 
     if getattr(currproc, 'connection', None):
         currproc.connection.close()

@@ -130,14 +130,14 @@ def auth_echo(payload):
     currproc = mp.current_process()
     engine = getattr(currproc, 'engine', None)
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=False
             )
         )
 
-    permissions = currproc.table_meta.tables['permissions']
+    permissions = currproc.authdb_meta.tables['permissions']
     s = select([permissions])
     result = currproc.engine.execute(s)
     # add the result to the outgoing payload

@@ -172,16 +172,16 @@ class BaseHandler(tornado.web.RequestHandler):
         session_settings : dict
             This is a dict containing various session settings::
 
-                {'expiry': the number of days after which user sessions expire,
-                 'cookiename': the name of the cookie to use for sessions,
-                 'cookiesecure': whether the session cookie has secure=true}
+                {'expiry_days': number of days after which user sessions expire,
+                 'cookie_name': the name of the cookie to use for sessions,
+                 'cookie_secure': whether the session cookie has secure=true}
 
         api_settings : dict
             This is a dict containing various API settings::
 
-                {'ratelimit': number of requests allowed per 60 seconds,
+                {'maxrate_60sec': number of requests allowed per 60 seconds,
                  'version': the API version to match against for requests,
-                 'expiry': the number of days an API key is valid for,
+                 'expiry_days': the number of days an API key is valid for,
                  'issuer': the API key issuer to match against}
 
         email_settings : dict
@@ -206,14 +206,14 @@ class BaseHandler(tornado.web.RequestHandler):
         self.cachedir = cachedir
         self.email_settings = email_settings
 
-        self.session_expiry = session_settings['expiry']
-        self.session_cookiename = session_settings['cookiename']
-        self.session_cookiesecure = session_settings['cookiesecure']
+        self.session_expiry = session_settings['expiry_days']
+        self.session_cookie_name = session_settings['cookie_name']
+        self.session_cookie_secure = session_settings['cookie_secure']
 
         self.apikey_apiversion = api_settings['version']
-        self.apikey_expiry = api_settings['expiry']
+        self.apikey_expiry = api_settings['expiry_days']
         self.apikey_issuer = api_settings['issuer']
-        self.ratelimit = api_settings['ratelimit']
+        self.ratelimit = api_settings['maxrate_60sec']
 
         # initialize this to None
         # we'll set this later in self.prepare()
@@ -372,11 +372,11 @@ class BaseHandler(tornado.web.RequestHandler):
             )
 
             self.set_secure_cookie(
-                self.session_cookiename,
+                self.session_cookie_name,
                 resp['session_token'],
                 expires_days=expires_days,
                 httponly=True,
-                secure=self.session_cookiesecure,
+                secure=self.session_cookie_secure,
                 samesite='lax',
             )
 
@@ -796,7 +796,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
             # check the session cookie
             session_token = self.get_secure_cookie(
-                self.session_cookiename,
+                self.session_cookie_name,
                 max_age_days=self.session_expiry
             )
 

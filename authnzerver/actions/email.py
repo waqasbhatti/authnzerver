@@ -304,14 +304,14 @@ def send_signup_verification_email(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    users = currproc.table_meta.tables['users']
+    users = currproc.authdb_meta.tables['users']
 
     # first, we'll verify the user was created successfully, their account is
     # currently set to inactive and their role is 'locked'. then, we'll verify
@@ -495,14 +495,14 @@ def verify_user_email_address(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    users = currproc.table_meta.tables['users']
+    users = currproc.authdb_meta.tables['users']
 
     # update the table for this user
     upd = users.update(
@@ -602,14 +602,14 @@ def send_forgotpass_verification_email(payload,
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.table_meta = (
+        currproc.engine, currproc.connection, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
             )
         )
 
-    users = currproc.table_meta.tables['users']
+    users = currproc.authdb_meta.tables['users']
     user_sel = select([
         users.c.user_id,
         users.c.email,
