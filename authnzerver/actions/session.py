@@ -118,13 +118,13 @@ def auth_session_new(payload,
 
         # this checks if the database connection is live
         currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
+        engine = getattr(currproc, 'authdb_engine', None)
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.authdb_meta = (
+            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -140,7 +140,7 @@ def auth_session_new(payload,
         # get the insert object from sqlalchemy
         sessions = currproc.authdb_meta.tables['sessions']
         insert = sessions.insert().values(**payload)
-        result = currproc.connection.execute(insert)
+        result = currproc.authdb_conn.execute(insert)
         result.close()
 
         return {
@@ -218,13 +218,13 @@ def auth_session_set_extrainfo(payload,
 
         # this checks if the database connection is live
         currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
+        engine = getattr(currproc, 'authdb_engine', None)
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.authdb_meta = (
+            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -237,7 +237,7 @@ def auth_session_set_extrainfo(payload,
         ).where(
             sessions.c.session_token == session_token
         ).values({'extra_info_json':extra_info})
-        result = currproc.connection.execute(upd)
+        result = currproc.authdb_conn.execute(upd)
 
         s = select([
             sessions.c.session_token,
@@ -250,7 +250,7 @@ def auth_session_set_extrainfo(payload,
             (sessions.c.session_token == session_token) &
             (sessions.c.expires > datetime.utcnow())
         )
-        result = currproc.connection.execute(s)
+        result = currproc.authdb_conn.execute(s)
         rows = result.fetchone()
         result.close()
 
@@ -316,13 +316,13 @@ def auth_session_exists(payload,
 
         # this checks if the database connection is live
         currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
+        engine = getattr(currproc, 'authdb_engine', None)
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.authdb_meta = (
+            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -352,7 +352,7 @@ def auth_session_exists(payload,
             (sessions.c.session_token == session_token) &
             (sessions.c.expires > datetime.utcnow())
         )
-        result = currproc.connection.execute(s)
+        result = currproc.authdb_conn.execute(s)
         rows = result.fetchone()
         result.close()
 
@@ -416,13 +416,13 @@ def auth_session_delete(payload,
 
         # this checks if the database connection is live
         currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
+        engine = getattr(currproc, 'authdb_engine', None)
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.authdb_meta = (
+            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -433,7 +433,7 @@ def auth_session_delete(payload,
         delete = sessions.delete().where(
             sessions.c.session_token == session_token
         )
-        result = currproc.connection.execute(delete)
+        result = currproc.authdb_conn.execute(delete)
         result.close()
 
         return {
@@ -512,13 +512,13 @@ def auth_delete_sessions_userid(payload,
 
         # this checks if the database connection is live
         currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
+        engine = getattr(currproc, 'authdb_engine', None)
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.authdb_meta = (
+            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -539,7 +539,7 @@ def auth_delete_sessions_userid(payload,
                 sessions.c.user_id == user_id
             )
 
-        result = currproc.connection.execute(delete)
+        result = currproc.authdb_conn.execute(delete)
         result.close()
 
         return {
@@ -579,13 +579,13 @@ def auth_kill_old_sessions(
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -602,7 +602,7 @@ def auth_kill_old_sessions(
         sessions
     ).where(sessions.c.expires < earliest_date)
 
-    result = currproc.connection.execute(sel)
+    result = currproc.authdb_conn.execute(sel)
     rows = result.fetchall()
     result.close()
 
@@ -614,7 +614,7 @@ def auth_kill_old_sessions(
         delete = sessions.delete().where(
             sessions.c.expires < earliest_date
         )
-        result = currproc.connection.execute(delete)
+        result = currproc.authdb_conn.execute(delete)
         result.close()
 
         return {
@@ -682,13 +682,13 @@ def auth_password_check(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -715,7 +715,7 @@ def auth_password_check(payload,
         dummy_sel = select([
             users.c.password
         ]).select_from(users).where(users.c.user_id == 3)
-        dummy_results = currproc.connection.execute(dummy_sel)
+        dummy_results = currproc.authdb_conn.execute(dummy_sel)
 
         dummy_password = dummy_results.fetchone()['password']
         dummy_results.close()
@@ -729,7 +729,7 @@ def auth_password_check(payload,
         dummy_sel = select([
             users.c.password
         ]).select_from(users).where(users.c.user_id == 3)
-        dummy_results = currproc.connection.execute(dummy_sel)
+        dummy_results = currproc.authdb_conn.execute(dummy_sel)
         dummy_password = dummy_results.fetchone()['password']
         dummy_results.close()
 
@@ -760,7 +760,7 @@ def auth_password_check(payload,
             dummy_sel = select([
                 users.c.password
             ]).select_from(users).where(users.c.user_id == 3)
-            dummy_results = currproc.connection.execute(dummy_sel)
+            dummy_results = currproc.authdb_conn.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
 
@@ -773,7 +773,7 @@ def auth_password_check(payload,
             dummy_sel = select([
                 users.c.password
             ]).select_from(users).where(users.c.user_id == 3)
-            dummy_results = currproc.connection.execute(dummy_sel)
+            dummy_results = currproc.authdb_conn.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
 
@@ -796,7 +796,7 @@ def auth_password_check(payload,
             dummy_sel = select([
                 users.c.password
             ]).select_from(users).where(users.c.user_id == 3)
-            dummy_results = currproc.connection.execute(dummy_sel)
+            dummy_results = currproc.authdb_conn.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
 
@@ -814,7 +814,7 @@ def auth_password_check(payload,
             ]).select_from(
                 users
             ).where(users.c.user_id == session_info['session_info']['user_id'])
-            user_results = currproc.connection.execute(user_sel)
+            user_results = currproc.authdb_conn.execute(user_sel)
             user_info = user_results.fetchone()
             user_results.close()
 
@@ -915,13 +915,13 @@ def auth_user_login(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -948,7 +948,7 @@ def auth_user_login(payload,
         dummy_sel = select([
             users.c.password
         ]).select_from(users).where(users.c.user_id == 3)
-        dummy_results = currproc.connection.execute(dummy_sel)
+        dummy_results = currproc.authdb_conn.execute(dummy_sel)
 
         dummy_password = dummy_results.fetchone()['password']
         dummy_results.close()
@@ -962,7 +962,7 @@ def auth_user_login(payload,
         dummy_sel = select([
             users.c.password
         ]).select_from(users).where(users.c.user_id == 3)
-        dummy_results = currproc.connection.execute(dummy_sel)
+        dummy_results = currproc.authdb_conn.execute(dummy_sel)
         dummy_password = dummy_results.fetchone()['password']
         dummy_results.close()
 
@@ -998,7 +998,7 @@ def auth_user_login(payload,
             dummy_sel = select([
                 users.c.password
             ]).select_from(users).where(users.c.user_id == 3)
-            dummy_results = currproc.connection.execute(dummy_sel)
+            dummy_results = currproc.authdb_conn.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
 
@@ -1011,7 +1011,7 @@ def auth_user_login(payload,
             dummy_sel = select([
                 users.c.password
             ]).select_from(users).where(users.c.user_id == 3)
-            dummy_results = currproc.connection.execute(dummy_sel)
+            dummy_results = currproc.authdb_conn.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
 
@@ -1041,7 +1041,7 @@ def auth_user_login(payload,
             dummy_sel = select([
                 users.c.password
             ]).select_from(users).where(users.c.user_id == 3)
-            dummy_results = currproc.connection.execute(dummy_sel)
+            dummy_results = currproc.authdb_conn.execute(dummy_sel)
             dummy_password = dummy_results.fetchone()['password']
             dummy_results.close()
 
@@ -1063,7 +1063,7 @@ def auth_user_login(payload,
             ).where(
                 users.c.email_verified == True
             )
-            user_results = currproc.connection.execute(user_sel)
+            user_results = currproc.authdb_conn.execute(user_sel)
             user_info = user_results.fetchone()
             user_results.close()
 

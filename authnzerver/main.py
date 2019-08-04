@@ -247,12 +247,12 @@ def _close_authentication_database():
         del currproc.authdb_meta
 
     if getattr(currproc, 'connection', None):
-        currproc.connection.close()
-        del currproc.connection
+        currproc.authdb_conn.close()
+        del currproc.authdb_conn
 
-    if getattr(currproc, 'engine', None):
-        currproc.engine.dispose()
-        del currproc.engine
+    if getattr(currproc, 'authdb_engine', None):
+        currproc.authdb_engine.dispose()
+        del currproc.authdb_engine
 
     print('Shutting down database engine in process: %s' % currproc.name,
           file=sys.stdout)
@@ -574,12 +574,12 @@ def main():
             del currproc.authdb_meta
 
         if getattr(currproc, 'connection', None):
-            currproc.connection.close()
-            del currproc.connection
+            currproc.authdb_conn.close()
+            del currproc.authdb_conn
 
-        if getattr(currproc, 'engine', None):
-            currproc.engine.dispose()
-            del currproc.engine
+        if getattr(currproc, 'authdb_engine', None):
+            currproc.authdb_engine.dispose()
+            del currproc.authdb_engine
 
         print('Shutting down database engine in process: %s' % currproc.name,
               file=sys.stdout)

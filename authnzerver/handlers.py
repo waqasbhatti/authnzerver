@@ -128,9 +128,9 @@ def auth_echo(payload):
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=False
@@ -139,7 +139,7 @@ def auth_echo(payload):
 
     permissions = currproc.authdb_meta.tables['permissions']
     s = select([permissions])
-    result = currproc.engine.execute(s)
+    result = currproc.authdb_engine.execute(s)
     # add the result to the outgoing payload
     serializable_result = [dict(x) for x in result]
     payload['dbtest'] = serializable_result

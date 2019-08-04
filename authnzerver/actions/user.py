@@ -220,13 +220,13 @@ def change_user_password(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -241,7 +241,7 @@ def change_user_password(payload,
     ]).select_from(users).where(
         (users.c.user_id == payload['user_id'])
     )
-    result = currproc.connection.execute(sel)
+    result = currproc.authdb_conn.execute(sel)
     rows = result.fetchone()
     result.close()
 
@@ -306,14 +306,14 @@ def change_user_password(payload,
         ).values({
             'password': hashed_password
         })
-        result = currproc.connection.execute(upd)
+        result = currproc.authdb_conn.execute(upd)
 
         sel = select([
             users.c.password,
         ]).select_from(users).where(
             (users.c.user_id == payload['user_id'])
         )
-        result = currproc.connection.execute(sel)
+        result = currproc.authdb_conn.execute(sel)
         rows = result.fetchone()
         result.close()
 
@@ -435,13 +435,13 @@ def create_new_user(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -495,7 +495,7 @@ def create_new_user(payload,
             'last_updated':datetime.utcnow(),
         }
         ins = users.insert(new_user_dict)
-        result = currproc.connection.execute(ins)
+        result = currproc.authdb_conn.execute(ins)
         result.close()
 
         user_added = True
@@ -521,7 +521,7 @@ def create_new_user(payload,
     ]).select_from(users).where(
         users.c.email == email
     )
-    result = currproc.connection.execute(sel)
+    result = currproc.authdb_conn.execute(sel)
     rows = result.fetchone()
     result.close()
 
@@ -641,13 +641,13 @@ def delete_user(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -669,7 +669,7 @@ def delete_user(payload,
     ).where(
         users.c.user_id == payload['user_id']
     )
-    result = currproc.connection.execute(sel)
+    result = currproc.authdb_conn.execute(sel)
     row = result.fetchone()
 
     if (not row) or (row['email'] != payload['email']):
@@ -719,14 +719,14 @@ def delete_user(payload,
     ).where(
         users.c.user_role != 'superuser'
     )
-    result = currproc.connection.execute(delete)
+    result = currproc.authdb_conn.execute(delete)
     result.close()
 
     # don't forget to delete the sessions as well
     delete = sessions.delete().where(
         sessions.c.user_id == payload['user_id']
     )
-    result = currproc.connection.execute(delete)
+    result = currproc.authdb_conn.execute(delete)
     result.close()
 
     sel = select([
@@ -739,7 +739,7 @@ def delete_user(payload,
         users.c.user_id == payload['user_id']
     )
 
-    result = currproc.connection.execute(sel)
+    result = currproc.authdb_conn.execute(sel)
     rows = result.fetchall()
 
     if rows and len(rows) > 0:
@@ -796,13 +796,13 @@ def verify_password_reset(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -838,7 +838,7 @@ def verify_password_reset(payload,
         users.c.email == payload['email_address']
     )
 
-    result = currproc.connection.execute(sel)
+    result = currproc.authdb_conn.execute(sel)
     user_info = result.fetchone()
     result.close()
 
@@ -905,14 +905,14 @@ def verify_password_reset(payload,
         ).values({
             'password': hashed_password
         })
-        result = currproc.connection.execute(upd)
+        result = currproc.authdb_conn.execute(upd)
 
         sel = select([
             users.c.password,
         ]).select_from(users).where(
             (users.c.email == payload['email_address'])
         )
-        result = currproc.connection.execute(sel)
+        result = currproc.authdb_conn.execute(sel)
         rows = result.fetchone()
         result.close()
 

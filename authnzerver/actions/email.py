@@ -298,13 +298,13 @@ def send_signup_verification_email(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -324,7 +324,7 @@ def send_signup_verification_email(payload,
         users.c.is_active,
         users.c.user_role,
     ]).select_from(users).where(users.c.email == payload['email_address'])
-    user_results = currproc.connection.execute(user_sel)
+    user_results = currproc.authdb_conn.execute(user_sel)
     user_info = user_results.fetchone()
     user_results.close()
 
@@ -436,7 +436,7 @@ def send_signup_verification_email(payload,
         ).values({
             'emailverify_sent_datetime': emailverify_sent_datetime,
         })
-        result = currproc.connection.execute(upd)
+        result = currproc.authdb_conn.execute(upd)
         result.close()
 
         return {
@@ -489,13 +489,13 @@ def verify_user_email_address(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -515,7 +515,7 @@ def verify_user_email_address(payload,
         'email_verified':True,
         'user_role':'authenticated'
     })
-    result = currproc.connection.execute(upd)
+    result = currproc.authdb_conn.execute(upd)
 
     sel = select([
         users.c.user_id,
@@ -524,7 +524,7 @@ def verify_user_email_address(payload,
     ]).select_from(users).where(
         (users.c.email == payload['email'])
     )
-    result = currproc.connection.execute(sel)
+    result = currproc.authdb_conn.execute(sel)
     rows = result.fetchone()
     result.close()
 
@@ -596,13 +596,13 @@ def send_forgotpass_verification_email(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -625,7 +625,7 @@ def send_forgotpass_verification_email(payload,
     ).where(
         users.c.user_role != 'anonymous'
     )
-    user_results = currproc.connection.execute(user_sel)
+    user_results = currproc.authdb_conn.execute(user_sel)
     user_info = user_results.fetchone()
     user_results.close()
 
@@ -753,7 +753,7 @@ def send_forgotpass_verification_email(payload,
         ).values({
             'emailforgotpass_sent_datetime': emailforgotpass_sent_datetime,
         })
-        result = currproc.connection.execute(upd)
+        result = currproc.authdb_conn.execute(upd)
         result.close()
 
         return {

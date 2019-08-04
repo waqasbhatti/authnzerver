@@ -87,13 +87,13 @@ def list_users(payload,
 
         # this checks if the database connection is live
         currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
+        engine = getattr(currproc, 'authdb_engine', None)
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.authdb_meta = (
+            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -130,7 +130,7 @@ def list_users(payload,
                 users.c.user_id == user_id
             )
 
-        result = currproc.connection.execute(s)
+        result = currproc.authdb_conn.execute(s)
         rows = result.fetchall()
         result.close()
 
@@ -257,13 +257,13 @@ def edit_user(payload,
 
         # this checks if the database connection is live
         currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
+        engine = getattr(currproc, 'authdb_engine', None)
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.authdb_meta = (
+            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -395,7 +395,7 @@ def edit_user(payload,
         ).where(
             users.c.user_id == target_userid
         ).values(update_dict)
-        result = currproc.connection.execute(upd)
+        result = currproc.authdb_conn.execute(upd)
 
         # check the update and return new values
         sel = select([
@@ -407,7 +407,7 @@ def edit_user(payload,
         ]).select_from(users).where(
             users.c.user_id == target_userid
         )
-        result = currproc.connection.execute(sel)
+        result = currproc.authdb_conn.execute(sel)
         rows = result.fetchone()
         result.close()
 
@@ -520,13 +520,13 @@ def internal_toggle_user_lock(payload,
 
         # this checks if the database connection is live
         currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
+        engine = getattr(currproc, 'authdb_engine', None)
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.authdb_meta = (
+            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -551,7 +551,7 @@ def internal_toggle_user_lock(payload,
         ).where(
             users.c.user_id == target_userid
         ).values(update_dict)
-        result = currproc.connection.execute(upd)
+        result = currproc.authdb_conn.execute(upd)
 
         # check the update and return new values
         sel = select([
@@ -563,7 +563,7 @@ def internal_toggle_user_lock(payload,
         ]).select_from(users).where(
             users.c.user_id == target_userid
         )
-        result = currproc.connection.execute(sel)
+        result = currproc.authdb_conn.execute(sel)
         rows = result.fetchone()
         result.close()
 
@@ -692,13 +692,13 @@ def toggle_user_lock(payload,
 
         # this checks if the database connection is live
         currproc = mp.current_process()
-        engine = getattr(currproc, 'engine', None)
+        engine = getattr(currproc, 'authdb_engine', None)
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.engine, currproc.connection, currproc.authdb_meta = (
+            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail

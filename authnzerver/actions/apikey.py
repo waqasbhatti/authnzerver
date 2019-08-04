@@ -109,13 +109,13 @@ def issue_new_apikey(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -209,7 +209,7 @@ def issue_new_apikey(payload,
         'session_token':payload['session_token'],
     })
 
-    result = currproc.connection.execute(ins)
+    result = currproc.authdb_conn.execute(ins)
     result.close()
 
     #
@@ -250,13 +250,13 @@ def verify_apikey(payload,
 
     # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'engine', None)
+    engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
 
     if not engine:
-        currproc.engine, currproc.connection, currproc.authdb_meta = (
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
             authdb.get_auth_db(
                 currproc.auth_db_path,
                 echo=raiseonfail
@@ -287,7 +287,7 @@ def verify_apikey(payload,
     ).where(
         apikeys.c.not_valid_before < datetime.utcnow()
     )
-    result = currproc.connection.execute(sel)
+    result = currproc.authdb_conn.execute(sel)
     row = result.fetchone()
     result.close()
 

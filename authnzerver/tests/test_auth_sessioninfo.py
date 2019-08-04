@@ -142,12 +142,12 @@ def test_sessioninfo():
         del currproc.authdb_meta
 
     if getattr(currproc, 'connection', None):
-        currproc.connection.close()
-        del currproc.connection
+        currproc.authdb_conn.close()
+        del currproc.authdb_conn
 
-    if getattr(currproc, 'engine', None):
-        currproc.engine.dispose()
-        del currproc.engine
+    if getattr(currproc, 'authdb_engine', None):
+        currproc.authdb_engine.dispose()
+        del currproc.authdb_engine
 
     try:
         os.remove('test-sessioninfo.authdb.sqlite')

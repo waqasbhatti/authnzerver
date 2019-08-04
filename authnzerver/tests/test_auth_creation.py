@@ -249,7 +249,7 @@ def test_sessions():
         assert key in check['session_info']
 
     assert check['session_info']['user_id'] == 2
-    assert check['session_info']['full_name'] is None
+    assert check['session_info']['full_name'] == 'The systemwide anonymous user'
     assert check['session_info']['email'] == 'anonuser@localhost'
     assert check['session_info']['email_verified'] is True
     assert check['session_info']['is_active'] is True
