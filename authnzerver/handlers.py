@@ -303,9 +303,10 @@ class AuthHandler(tornado.web.RequestHandler):
 
             # get the request ID
             # this is an integer
-            reqid = payload['reqid']
-            if reqid is None or reqid == 0:
-                raise ValueError("no request ID provided")
+            reqid = payload.get('reqid')
+            if reqid is None:
+                raise ValueError("No request ID provided. "
+                                 "Ignoring this request.")
 
             # run the function associated with the request type
             loop = tornado.ioloop.IOLoop.current()
