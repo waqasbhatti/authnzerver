@@ -367,6 +367,8 @@ def auth_session_exists(payload,
             }
 
         except Exception:
+            LOGGER.error("Session look up for token: %s failed." %
+                         session_token)
 
             return {
                 'success':False,
