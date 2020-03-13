@@ -62,158 +62,6 @@ import tornado.options
 from tornado.options import define, options
 import multiprocessing as mp
 
-########################################
-### APPLICATION COMMAND-LINE OPTIONS ###
-########################################
-
-modpath = os.path.abspath(os.path.dirname(__file__))
-
-#
-# BASE DIRECTORY, CACHE PATH, ENV PATH
-#
-
-# basedir is the directory at the root where this server stores its auth DB and
-# looks for secret keys.
-define('basedir',
-       default=os.getcwd(),
-       help=('The base directory containing secret files and the auth DB.'),
-       type=str)
-
-# the path to the cache directory used to enforce API limits
-define('cachedir',
-       default='/tmp/authnzerver-cache',
-       help=('Path to the cache directory used by the authnzerver.'),
-       type=str)
-
-# the path to an env file containing environment variables
-define('envfile',
-       default=None,
-       help=('Path to a file containing environ variables '
-             'for testing/development.'),
-       type=str)
-
-
-#
-# START UP OPTIONS
-#
-
-# the port to serve on
-define('port',
-       default=13431,
-       help='Run on the given port.',
-       type=int)
-
-# the address to listen on
-define('serve',
-       default='127.0.0.1',
-       help='Bind to given address and serve content.',
-       type=str)
-
-# whether to run in debugmode or not
-define('debugmode',
-       default=0,
-       help='start up in debug mode if set to 1.',
-       type=int)
-
-# number of background threads in the pool executor
-define('backgroundworkers',
-       default=4,
-       help=('number of background workers to use '),
-       type=int)
-
-
-#
-# AUTH DB PATH
-#
-
-# whether to make a new authdb if none exists
-define('autosetup',
-       default=True,
-       help=("If this is True, will automatically generate an SQLite "
-             "authentication database in the basedir if there isn't one "
-             "present and the value of the authdb option is also None."),
-       type=bool)
-
-
-# the path to the authentication DB
-define('authdb',
-       default=None,
-       help=('An SQLAlchemy database URL to indicate where '
-             'the local authentication DB is. '
-             'This should be in the form discussed at: '
-             'https://docs.sqlalchemy.org/en/latest'
-             '/core/engines.html#database-urls'),
-       type=str)
-
-#
-# SECRET KEYS AND SESSIONS
-#
-
-# alternatively, the file to get the secret key that secures HTTP communications
-# between the authnzerver and any other processes.
-define('secret',
-       default=None,
-       help=('Path to the file containing the secret key. '
-             'This is relative to the path given in the basedir option.'),
-       type=str)
-
-# this defines how long a session is supposed to last
-define('sessionexpiry',
-       default=30,
-       help=('This sets the session-expiry time in days.'),
-       type=int)
-
-
-#########################################
-## CONFIG FROM ENVIRON AND SUBSTITUTES ##
-#########################################
-
-CONF = {
-    'port':{
-        'env':'AUTHNZERVER_PORT',
-        'cmdline':'port',
-        'type':int,
-        'default':13431,
-    },
-    'listen':{
-        'env':'AUTHNZERVER_LISTEN',
-        'cmdline':'serve',
-        'type':str,
-        'default':'127.0.0.1',
-    },
-    'basedir':{
-        'env':'AUTHNZERVER_BASEDIR',
-        'cmdline':'basedir',
-        'type':str,
-        'default':os.getcwd(),
-    },
-    'cachedir':{
-        'env':'AUTHNZERVER_CACHEDIR',
-        'cmdline':'cachedir',
-        'type':str,
-        'default':'/tmp/authnzerver-cache',
-    },
-    'authdb':{
-        'env':'AUTHNZERVER_AUTHDB',
-        'cmdline':'authdb',
-        'type':str,
-        'default':None,
-    },
-    'secret':{
-        'env':'AUTHNZERVER_SECRET',
-        'cmdline':'secret',
-        'type':str,
-        'default':None,
-    },
-    'sessionexpiry':{
-        'env':'AUTHNZERVER_SESSIONEXPIRY',
-        'cmdline':'sessionexpiry',
-        'type':int,
-        'default':30,
-    },
-
-}
-
 
 #######################
 ## UTILITY FUNCTIONS ##
@@ -246,7 +94,7 @@ def _close_authentication_database():
     if getattr(currproc, 'authdb_meta', None):
         del currproc.authdb_meta
 
-    if getattr(currproc, 'connection', None):
+    if getattr(currproc, 'authdb_conn', None):
         currproc.authdb_conn.close()
         del currproc.authdb_conn
 
@@ -256,6 +104,42 @@ def _close_authentication_database():
 
     print('Shutting down database engine in process: %s' % currproc.name,
           file=sys.stdout)
+
+
+########################################################
+## CONFIG FROM ENVIRON, COMMAND LINE, AND SUBSTITUTES ##
+########################################################
+
+from .confvars import CONF
+
+# this is the module path
+modpath = os.path.abspath(os.path.dirname(__file__))
+
+# load all of the conf vars as command-line options
+for cv in CONF:
+    define(CONF[cv]['cmdline'],
+           default=CONF[cv]['default'],
+           help=CONF[cv]['help'],
+           type=CONF[cv]['type'])
+
+#
+# extra config options provided only as command-line parameters
+#
+
+# the path to an env file containing environment variables
+define('envfile',
+       default=None,
+       help=('Path to a file containing environ variables '
+             'for testing/development.'),
+       type=str)
+
+# whether to make a new authdb if none exists
+define('autosetup',
+       default=True,
+       help=("If this is True, will automatically generate an SQLite "
+             "authentication database in the basedir if there isn't one "
+             "present and the value of the authdb option is also None."),
+       type=bool)
 
 
 ##########
@@ -303,6 +187,7 @@ def main():
 
     envfile = options.envfile
 
+    # if the envfile exists, load it in
     if envfile is not None and os.path.exists(envfile):
         from configparser import ConfigParser
         from itertools import chain
