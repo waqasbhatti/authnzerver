@@ -173,50 +173,20 @@ def change_user_password(payload,
 
     '''
 
-    if 'user_id' not in payload:
-        return {
-            'success':False,
-            'user_id':None,
-            'email':None,
-            'messages':['Invalid password change request. '
-                        'Some args are missing.'],
-        }
+    for key in ('user_id',
+                'full_name',
+                'email',
+                'current_password',
+                'new_password'):
 
-    if 'full_name' not in payload:
-        return {
-            'success':False,
-            'user_id':None,
-            'email':None,
-            'messages':['Invalid password change request. '
-                        'Some args are missing.'],
-        }
-
-    if 'email' not in payload:
-        return {
-            'success':False,
-            'user_id':None,
-            'email':None,
-            'messages':['Invalid password change request. '
-                        'Some args are missing.'],
-        }
-
-    if 'current_password' not in payload:
-        return {
-            'success':False,
-            'user_id':None,
-            'email':None,
-            'messages':['Invalid password change request. '
-                        'Some args are missing.'],
-        }
-
-    if 'new_password' not in payload:
-        return {
-            'success':False,
-            'user_id':None,
-            'email':None,
-            'messages':['Invalid password change request. '
-                        'Some args are missing.'],
-        }
+        if key not in payload:
+            return {
+                'success':False,
+                'user_id':None,
+                'email':None,
+                'messages':['Invalid password change request. '
+                            'Some args are missing.'],
+            }
 
     # this checks if the database connection is live
     currproc = mp.current_process()
@@ -300,7 +270,7 @@ def change_user_password(payload,
         ).where(
             users.c.user_id == payload['user_id']
         ).where(
-            users.c.is_active == True
+            users.c.is_active.is_(True)
         ).where(
             users.c.email == payload['email']
         ).values({
@@ -383,32 +353,19 @@ def create_new_user(payload,
 
     '''
 
-    if 'full_name' not in payload:
-        return {
-            'success':False,
-            'user_email':None,
-            'user_id':None,
-            'send_verification':False,
-            'messages':["Invalid user creation request."]
-        }
+    for key in ('full_name',
+                'email',
+                'password'):
 
-    if 'email' not in payload:
-        return {
-            'success':False,
-            'user_email':None,
-            'user_id':None,
-            'send_verification':False,
-            'messages':["Invalid user creation request."]
-        }
+        if key not in payload:
 
-    if 'password' not in payload:
-        return {
-            'success':False,
-            'user_email':None,
-            'user_id':None,
-            'send_verification':False,
-            'messages':["Invalid user creation request."]
-        }
+            return {
+                'success':False,
+                'user_email':None,
+                'user_id':None,
+                'send_verification':False,
+                'messages':["Invalid user creation request."]
+            }
 
     # validate the email provided
     email_confusables_ok = (
@@ -617,27 +574,19 @@ def delete_user(payload,
     - password
 
     '''
-    if 'email' not in payload:
-        return {
-            'success': False,
-            'user_id':None,
-            'email':None,
-            'messages':["Invalid user deletion request."],
-        }
-    if 'user_id' not in payload:
-        return {
-            'success':False,
-            'user_id':None,
-            'email':None,
-            'messages':["Invalid user deletion request."],
-        }
-    if 'password' not in payload:
-        return {
-            'success':False,
-            'user_id':None,
-            'email':None,
-            'messages':["Invalid user deletion request."],
-        }
+
+    for key in ('email',
+                'user_id',
+                'password'):
+
+        if key not in payload:
+
+            return {
+                'success': False,
+                'user_id':None,
+                'email':None,
+                'messages':["Invalid user deletion request."],
+            }
 
     # this checks if the database connection is live
     currproc = mp.current_process()
@@ -773,26 +722,18 @@ def verify_password_reset(payload,
     - session_token
 
     '''
-    if 'email_address' not in payload:
 
-        return {
-            'success':False,
-            'messages':["Email not provided."]
-        }
+    for key in ('email_address',
+                'new_password',
+                'session_token'):
 
-    if 'new_password' not in payload:
+        if key not in payload:
 
-        return {
-            'success':False,
-            'messages':["Password not provided."]
-        }
-
-    if 'session_token' not in payload:
-
-        return {
-            'success':False,
-            'messages':["Session token not provided."]
-        }
+            return {
+                'success':False,
+                'messages':["Invalid password reset request. "
+                            "Some required parameters are missing."]
+            }
 
     # this checks if the database connection is live
     currproc = mp.current_process()
@@ -899,7 +840,7 @@ def verify_password_reset(payload,
         ).where(
             users.c.user_id == user_info['user_id']
         ).where(
-            users.c.is_active == True
+            users.c.is_active.is_(True)
         ).where(
             users.c.email == payload['email_address']
         ).values({

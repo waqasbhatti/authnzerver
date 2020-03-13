@@ -124,7 +124,9 @@ def auth_session_new(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -194,22 +196,19 @@ def auth_session_set_extrainfo(payload,
 
     '''
 
-    if 'session_token' not in payload:
-        LOGGER.error('no session token provided')
+    for key in ('session_token',
+                'extra_info'):
 
-        return {
-            'success':False,
-            'session_info':None,
-            'messages':["No session token provided."],
-        }
-    if 'extra_info' not in payload:
-        LOGGER.error('no extra info provided')
+        if key not in payload:
 
-        return {
-            'success':False,
-            'session_info':None,
-            'messages':["No extra info provided."],
-        }
+            LOGGER.error('invalid set_extrainfo request')
+
+            return {
+                'success':False,
+                'session_info':None,
+                'messages':["Invalid set_extrainfo request: "
+                            "missing or invalid parameters."],
+            }
 
     session_token = payload['session_token']
     extra_info = payload['extra_info']
@@ -224,7 +223,9 @@ def auth_session_set_extrainfo(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -322,7 +323,9 @@ def auth_session_exists(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -424,7 +427,9 @@ def auth_session_delete(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -476,35 +481,20 @@ def auth_delete_sessions_userid(payload,
 
     '''
 
-    if 'user_id' not in payload:
-        LOGGER.error('no user_id provided in '
-                     'auth_delete_sessions_userid')
+    for key in ('user_id',
+                'session_token',
+                'keep_current_session'):
 
-        return {
-            'success':False,
-            'messages':["No user_id provided in "
-                        "auth_delete_sessions_userid."],
-        }
+        if key not in payload:
 
-    if 'session_token' not in payload:
-        LOGGER.error('no session token provided in '
-                     'auth_delete_sessions_userid')
+            LOGGER.error('missing or invalid parameters for '
+                         'auth_delete_sessions_userid')
 
-        return {
-            'success':False,
-            'messages':["No session token provided in "
-                        "auth_delete_sessions_userid."],
-        }
-
-    if 'keep_current_session' not in payload:
-        LOGGER.error('no session token provided in '
-                     'auth_delete_sessions_userid')
-
-        return {
-            'success':False,
-            'messages':["No session token provided in "
-                        "auth_delete_sessions_userid."],
-        }
+            return {
+                'success':False,
+                'messages':["Missing or invalid parameters "
+                            "auth_delete_sessions_userid."],
+            }
 
     user_id = payload['user_id']
     session_token = payload['session_token']
@@ -520,7 +510,9 @@ def auth_delete_sessions_userid(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -1061,9 +1053,9 @@ def auth_user_login(payload,
             ]).select_from(users).where(
                 users.c.email == payload['email']
             ).where(
-                users.c.is_active == True
+                users.c.is_active.is_(True)
             ).where(
-                users.c.email_verified == True
+                users.c.email_verified.is_(True)
             )
             user_results = currproc.authdb_conn.execute(user_sel)
             user_info = user_results.fetchone()
