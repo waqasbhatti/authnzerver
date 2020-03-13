@@ -44,9 +44,9 @@ CONF = {
     'debugmode':{
         'env':'%s_DEBUGMODE' % ENVPREFIX,
         'cmdline':'debugmode',
-        'type':bool,
+        'type':int,
         'default':False,
-        'help':('If True, will enable an '
+        'help':('If 1, will enable an '
                 '/echo endpoint for debugging purposes.'),
         'readable_from_file':False,
     },

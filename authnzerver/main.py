@@ -154,8 +154,7 @@ def main():
 
     # parse the command line
     options.parse_command_line()
-
-    DEBUG = True if tornado.options.debugmode == 1 else False
+    DEBUG = True if options.debugmode == 1 else False
 
     # get a logger
     LOGGER = logging.getLogger(__name__)
@@ -186,7 +185,7 @@ def main():
 
     loaded_config = load_config(CONF,
                                 tornado.options,
-                                envfile=tornado.options.envfile)
+                                envfile=options.envfile)
 
     maxworkers = loaded_config.workers
 

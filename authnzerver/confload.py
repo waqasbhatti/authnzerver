@@ -27,18 +27,19 @@ import os.path
 from configparser import ConfigParser
 from itertools import chain
 import json
+from types import SimpleNamespace
 
 
 ###############################
 ## CONFIG HANDLING FUNCTIONS ##
 ###############################
 
-def get_conf_item(item_key,
+def get_conf_item(env_key,
                   environment,
                   options_object,
+                  options_key=None,
                   vartype=str,
                   default=None,
-                  options_object_attr=None,
                   readable_from_file=False,
                   basedir=None):
     """This loads a config item from the environment or command-line options.
@@ -51,7 +52,7 @@ def get_conf_item(item_key,
     Parameters
     ----------
 
-    item_key : str
+    env_key : str
         The key that specifies the item to get.
 
     environment : environment object
@@ -71,7 +72,7 @@ def get_conf_item(item_key,
     default : Any
         The default value of the conf item.
 
-    options_object_attr : str
+    options_key : str
         This is the attribute to look up in the options object for the value of
         the conf item.
 
@@ -95,12 +96,12 @@ def get_conf_item(item_key,
     confitem = None
 
     # check the options object first
-    if options_object_attr is not None:
-        confitem = getattr(options_object, options_object_attr)
+    if options_key is not None:
+        confitem = getattr(options_object, options_key)
 
     # override with the environment value
-    if item_key in environment:
-        confitem = environment.get(item_key)
+    if env_key in environment:
+        confitem = environment.get(env_key)
 
     #
     # if we got a confitem or a default sub, process it
@@ -112,7 +113,7 @@ def get_conf_item(item_key,
 
         raise ValueError(
             'Config item: "%s" is invalid/missing, '
-            'no default provided.' % item_key
+            'no default provided.' % env_key
         )
 
     # if the conf item doesn't exist, but a default exists, process that.
@@ -121,7 +122,7 @@ def get_conf_item(item_key,
 
         LOGGER.warning(
             'Config item: "%s" is invalid/missing, '
-            'using provided default.' % item_key
+            'using provided default.' % env_key
         )
 
         confitem = default
@@ -210,27 +211,29 @@ def load_config(conf_dict,
     # get the basedir from either the environment or the options
     #
     basedir = get_conf_item(
-        'basedir',
+        conf_dict['basedir']['env'],
         current_environment,
         options_object,
+        options_key=conf_dict['basedir']['cmdline'],
         vartype=conf_dict['basedir']['type'],
         default=conf_dict['basedir']['default'],
-        options_object_attr=conf_dict['basedir']['cmdline'],
         readable_from_file=conf_dict['basedir']['readable_from_file'],
     )
+
+    loaded_options = SimpleNamespace()
 
     for key in conf_dict:
 
         conf_item_value = get_conf_item(
-            key,
+            conf_dict[key]['env'],
             current_environment,
             options_object,
+            options_key=conf_dict[key]['cmdline'],
             vartype=conf_dict[key]['type'],
             default=conf_dict[key]['default'],
-            options_object_attr=conf_dict[key]['cmdline'],
             readable_from_file=conf_dict[key]['readable_from_file'],
             basedir=basedir
         )
-        options_object[key] = conf_item_value
+        setattr(loaded_options, key, conf_item_value)
 
-    return options_object
+    return loaded_options
