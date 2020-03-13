@@ -5,6 +5,7 @@ This tests loading conf variables from the environment or tornado options.
 
 import json
 from textwrap import dedent
+import os
 
 from tornado.options import OptionParser
 from authnzerver import confvars, confload
@@ -222,7 +223,7 @@ def test_load_config_from_options(monkeypatch, tmpdir):
     # generate the tornado options object
     generated_options = generate_options()
 
-    generated_options.authdb = '/path/to/auth-db-opt'
+    generated_options.authdb = 'sqlite:///path/to/auth-db-opt'
     generated_options.basedir = '/path/to/basedir-opt'
     generated_options.listen = '192.168.1.1'
     generated_options.port = 15000
@@ -237,7 +238,7 @@ def test_load_config_from_options(monkeypatch, tmpdir):
                                          generated_options,
                                          envfile=None)
 
-    assert loaded_config.authdb == '/path/to/auth-db-opt'
+    assert loaded_config.authdb == 'sqlite:///path/to/auth-db-opt'
     assert loaded_config.basedir == '/path/to/basedir-opt'
     assert loaded_config.cachedir == '/tmp/authnzerver-cache'
     assert loaded_config.debugmode == 0
@@ -268,7 +269,7 @@ def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
     # generate the envfile
     generated_envfile = generate_envfile(
         tmpdir,
-        authdb='/path/to/authdb-envfile',
+        authdb='sqlite:///path/to/authdb-envfile',
         basedir='/path/to/basedir-envfile',
         cachedir='/tmp/authnzerver/cachedir-envfile',
         debugmode=0,
@@ -285,7 +286,7 @@ def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
                                          generated_options,
                                          envfile=generated_envfile)
 
-    assert loaded_config.authdb == "/path/to/authdb-envfile"
+    assert loaded_config.authdb == "sqlite:///path/to/authdb-envfile"
     assert loaded_config.basedir == "/path/to/basedir-envfile"
     assert loaded_config.cachedir == "/tmp/authnzerver/cachedir-envfile"
     assert loaded_config.debugmode == 0
@@ -316,7 +317,7 @@ def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
     # generate the envfile
     generated_envfile = generate_envfile(
         tmpdir,
-        authdb='/path/to/authdb-envfile',
+        authdb='sqlite:///path/to/authdb-envfile',
         basedir='/path/to/basedir-envfile',
         cachedir='/tmp/authnzerver/cachedir-envfile',
         debugmode=0,
@@ -333,7 +334,7 @@ def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
                                          generated_options,
                                          envfile=generated_envfile)
 
-    assert loaded_config.authdb == "/path/to/authdb-envfile"
+    assert loaded_config.authdb == "sqlite:///path/to/authdb-envfile"
     assert loaded_config.basedir == "/path/to/basedir-envfile"
     assert loaded_config.cachedir == "/tmp/authnzerver/cachedir-envfile"
     assert loaded_config.debugmode == 0
@@ -350,13 +351,79 @@ def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
     assert loaded_config.workers == 1
 
 
-def test_load_config_env_over_options(monkeypatch, tmpdir):
-    pass
-
-
 def test_load_config_env_and_defaults(monkeypatch, tmpdir):
-    pass
+
+    # generate the permissions JSON
+    permissions_json = generate_permissions_json(tmpdir)
+
+    # generate the tornado options object
+    generated_options = generate_options()
+
+    monkeypatch.setenv("AUTHNZERVER_AUTHDB",
+                       "sqlite:///test/db/path")
+    monkeypatch.setenv("AUTHNZERVER_DEBUGMODE",
+                       "0")
+    monkeypatch.setenv("AUTHNZERVER_PERMISSIONS",
+                       permissions_json)
+    monkeypatch.setenv("AUTHNZERVER_SECRET",
+                       'this is a direct text secret')
+
+    # load the config items now
+    loaded_config = confload.load_config(confvars.CONF,
+                                         generated_options,
+                                         envfile=generated_options.envfile)
+
+    assert loaded_config.authdb == "sqlite:///test/db/path"
+    assert loaded_config.basedir == os.getcwd()
+    assert loaded_config.cachedir == '/tmp/authnzerver-cache'
+    assert loaded_config.debugmode == 0
+    assert loaded_config.listen == '127.0.0.1'
+
+    assert isinstance(loaded_config.permissions, dict)
+    assert loaded_config.permissions['test'] == 'yes'
+    assert loaded_config.permissions['no'] == 1
+
+    assert loaded_config.port == 13431
+    assert loaded_config.secret == 'this is a direct text secret'
+
+    assert loaded_config.sessionexpiry == 30
+    assert loaded_config.workers == 4
 
 
 def test_load_config_options_and_defaults(monkeypatch, tmpdir):
-    pass
+
+    # generate the secret file
+    secret_file = generate_secret_file(tmpdir)
+
+    # generate the permissions JSON
+    permissions_json = generate_permissions_json(tmpdir)
+
+    # generate the tornado options object
+    generated_options = generate_options()
+
+    generated_options.authdb = 'sqlite:///path/to/auth-db-opt'
+    generated_options.listen = '192.168.1.1'
+    generated_options.port = 4002
+    generated_options.permissions = permissions_json
+    generated_options.secret = secret_file
+
+    # load the config items now
+    loaded_config = confload.load_config(confvars.CONF,
+                                         generated_options,
+                                         envfile=None)
+
+    assert loaded_config.authdb == 'sqlite:///path/to/auth-db-opt'
+    assert loaded_config.basedir == os.getcwd()
+    assert loaded_config.cachedir == '/tmp/authnzerver-cache'
+    assert loaded_config.debugmode == 0
+    assert loaded_config.listen == '192.168.1.1'
+
+    assert isinstance(loaded_config.permissions, dict)
+    assert loaded_config.permissions['test'] == 'yes'
+    assert loaded_config.permissions['no'] == 1
+
+    assert loaded_config.port == 4002
+    assert loaded_config.secret == 'super-secret-secret'
+
+    assert loaded_config.sessionexpiry == 30
+    assert loaded_config.workers == 4
