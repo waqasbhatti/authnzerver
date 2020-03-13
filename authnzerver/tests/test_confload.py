@@ -29,7 +29,8 @@ def generate_permissions_json(filepath):
     return json_fpath
 
 
-def generate_options():
+def generate_options(envfile=None,
+                     autosetup=False):
     '''
     This generates a Tornado options object for use in testing.
 
@@ -47,7 +48,7 @@ def generate_options():
     # the path to an env file containing environment variables
     generated_options.define(
         'envfile',
-        default=None,
+        default=envfile,
         help=('Path to a file containing environ variables '
               'for testing/development.'),
         type=str
@@ -56,7 +57,7 @@ def generate_options():
     # whether to make a new authdb if none exists
     generated_options.define(
         'autosetup',
-        default=False,
+        default=autosetup,
         help=("If this is True, will automatically generate an SQLite "
               "authentication database in the basedir if there isn't one "
               "present and the value of the authdb option is also None."),
@@ -82,7 +83,7 @@ def test_load_config_from_env(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_BASEDIR",
                        "/test/base/dir")
     monkeypatch.setenv("AUTHNZERVER_CACHEDIR",
-                       "sqlite:///test/authnzerver/cachedir")
+                       "/test/authnzerver/cachedir")
     monkeypatch.setenv("AUTHNZERVER_DEBUGMODE",
                        "0")
     monkeypatch.setenv("AUTHNZERVER_LISTEN",
@@ -104,3 +105,33 @@ def test_load_config_from_env(monkeypatch, tmpdir):
                                          envfile=generated_options.envfile)
 
     assert loaded_config.authdb == "sqlite:///test/db/path"
+    assert loaded_config.basedir == "/test/base/dir"
+    assert loaded_config.cachedir == "/test/authnzerver/cachedir"
+    assert loaded_config.debugmode == 0
+    assert loaded_config.listen == '127.0.0.1'
+
+    assert isinstance(loaded_config.permissions, dict)
+    assert loaded_config.permissions['test'] == 'yes'
+    assert loaded_config.permissions['no'] == 1
+
+    assert loaded_config.port == 13431
+    assert loaded_config.secret == 'super-secret-secret'
+
+    assert loaded_config.sessionexpiry == 60
+    assert loaded_config.workers == 4
+
+
+def test_load_config_from_options(monkeypatch, tmpdir):
+    pass
+
+
+def test_load_config_env_over_options(monkeypatch, tmpdir):
+    pass
+
+
+def test_load_config_env_and_defaults(monkeypatch, tmpdir):
+    pass
+
+
+def test_load_config_options_and_defaults(monkeypatch, tmpdir):
+    pass

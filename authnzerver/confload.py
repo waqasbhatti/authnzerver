@@ -53,12 +53,11 @@ def get_conf_item(env_key,
     ----------
 
     env_key : str
-        The key that specifies the item to get.
+        The environment variable that specifies the item to get.
 
-    environment : environment object
-        This is an environment object similar to that obtained from::
-
-            os.environ
+    environment : environment object or ConfigParser object
+        This is an object similar to that obtained from ``os.environ`` or a
+        similar ConfigParser object.
 
     options_object : Tornado options object
         If the environment variable isn't defined, the next place this function
