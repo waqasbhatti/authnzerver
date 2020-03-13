@@ -80,7 +80,7 @@ Please enter this code:
 
 {verification_code}
 
-into the verification form at: {server_baseurl}/users/verify
+into the account verification form at: {server_baseurl}{account_verify_url}
 
 to verify that you initiated this request. This code will expire in 15
 minutes. You will also need to enter your email address and password
@@ -115,7 +115,7 @@ Please enter this code:
 
 {verification_code}
 
-into the verification form at: {server_baseurl}/users/forgot-password-step2
+into the account verification form at: {server_baseurl}{password_forgot_url}
 
 to verify that you initiated this request. This code will expire in 15
 minutes.
@@ -149,7 +149,7 @@ Please enter this code:
 
 {verification_code}
 
-into the verification form at: {server_baseurl}/users/password-change
+into the account verification form at: {server_baseurl}{password_change_url}
 
 to verify that you initiated this request. This code will expire in 15
 minutes.
@@ -262,6 +262,7 @@ def send_signup_verification_email(payload,
 
     for key in ('email_address',
                 'server_baseurl',
+                'account_verify_url',
                 'server_name',
                 'session_token',
                 'fernet_verification_token',
@@ -397,6 +398,7 @@ def send_signup_verification_email(payload,
     msgtext = SIGNUP_VERIFICATION_EMAIL_TEMPLATE.format(
         server_baseurl=payload['server_baseurl'],
         server_name=payload['server_name'],
+        account_verify_url=payload['account_verify_url'],
         verification_code=payload['fernet_verification_token'],
         browser_identifier=browser.replace('_','.'),
         ip_address=ip_addr,
@@ -430,7 +432,7 @@ def send_signup_verification_email(payload,
         ).where(
             users.c.user_id == payload['created_info']['user_id']
         ).where(
-            users.c.is_active == False
+            users.c.is_active.is_(False)
         ).where(
             users.c.email == payload['created_info']['user_email']
         ).values({
@@ -507,7 +509,7 @@ def verify_user_email_address(payload,
     # update the table for this user
     upd = users.update(
     ).where(
-        users.c.is_active == False
+        users.c.is_active.is_(False)
     ).where(
         users.c.email == payload['email']
     ).values({
@@ -575,6 +577,7 @@ def send_forgotpass_verification_email(payload,
     for key in ('email_address',
                 'fernet_verification_token',
                 'server_baseurl',
+                'password_forgot_url',
                 'server_name',
                 'session_token',
                 'smtp_sender',
@@ -619,7 +622,7 @@ def send_forgotpass_verification_email(payload,
     ]).select_from(users).where(
         users.c.email == payload['email_address']
     ).where(
-        users.c.is_active == True
+        users.c.is_active.is_(True)
     ).where(
         users.c.user_role != 'locked'
     ).where(
@@ -715,6 +718,7 @@ def send_forgotpass_verification_email(payload,
     # generate the email message
     msgtext = FORGOTPASS_VERIFICATION_EMAIL_TEMPLATE.format(
         server_baseurl=payload['server_baseurl'],
+        password_forgot_url=payload['password_forgot_url'],
         server_name=payload['server_name'],
         verification_code=payload['fernet_verification_token'],
         browser_identifier=browser.replace('_','.'),
@@ -747,7 +751,7 @@ def send_forgotpass_verification_email(payload,
         # verifyemail_sent_datetime if sending succeeded.
         upd = users.update(
         ).where(
-            users.c.is_active == True
+            users.c.is_active.is_(True)
         ).where(
             users.c.email == payload['email_address']
         ).values({

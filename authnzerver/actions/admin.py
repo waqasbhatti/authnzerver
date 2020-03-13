@@ -93,7 +93,9 @@ def list_users(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -217,8 +219,10 @@ def edit_user(payload,
 
     '''
 
-    for key in ('user_id','user_role',
-                'session_token','target_userid',
+    for key in ('user_id',
+                'user_role',
+                'session_token',
+                'target_userid',
                 'update_dict'):
 
         if key not in payload:
@@ -263,7 +267,9 @@ def edit_user(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -526,7 +532,9 @@ def internal_toggle_user_lock(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail
@@ -698,7 +706,9 @@ def toggle_user_lock(payload,
             currproc.auth_db_path = override_authdb_path
 
         if not engine:
-            currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
                 authdb.get_auth_db(
                     currproc.auth_db_path,
                     echo=raiseonfail

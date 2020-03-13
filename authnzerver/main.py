@@ -135,7 +135,7 @@ define('envfile',
 
 # whether to make a new authdb if none exists
 define('autosetup',
-       default=True,
+       default=False,
        help=("If this is True, will automatically generate an SQLite "
              "authentication database in the basedir if there isn't one "
              "present and the value of the authdb option is also None."),
@@ -153,9 +153,9 @@ def main():
     '''
 
     # parse the command line
-    tornado.options.parse_command_line()
+    options.parse_command_line()
 
-    DEBUG = True if options.debugmode == 1 else False
+    DEBUG = True if tornado.options.debugmode == 1 else False
 
     # get a logger
     LOGGER = logging.getLogger(__name__)
@@ -169,7 +169,8 @@ def main():
     ###################
 
     from .external.futures37.process import ProcessPoolExecutor
-    from .secrets import get_secret, autogen_secrets_authdb
+    from .secrets import autogen_secrets_authdb
+    from .confload import load_config
 
     ##############
     ## HANDLERS ##
@@ -183,101 +184,34 @@ def main():
     ## SET UP CONFIG ##
     ###################
 
-    maxworkers = options.backgroundworkers
+    loaded_config = load_config(CONF,
+                                tornado.options,
+                                envfile=tornado.options.envfile)
 
-    envfile = options.envfile
+    maxworkers = loaded_config.workers
 
-    # if the envfile exists, load it in
-    if envfile is not None and os.path.exists(envfile):
-        from configparser import ConfigParser
-        from itertools import chain
-        with open(envfile,'r') as infd:
-            envfd = chain(('[DEFAULT]',),infd)
-            c = ConfigParser()
-            c.read_file(envfd)
-            env = c['DEFAULT']
-
-    else:
-        env = None
-
-    basedir = get_secret(CONF['basedir']['env'],
-                         vartype=CONF['basedir']['type'],
-                         default=CONF['basedir']['default'],
-                         from_options_object=options,
-                         options_object_attr=CONF['basedir']['cmdline'],
-                         secret_file_read=False,
-                         basedir=None,
-                         envfile=env)
+    basedir = loaded_config.basedir
     LOGGER.info("The server's base directory is: %s" % os.path.abspath(basedir))
 
-    cachedir = get_secret(CONF['cachedir']['env'],
-                          vartype=CONF['cachedir']['type'],
-                          default=CONF['cachedir']['default'],
-                          from_options_object=options,
-                          options_object_attr=CONF['cachedir']['cmdline'],
-                          secret_file_read=False,
-                          basedir=basedir,
-                          envfile=env)
+    cachedir = loaded_config.cachedir
     LOGGER.info("The server's cache directory is: %s" %
                 os.path.abspath(cachedir))
 
-    port = get_secret(CONF['port']['env'],
-                      vartype=CONF['port']['type'],
-                      default=CONF['port']['default'],
-                      from_options_object=options,
-                      options_object_attr=CONF['port']['cmdline'],
-                      secret_file_read=False,
-                      basedir=basedir,
-                      envfile=env)
-
-    listen = get_secret(CONF['listen']['env'],
-                        vartype=CONF['listen']['type'],
-                        default=CONF['listen']['default'],
-                        from_options_object=options,
-                        options_object_attr=CONF['listen']['cmdline'],
-                        secret_file_read=False,
-                        basedir=basedir,
-                        envfile=env)
-
-    sessionexpiry = get_secret(
-        CONF['sessionexpiry']['env'],
-        vartype=CONF['sessionexpiry']['type'],
-        default=CONF['sessionexpiry']['default'],
-        from_options_object=options,
-        options_object_attr=CONF['sessionexpiry']['cmdline'],
-        secret_file_read=False,
-        basedir=basedir,
-        envfile=env
-    )
+    port = loaded_config.port
+    listen = loaded_config.listen
+    sessionexpiry = loaded_config.sessionexpiry
     LOGGER.info('Session cookie expiry is set to: %s days' % sessionexpiry)
 
     #
-    # set up the authdb and secret
+    # set up the authdb, secret, and permissions model
     #
+    authdb = loaded_config.authdb
+    secret = loaded_config.secret
 
-    try:
-        authdb = get_secret(CONF['authdb']['env'],
-                            vartype=CONF['authdb']['type'],
-                            default=CONF['authdb']['default'],
-                            from_options_object=options,
-                            options_object_attr=CONF['authdb']['cmdline'],
-                            secret_file_read=False,
-                            basedir=basedir,
-                            envfile=env)
-    except Exception:
-        authdb = None
+    # FIXME: add this in later
+    # permissions = loaded_config.permissions
 
-    try:
-        secret = get_secret(CONF['secret']['env'],
-                            vartype=CONF['secret']['type'],
-                            default=CONF['secret']['default'],
-                            from_options_object=options,
-                            options_object_attr=CONF['secret']['cmdline'],
-                            secret_file_read=True,
-                            basedir=basedir,
-                            envfile=env)
-    except Exception:
-        secret = None
+    # FIXME: figure out better autosetup
 
     # authdb and secret not provided but basedir was auto-setup in the past
     if ((not authdb) and
@@ -293,12 +227,12 @@ def main():
     # authdb and secret not provided and this is a completely new run
     elif ((not authdb) and
           (not secret) and
-          (options.autosetup is True) and
+          (loaded_config.autosetup is True) and
           (not os.path.exists(os.path.join(basedir,
                                            '.authnzerver-autosetup-done')))):
 
         authdb_path, admin_credentials, secret_file = autogen_secrets_authdb(
-            options.basedir,
+            loaded_config.basedir,
             interactive=False
         )
 

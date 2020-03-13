@@ -131,20 +131,23 @@ def get_conf_item(item_key,
             confitem = confitem.replace('{{basedir}}',basedir)
 
         # if this is a file to read in as a string
-        if os.path.exists(confitem) and readable_from_file == 'string':
+        if (isinstance(confitem, str) and
+            os.path.exists(confitem) and
+            readable_from_file == 'string'):
             with open(confitem,'r') as infd:
                 confitem = infd.read().strip('\n')
                 confitem = vartype(confitem)
 
         # if this is a file to read in as JSON
-        elif os.path.exists(confitem) and readable_from_file == 'json':
+        elif (isinstance(confitem, str) and
+              os.path.exists(confitem) and
+              readable_from_file == 'json'):
             with open(confitem,'r') as infd:
                 confitem = json.load(infd)
 
         # otherwise, it's not a file or it doesn't exist, return it as is
-        else:
-            confitem = vartype(confitem)
-
+        # NOTE: no casting done here to preserve whatever type default was
+        # NOTE: e.g., this allows us to use a a dict as a default
         return confitem
 
     #
@@ -155,17 +158,22 @@ def get_conf_item(item_key,
         confitem = confitem.replace('{{basedir}}',basedir)
 
     # if this is a file to read in as a string
-    if os.path.exists(confitem) and readable_from_file == 'string':
+    if (isinstance(confitem, str) and
+        os.path.exists(confitem) and
+        readable_from_file == 'string'):
         with open(confitem,'r') as infd:
             confitem = infd.read().strip('\n')
             confitem = vartype(confitem)
 
     # if this is a file to read in as JSON
-    elif os.path.exists(confitem) and readable_from_file == 'json':
+    elif (isinstance(confitem, str) and
+          os.path.exists(confitem) and
+          readable_from_file == 'json'):
         with open(confitem,'r') as infd:
             confitem = json.load(infd)
 
-    # otherwise, it's not a file or it doesn't exist, return it as is
+    # otherwise, it's not a file or it doesn't exist, return it and cast to the
+    # appropriate type
     else:
         confitem = vartype(confitem)
 
@@ -174,15 +182,11 @@ def get_conf_item(item_key,
 
 def load_config(conf_dict,
                 options_object,
-                envfile=None,
-                basedir=None):
+                envfile=None):
     '''
     This loads all the config items in config_dict.
 
     '''
-
-    if not basedir:
-        basedir = os.getcwd()
 
     # get the environ from the envfile as priority 1
     if isinstance(envfile, str) and os.path.exists(envfile):
@@ -201,6 +205,19 @@ def load_config(conf_dict,
     # if neither of the above work, fall back to the actual environment
     else:
         current_environment = os.environ
+
+    #
+    # get the basedir from either the environment or the options
+    #
+    basedir = get_conf_item(
+        'basedir',
+        current_environment,
+        options_object,
+        vartype=conf_dict['basedir']['type'],
+        default=conf_dict['basedir']['default'],
+        options_object_attr=conf_dict['basedir']['cmdline'],
+        readable_from_file=conf_dict['basedir']['readable_from_file'],
+    )
 
     for key in conf_dict:
 
