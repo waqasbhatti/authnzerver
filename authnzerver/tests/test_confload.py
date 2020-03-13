@@ -4,6 +4,7 @@ This tests loading conf variables from the environment or tornado options.
 '''
 
 import json
+from textwrap import dedent
 
 from tornado.options import OptionParser
 from authnzerver import confvars, confload
@@ -14,7 +15,7 @@ def generate_secret_file(filepath):
     with open(filepath.join('secret-file.secret'),'w') as outfd:
         outfd.write('super-secret-secret\n')
 
-    return filepath.join('secret-file.secret')
+    return str(filepath.join('secret-file.secret'))
 
 
 def generate_permissions_json(filepath):
@@ -26,7 +27,45 @@ def generate_permissions_json(filepath):
     with open(json_fpath,'w') as outfd:
         json.dump(model, outfd)
 
-    return json_fpath
+    return str(json_fpath)
+
+
+def generate_envfile(
+        filepath,
+        authdb=None,
+        basedir=None,
+        cachedir=None,
+        debugmode=None,
+        listen=None,
+        permissions=None,
+        port=None,
+        secret=None,
+        sessionexpiry=None,
+        workers=None
+):
+
+    envfile_path = filepath.join('.env')
+
+    with open(envfile_path,'w') as outfd:
+
+        outfd.write(
+            dedent(
+                f"""\
+                AUTHNZERVER_AUTHDB={authdb}
+                AUTHNZERVER_BASEDIR={basedir}
+                AUTHNZERVER_CACHEDIR={cachedir}
+                AUTHNZERVER_DEBUGMODE={debugmode}
+                AUTHNZERVER_LISTEN={listen}
+                AUTHNZERVER_PERMISSIONS={permissions}
+                AUTHNZERVER_PORT={port}
+                AUTHNZERVER_SECRET={secret}
+                AUTHNZERVER_SESSIONEXPIRY={sessionexpiry}
+                AUTHNZERVER_WORKERS={workers}
+                """
+            )
+        )
+
+    return str(envfile_path)
 
 
 def generate_options(envfile=None,
@@ -67,7 +106,7 @@ def generate_options(envfile=None,
     return generated_options
 
 
-def test_load_config_from_env(monkeypatch, tmpdir):
+def test_load_config_from_env_filesecret(monkeypatch, tmpdir):
 
     # generate the secret file
     secret_file = generate_secret_file(tmpdir)
@@ -89,11 +128,11 @@ def test_load_config_from_env(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_LISTEN",
                        "127.0.0.1")
     monkeypatch.setenv("AUTHNZERVER_PERMISSIONS",
-                       str(permissions_json))
+                       permissions_json)
     monkeypatch.setenv("AUTHNZERVER_PORT",
                        "13431")
     monkeypatch.setenv("AUTHNZERVER_SECRET",
-                       str(secret_file))
+                       secret_file)
     monkeypatch.setenv("AUTHNZERVER_SESSIONEXPIRY",
                        "60")
     monkeypatch.setenv("AUTHNZERVER_WORKERS",
@@ -121,7 +160,105 @@ def test_load_config_from_env(monkeypatch, tmpdir):
     assert loaded_config.workers == 4
 
 
+def test_load_config_from_env_textsecret(monkeypatch, tmpdir):
+
+    # generate the permissions JSON
+    permissions_json = generate_permissions_json(tmpdir)
+
+    # generate the tornado options object
+    generated_options = generate_options()
+
+    monkeypatch.setenv("AUTHNZERVER_AUTHDB",
+                       "sqlite:///test/db/path")
+    monkeypatch.setenv("AUTHNZERVER_BASEDIR",
+                       "/test/base/dir")
+    monkeypatch.setenv("AUTHNZERVER_CACHEDIR",
+                       "/test/authnzerver/cachedir")
+    monkeypatch.setenv("AUTHNZERVER_DEBUGMODE",
+                       "0")
+    monkeypatch.setenv("AUTHNZERVER_LISTEN",
+                       "127.0.0.1")
+    monkeypatch.setenv("AUTHNZERVER_PERMISSIONS",
+                       permissions_json)
+    monkeypatch.setenv("AUTHNZERVER_PORT",
+                       "13431")
+    monkeypatch.setenv("AUTHNZERVER_SECRET",
+                       'this is a direct text secret')
+    monkeypatch.setenv("AUTHNZERVER_SESSIONEXPIRY",
+                       "60")
+    monkeypatch.setenv("AUTHNZERVER_WORKERS",
+                       "4")
+
+    # load the config items now
+    loaded_config = confload.load_config(confvars.CONF,
+                                         generated_options,
+                                         envfile=generated_options.envfile)
+
+    assert loaded_config.authdb == "sqlite:///test/db/path"
+    assert loaded_config.basedir == "/test/base/dir"
+    assert loaded_config.cachedir == "/test/authnzerver/cachedir"
+    assert loaded_config.debugmode == 0
+    assert loaded_config.listen == '127.0.0.1'
+
+    assert isinstance(loaded_config.permissions, dict)
+    assert loaded_config.permissions['test'] == 'yes'
+    assert loaded_config.permissions['no'] == 1
+
+    assert loaded_config.port == 13431
+    assert loaded_config.secret == 'this is a direct text secret'
+
+    assert loaded_config.sessionexpiry == 60
+    assert loaded_config.workers == 4
+
+
 def test_load_config_from_options(monkeypatch, tmpdir):
+
+    # generate the secret file
+    secret_file = generate_secret_file(tmpdir)
+
+    # generate the permissions JSON
+    permissions_json = generate_permissions_json(tmpdir)
+
+    # generate the tornado options object
+    generated_options = generate_options()
+
+    generated_options.authdb = '/path/to/auth-db-opt'
+    generated_options.basedir = '/path/to/basedir-opt'
+    generated_options.listen = '192.168.1.1'
+    generated_options.port = 15000
+    generated_options.sessionexpiry = 7
+    generated_options.workers = 8
+
+    generated_options.permissions = permissions_json
+    generated_options.secret = secret_file
+
+    # load the config items now
+    loaded_config = confload.load_config(confvars.CONF,
+                                         generated_options,
+                                         envfile=None)
+
+    assert loaded_config.authdb == '/path/to/auth-db-opt'
+    assert loaded_config.basedir == '/path/to/basedir-opt'
+    assert loaded_config.cachedir == '/tmp/authnzerver-cache'
+    assert loaded_config.debugmode == 0
+    assert loaded_config.listen == '192.168.1.1'
+
+    assert isinstance(loaded_config.permissions, dict)
+    assert loaded_config.permissions['test'] == 'yes'
+    assert loaded_config.permissions['no'] == 1
+
+    assert loaded_config.port == 15000
+    assert loaded_config.secret == 'super-secret-secret'
+
+    assert loaded_config.sessionexpiry == 7
+    assert loaded_config.workers == 8
+
+
+def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
+    pass
+
+
+def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
     pass
 
 

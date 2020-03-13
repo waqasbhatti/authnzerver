@@ -75,9 +75,10 @@ def get_conf_item(env_key,
         This is the attribute to look up in the options object for the value of
         the conf item.
 
-    readable_from_file : bool
-        If this is True, and the conf item is a valid filename, will open it and
-        read it in, cast to the specified variable type, and return the item.
+    readable_from_file : {'json','string'} or False
+        If this is specified, and the conf item is a valid filename, will open
+        it and read it in, cast to the specified variable type, and return the
+        item.
 
     basedir : str
         The directory where the server will do its work. This is used to fill in
