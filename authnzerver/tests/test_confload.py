@@ -255,11 +255,99 @@ def test_load_config_from_options(monkeypatch, tmpdir):
 
 
 def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
-    pass
+
+    # generate the secret file
+    secret_file = generate_secret_file(tmpdir)
+
+    # generate the permissions JSON
+    permissions_json = generate_permissions_json(tmpdir)
+
+    # generate the tornado options object
+    generated_options = generate_options()
+
+    # generate the envfile
+    generated_envfile = generate_envfile(
+        tmpdir,
+        authdb='/path/to/authdb-envfile',
+        basedir='/path/to/basedir-envfile',
+        cachedir='/tmp/authnzerver/cachedir-envfile',
+        debugmode=0,
+        listen='10.0.0.10',
+        permissions=permissions_json,
+        port=5005,
+        secret=secret_file,
+        sessionexpiry=25,
+        workers=1
+    )
+
+    # load the config items now
+    loaded_config = confload.load_config(confvars.CONF,
+                                         generated_options,
+                                         envfile=generated_envfile)
+
+    assert loaded_config.authdb == "/path/to/authdb-envfile"
+    assert loaded_config.basedir == "/path/to/basedir-envfile"
+    assert loaded_config.cachedir == "/tmp/authnzerver/cachedir-envfile"
+    assert loaded_config.debugmode == 0
+    assert loaded_config.listen == '10.0.0.10'
+
+    assert isinstance(loaded_config.permissions, dict)
+    assert loaded_config.permissions['test'] == 'yes'
+    assert loaded_config.permissions['no'] == 1
+
+    assert loaded_config.port == 5005
+    assert loaded_config.secret == 'super-secret-secret'
+
+    assert loaded_config.sessionexpiry == 25
+    assert loaded_config.workers == 1
 
 
 def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
-    pass
+
+    # generate the secret
+    secret = 'this is a direct secret bit'
+
+    # generate the permissions JSON
+    permissions_json = generate_permissions_json(tmpdir)
+
+    # generate the tornado options object
+    generated_options = generate_options()
+
+    # generate the envfile
+    generated_envfile = generate_envfile(
+        tmpdir,
+        authdb='/path/to/authdb-envfile',
+        basedir='/path/to/basedir-envfile',
+        cachedir='/tmp/authnzerver/cachedir-envfile',
+        debugmode=0,
+        listen='10.0.0.10',
+        permissions=permissions_json,
+        port=5005,
+        secret=secret,
+        sessionexpiry=25,
+        workers=1
+    )
+
+    # load the config items now
+    loaded_config = confload.load_config(confvars.CONF,
+                                         generated_options,
+                                         envfile=generated_envfile)
+
+    assert loaded_config.authdb == "/path/to/authdb-envfile"
+    assert loaded_config.basedir == "/path/to/basedir-envfile"
+    assert loaded_config.cachedir == "/tmp/authnzerver/cachedir-envfile"
+    assert loaded_config.debugmode == 0
+    assert loaded_config.listen == '10.0.0.10'
+
+    assert isinstance(loaded_config.permissions, dict)
+    assert loaded_config.permissions['test'] == 'yes'
+    assert loaded_config.permissions['no'] == 1
+
+    assert loaded_config.port == 5005
+    assert loaded_config.secret == 'this is a direct secret bit'
+
+    assert loaded_config.sessionexpiry == 25
+    assert loaded_config.workers == 1
 
 
 def test_load_config_env_over_options(monkeypatch, tmpdir):
