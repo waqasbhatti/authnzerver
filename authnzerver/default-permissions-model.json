@@ -1,0 +1,202 @@
+{
+  "roles": [
+    "superuser",
+    "staff",
+    "authenticated",
+    "anonymous",
+    "locked"
+  ],
+  "items": [
+    "object",
+    "dataset",
+    "collection",
+    "user",
+    "session",
+    "apikey",
+    "preference"
+  ],
+  "actions": [
+    "list",
+    "view",
+    "create",
+    "delete",
+    "edit",
+  ],
+  "visibilities": [
+    "public",
+    "unlisted",
+    "private",
+    "shared"
+  ],
+  "limits": {
+    "max":{"type":"int", "operator":"lt"},
+    "min":{"type":"int", "operator":"gt"},
+    "max_per_minute":{"type":"int", "operator":"ltper_60_sec"},
+    "max_per_hour":{"type":"int", "operator":"ltper_3600_sec"},
+    "max_per_day":{"type":"int", "operator":"ltper_86400_sec"},
+    "min_per_minute":{"type":"int", "operator":"gtper_60_sec"},
+    "min_per_hour":{"type":"int", "operator":"gtper_3600_sec"},
+    "min_per_day":{"type":"int", "operator":"gtper_86400_sec"}
+  },
+  "item_policy": {
+    "object": {
+      "valid_role_actions": ["list","view","create","edit","delete"],
+      "valid_state_changes": ["owner","visibility"],
+      "valid_visibilities":["public","unlisted","shared","private"],
+      "invalid_roles":["locked"]
+    },
+    "dataset": {
+      "valid_role_actions": ["list","view","create","edit","delete"],
+      "valid_state_changes": ["owner","visibility"],
+      "valid_visibilities":["public","unlisted","shared","private"],
+      "invalid_roles":["locked"]
+    },
+    "collection": {
+      "valid_role_actions": ["list","view","create","edit","delete"],
+      "valid_state_changes": ["owner","visibility"],
+      "valid_visibilities":["public","unlisted","shared","private"],
+      "invalid_roles":["locked"]
+    },
+    "user": {
+      "valid_role_actions": ["list","view","create","edit","delete"],
+      "valid_state_changes": [],
+      "valid_visibilities":["private"],
+      "invalid_roles":["authenticated","anonymous","locked"]
+    },
+    "session": {
+      "valid_role_actions": ["list","view","delete"],
+      "valid_state_changes": [],
+      "valid_visibilities":["private"],
+      "invalid_roles":["authenticated","anonymous","locked"]
+    },
+    "apikey": {
+      "valid_role_actions": ["list","view","create","delete"],
+      "valid_state_changes": [],
+      "valid_visibilities":["private"],
+      "invalid_roles":["anonymous","locked"]
+    },
+    "preference": {
+      "valid_role_actions": ["list","view","edit"],
+      "valid_state_changes": [],
+      "valid_visibilities":["private"],
+      "invalid_roles":["anonymous","locked"]
+    }
+  },
+  "role_policy": {
+    "superuser": {
+      "limits": {
+        "max": 5000000,
+        "max_per_minute": 60000,
+      },
+      "can_own_items": ["dataset","object","collection","apikey","preference"],
+      "allowed_actions_for_owned": ["list","view","create","delete","edit"],
+      "allowed_actions_for_visibilities": {
+        "public":["list","view","create","delete","edit"],
+        "unlisted":["list","view","create","delete","edit"],
+        "shared":["list","view","create","delete","edit"],
+        "private":["list","view","create","delete","edit"]
+      },
+      "allowed_state_changes":{
+        "visibility":{
+          "private":["unlisted","public","shared"],
+          "public":["unlisted","private","shared"],
+          "unlisted":["public","private","shared"],
+          "shared":["unlisted","private","public"]
+        },
+        "owner":["private","public","unlisted","shared"]
+      }
+    },
+    "staff": {
+      "limits": {
+        "max": 5000000,
+        "max_per_minute": 60000,
+      },
+      "can_own_items": ["dataset","object","collection","apikey","preference"],
+      "allowed_actions_for_owned": ["list","view","create","delete","edit"],
+      "allowed_actions_for_visibilities": {
+        "public":["list","view","create","delete","edit"],
+        "unlisted":["list","view","create","delete","edit"],
+        "shared":["list","view","create","delete","edit"],
+        "private":["list","view","create","delete","edit"]
+      },
+      "allowed_state_changes":{
+        "visibility":{
+          "private":["unlisted","public","shared"],
+          "public":["unlisted","private","shared"],
+          "unlisted":["public","private","shared"],
+          "shared":["unlisted","private","public"]
+        },
+        "owner":["private","public","unlisted","shared"]
+      }
+    },
+    "authenticated": {
+      "limits": {
+        "max": 5000000,
+        "max_per_minute": 60000,
+      },
+      "can_own_items": ["dataset","object","collection","apikey","preference"],
+      "allowed_actions_for_owned": ["list","view","create","delete","edit"],
+      "allowed_actions_for_visibilities": {
+        "public":["list","view","create","delete","edit"],
+        "unlisted":["list","view","create","delete","edit"],
+        "shared":["list","view","create","delete","edit"],
+        "private":["list","view","create","delete","edit"]
+      },
+      "allowed_state_changes":{
+        "visibility":{
+          "private":["unlisted","public","shared"],
+          "public":["unlisted","private","shared"],
+          "unlisted":["public","private","shared"],
+          "shared":["unlisted","private","public"]
+        },
+        "owner":["private","public","unlisted","shared"]
+      }
+    },
+    "anonymous": {
+      "limits": {
+        "max": 5000000,
+        "max_per_minute": 60000,
+      },
+      "can_own_items": ["dataset","object","collection","apikey","preference"],
+      "allowed_actions_for_owned": ["list","view","create","delete","edit"],
+      "allowed_actions_for_visibilities": {
+        "public":["list","view","create","delete","edit"],
+        "unlisted":["list","view","create","delete","edit"],
+        "shared":["list","view","create","delete","edit"],
+        "private":["list","view","create","delete","edit"]
+      },
+      "allowed_state_changes":{
+        "visibility":{
+          "private":["unlisted","public","shared"],
+          "public":["unlisted","private","shared"],
+          "unlisted":["public","private","shared"],
+          "shared":["unlisted","private","public"]
+        },
+        "owner":["private","public","unlisted","shared"]
+      }
+    },
+    "locked": {
+      "limits": {
+        "max": 5000000,
+        "max_per_minute": 60000,
+      },
+      "can_own_items": ["dataset","object","collection","apikey","preference"],
+      "allowed_actions_for_owned": ["list","view","create","delete","edit"],
+      "allowed_actions_for_visibilities": {
+        "public":["list","view","create","delete","edit"],
+        "unlisted":["list","view","create","delete","edit"],
+        "shared":["list","view","create","delete","edit"],
+        "private":["list","view","create","delete","edit"]
+      },
+      "allowed_state_changes":{
+        "visibility":{
+          "private":["unlisted","public","shared"],
+          "public":["unlisted","private","shared"],
+          "unlisted":["public","private","shared"],
+          "shared":["unlisted","private","public"]
+        },
+        "owner":["private","public","unlisted","shared"]
+      }
+    }
+  }
+}
