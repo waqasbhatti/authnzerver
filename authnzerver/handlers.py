@@ -177,6 +177,8 @@ request_functions = {
     # apikey actions
     'apikey-new':actions.issue_new_apikey,
     'apikey-verify':actions.verify_apikey,
+    # access check actions
+    'check-user-access': actions.check_user_access
 }
 
 

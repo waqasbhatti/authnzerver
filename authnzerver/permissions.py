@@ -255,7 +255,9 @@ def check_item_access(permissions_model,
 
         try:
 
-            if target_sharedwith and target_sharedwith != '':
+            if (target_sharedwith and
+                target_sharedwith != '' and
+                target_sharedwith.lower() != 'none'):
 
                 sharedwith_userids = target_sharedwith.split(',')
                 sharedwith_userids = [int(x) for x in sharedwith_userids]

@@ -133,7 +133,7 @@
         "max_requests_per_minute": {"type": "max", "limit": 600}
       },
       "can_own_items": ["dataset"],
-      "allowed_actions_for_owned": ["list", "view", "create", "change_visibility"],
+      "allowed_actions_for_owned": ["list", "view", "create"],
       "allowed_actions_for_other": {
         "public": ["list", "view"],
         "unlisted": ["view"],
