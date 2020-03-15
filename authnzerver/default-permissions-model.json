@@ -32,13 +32,7 @@
   ],
   "limits": {
     "max": {"type": "int", "operator": "lt"},
-    "min": {"type": "int", "operator": "gt"},
-    "max_per_minute": {"type": "int", "operator": "ltper_60_sec"},
-    "max_per_hour": {"type": "int", "operator": "ltper_3600_sec"},
-    "max_per_day": {"type": "int", "operator": "ltper_86400_sec"},
-    "min_per_minute": {"type": "int", "operator": "gtper_60_sec"},
-    "min_per_hour": {"type": "int", "operator": "gtper_3600_sec"},
-    "min_per_day": {"type": "int", "operator": "gtper_86400_sec"}
+    "min": {"type": "int", "operator": "gt"}
   },
   "item_policy": {
     "object": {
@@ -83,8 +77,8 @@
   "role_policy": {
     "superuser": {
       "limits": {
-        "max": 5000000,
-        "max_per_minute": 60000
+        "max_requests": {"type": "max", "limit": 5000000},
+        "max_requests_per_minute": {"type": "max", "limit": 60000}
       },
       "can_own_items": ["dataset", "object", "collection", "apikey", "preference"],
       "allowed_actions_for_owned": ["list", "view", "create", "delete", "edit",
@@ -102,8 +96,8 @@
     },
     "staff": {
       "limits": {
-        "max": 1000000,
-        "max_per_minute": 60000
+        "max_requests": {"type": "max", "limit": 1000000},
+        "max_requests_per_minute": {"type": "max", "limit": 60000}
       },
       "can_own_items": ["dataset", "object", "collection", "apikey", "preference"],
       "allowed_actions_for_owned": ["list", "view", "create", "delete", "edit",
@@ -120,8 +114,8 @@
     },
     "authenticated": {
       "limits": {
-        "max": 500000,
-        "max_per_minute": 6000
+        "max_requests": {"type": "max", "limit": 500000},
+        "max_requests_per_minute": {"type": "max", "limit": 6000}
       },
       "can_own_items": ["dataset", "apikey", "preference"],
       "allowed_actions_for_owned": ["list", "view", "create", "delete", "edit",
@@ -135,8 +129,8 @@
     },
     "anonymous": {
       "limits": {
-        "max": 100000,
-        "max_per_minute": 600
+        "max_requests": {"type": "max", "limit": 100000},
+        "max_requests_per_minute": {"type": "max", "limit": 600}
       },
       "can_own_items": ["dataset"],
       "allowed_actions_for_owned": ["list", "view", "create", "change_visibility"],
@@ -149,8 +143,8 @@
     },
     "locked": {
       "limits": {
-        "max": 0,
-        "max_per_minute": 0
+        "max_requests": {"type": "max", "limit": 0},
+        "max_requests_per_minute": {"type": "max", "limit": 0}
       },
       "can_own_items": [],
       "allowed_actions_for_owned": [],

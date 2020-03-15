@@ -8,349 +8,140 @@ This contains the permissions and user-role models for authnzerver.
 
 '''
 
+#############
+## LOGGING ##
+#############
 
-######################################
-## ROLES AND ASSOCIATED PERMISSIONS ##
-######################################
+import logging
 
-# these are the basic permissions for roles
-ROLE_PERMISSIONS = {
-    'superuser':{
-        'limits':{
-            'max_req_items': 5000000,
-            'max_reqs_60sec': 60000,
-        },
-        'can_own':{'dataset','object','collection','apikeys','preferences'},
-        'for_owned': {
-            'list',
-            'view',
-            'create',
-            'delete',
-            'edit',
-            'make_public',
-            'make_unlisted',
-            'make_private',
-            'make_shared',
-            'change_owner',
-        },
-        'for_others':{
-            'public':{
-                'list',
-                'view',
-                'create',
-                'delete',
-                'edit',
-                'make_private',
-                'make_unlisted',
-                'make_shared',
-                'change_owner',
-            },
-            'unlisted':{
-                'list',
-                'view',
-                'create',
-                'delete',
-                'edit',
-                'make_public',
-                'make_private',
-                'make_shared',
-                'change_owner',
-            },
-            'shared':{
-                'list',
-                'view',
-                'create',
-                'delete',
-                'edit',
-                'make_public',
-                'make_unlisted',
-                'make_private',
-                'change_owner',
-            },
-            'private':{
-                'list',
-                'view',
-                'create',
-                'delete',
-                'edit',
-                'make_public',
-                'make_unlisted',
-                'make_shared',
-                'change_owner',
-            },
-        }
-    },
-    'staff':{
-        'limits':{
-            'max_req_items': 1000000,
-            'max_reqs_60sec': 60000,
-        },
-        'can_own':{'dataset','object','collection','apikeys','preferences'},
-        'for_owned': {
-            'list',
-            'view',
-            'create',
-            'delete',
-            'edit',
-            'make_public',
-            'make_unlisted',
-            'make_private',
-            'make_shared',
-            'change_owner',
-        },
-        'for_others':{
-            'public':{
-                'list',
-                'view',
-                'edit',
-                'delete',
-            },
-            'unlisted':{
-                'list',
-                'view',
-                'edit',
-                'delete',
-            },
-            'shared':{
-                'list',
-                'view',
-                'edit',
-            },
-            'private':{
-                'list',
-            },
-        }
-    },
-    'authenticated':{
-        'limits':{
-            'max_req_items': 500000,
-            'max_reqs_60sec': 6000,
-        },
-        'can_own':{'dataset','apikeys','preferences'},
-        'for_owned': {
-            'list',
-            'view',
-            'create',
-            'delete',
-            'edit',
-            'make_public',
-            'make_unlisted',
-            'make_private',
-            'make_shared',
-        },
-        'for_others':{
-            'public':{
-                'list',
-                'view',
-            },
-            'unlisted':{
-                'view',
-            },
-            'shared':{
-                'list',
-                'view',
-                'edit',
-            },
-            'private':set({}),
-        }
-    },
-    'anonymous':{
-        'limits':{
-            'max_req_items': 100000,
-            'max_reqs_60sec': 600,
-        },
-        'can_own':{'dataset'},
-        'for_owned': {
-            'list',
-            'view',
-            'create',
-            'make_private',
-            'make_public',
-            'make_unlisted',
-        },
-        'for_others':{
-            'public':{
-                'list',
-                'view',
-            },
-            'unlisted':{
-                'view'
-            },
-            'shared':set({}),
-            'private':set({}),
-        }
-    },
-    'locked':{
-        'limits':{
-            'max_req_items': 0,
-            'max_reqs_60sec': 0,
-        },
-        'can_own':set({}),
-        'for_owned': set({}),
-        'for_others':{
-            'public':set({}),
-            'unlisted':set({}),
-            'shared':set({}),
-            'private':set({}),
-        }
-    },
-}
+# get a logger
+LOGGER = logging.getLogger(__name__)
 
-# these are intersected with each role's permissions above to form the final set
-# of permissions available for each item
-ITEM_PERMISSIONS = {
-    'object':{
-        'valid_permissions':{'list',
-                             'view',
-                             'create',
-                             'edit',
-                             'delete',
-                             'change_owner',
-                             'make_public',
-                             'make_unlisted',
-                             'make_shared',
-                             'make_private'},
-        'valid_visibilities':{'public',
-                              'unlisted',
-                              'private',
-                              'shared'},
-        'invalid_roles':set({'locked'}),
-    },
-    'dataset':{
-        'valid_permissions':{'list',
-                             'view',
-                             'create',
-                             'edit',
-                             'delete',
-                             'change_owner',
-                             'make_public',
-                             'make_unlisted',
-                             'make_shared',
-                             'make_private'},
-        'valid_visibilities':{'public',
-                              'unlisted',
-                              'private',
-                              'shared'},
-        'invalid_roles':set({'locked'}),
-    },
-    'collection':{
-        'valid_permissions':{'list',
-                             'view',
-                             'create',
-                             'edit',
-                             'delete',
-                             'change_owner',
-                             'make_public',
-                             'make_unlisted',
-                             'make_shared',
-                             'make_private'},
-        'valid_visibilities':{'public',
-                              'unlisted',
-                              'private',
-                              'shared'},
-        'invalid_roles':set({'locked'}),
-    },
-    'users':{
-        'valid_permissions':{'list',
-                             'view',
-                             'edit',
-                             'create',
-                             'delete'},
-        'valid_visibilities':{'private'},
-        'invalid_roles':set({'authenticated','anonymous','locked'}),
+#############
+## IMPORTS ##
+#############
 
-    },
-    'sessions':{
-        'valid_permissions':{'list',
-                             'view',
-                             'delete'},
-        'valid_visibilities':{'private'},
-        'invalid_roles':set({'authenticated','anonymous','locked'}),
-
-    },
-    'apikeys':{
-        'valid_permissions':{'list',
-                             'view',
-                             'create',
-                             'delete'},
-        'valid_visibilities':{'private'},
-        'invalid_roles':set({'anonymous','locked'}),
-
-    },
-    'preferences':{
-        'valid_permissions':{'list',
-                             'view',
-                             'edit'},
-        'valid_visibilities':{'private'},
-        'invalid_roles':set({'anonymous','locked'}),
-    }
-}
+import json
 
 
-###########################################
-## GENERATING PERMISSION AND ROLE MODELS ##
-###########################################
+#################################
+##  PERMISSION MODEL FUNCTIONS ##
+#################################
 
-def generate_permissions():
-    '''FIXME: implement this.'''
+def load_permissions_json(model_json):
+    '''Loads a permissions JSON and returns the model.'''
 
-    pass
+    with open(model_json,'r') as infd:
+        model = json.load(infd)
+
+    # load the item policy
+    item_policy = model['item_policy']
+
+    for itemkey in item_policy:
+        item_policy[itemkey]['valid_role_actions'] = set(
+            item_policy[itemkey]['valid_role_actions']
+        )
+        item_policy[itemkey]['valid_visibilities'] = set(
+            item_policy[itemkey]['valid_visibilities']
+        )
+        item_policy[itemkey]['invalid_roles'] = set(
+            item_policy[itemkey]['invalid_roles']
+        )
+
+    # load the role policy
+    role_policy = model['role_policy']
+
+    for rolekey in role_policy:
+        role_policy[rolekey]['can_own_items'] = set(
+            role_policy[rolekey]['can_own_items']
+        )
+        role_policy[rolekey]['allowed_actions_for_owned'] = set(
+            role_policy[rolekey]['allowed_actions_for_owned']
+        )
+        for actionkey in role_policy[rolekey]['allowed_actions_for_other']:
+            role_policy[rolekey]['allowed_actions_for_other'][actionkey] = set(
+                role_policy[rolekey]['allowed_actions_for_other'][actionkey]
+            )
+
+    model['roles'] = set(model['roles'])
+    model['items'] = set(model['items'])
+    model['actions'] = set(model['actions'])
+    model['visibilities'] = set(model['visibilities'])
+
+    return model
 
 
 ##########################
 ## CHECKING PERMISSIONS ##
 ##########################
 
-def get_item_permissions(role_name,
-                         target_name,
-                         target_visibility,
-                         target_scope,
-                         debug=False,
-                         all_role_permissions=None,
-                         all_item_permissions=None):
-    '''Returns the possible permissions for a target given a role and target
+def get_item_actions(permissions_model,
+                     role_name,
+                     target_name,
+                     target_visibility,
+                     target_ownership,
+                     debug=False):
+    '''Returns the possible actions for a target given a role and target
     status.
 
-    role is one of {superuser, authenticated, anonymous, locked}
+    Parameters
+    ----------
 
-    target_name is one of {object, dataset, collection, users,
-                           apikeys, preferences, sessions}
+    permissions_policy : dict
+        A permissions model returned by :py:func:`.load_permissions_json`.
 
-    target_visibility is one of {public, private, shared}
+    role_name : str
+        The name of the role to find the valid actions for.
 
-    target_scope is one of {owned, others}
+    target_name : str
+        The name of the item to check the valid actions for.
 
-    Returns a set. If the permissions don't make sense, returns an empty set, in
-    which case access MUST be denied.
+    target_visibility : str
+        The visibility of the tiem to check the valid actions for.
+
+    target_ownership: {'for_owned','for_other'}
+        If 'for_owned', only the valid actions for the target item available if
+        the item is owned by the user will be returned. If 'for_other', only the
+        valid actions subject to the visibility of the item owned by other users
+        will be returned.
+
+    debug : bool
+        If True, will print the policy decisions being taken.
+
+    Returns
+    -------
+
+    set
+        Returns a set of valid actions for the target item based on the applied
+        policy. If the actions don't make sense, returns an empty set, in which
+        case access MUST be denied.
 
     '''
 
-    if not all_role_permissions:
-        all_role_permissions = ROLE_PERMISSIONS
-    if not all_item_permissions:
-        all_item_permissions = ITEM_PERMISSIONS
+    role_policy = permissions_model['role_policy']
+    item_policy = permissions_model['item_policy']
 
     if debug:
         print(
             'role_name = %s\ntarget_name = %s\n'
-            'target_visibility = %s\ntarget_scope = %s' %
-            (role_name, target_name, target_visibility, target_scope)
+            'target_visibility = %s\ntarget_ownership = %s' %
+            (role_name, target_name, target_visibility, target_ownership)
         )
 
     try:
-        target_valid_permissions = all_item_permissions[
+        target_valid_actions = item_policy[
             target_name
-        ]['valid_permissions']
-        target_valid_visibilities = all_item_permissions[
+        ]['valid_role_actions']
+        target_valid_visibilities = item_policy[
             target_name
         ]['valid_visibilities']
-        target_invalid_roles = all_item_permissions[
+        target_invalid_roles = item_policy[
             target_name
         ]['invalid_roles']
 
         if debug:
             print('%s valid_perms: %r' %
-                  (target_name, target_valid_permissions))
+                  (target_name, target_valid_actions))
             print('%s valid_visibilities: %r' %
                   (target_name, target_valid_visibilities))
             print('%s invalid_roles: %r' %
@@ -364,54 +155,89 @@ def get_item_permissions(role_name,
         if target_visibility not in target_valid_visibilities:
             return set({})
 
-        # check the target's scope
+        # check the target's ownership
 
         # if this target is owned by the user, then check target owned
-        # permissions
-        if target_scope == 'for_owned':
-            role_permissions = all_role_permissions[role_name][target_scope]
+        # actions
+        if target_ownership == 'for_owned':
+            role_actions = role_policy[role_name]['allowed_actions_for_owned']
 
-        # otherwise, the target is not owned by the user, check scope
-        # permissions for target status
+        # otherwise, the target is not owned by the user (target_ownership ==
+        # 'for_other'), check ownership actions for target status
         else:
-            role_permissions = (
-                all_role_permissions[role_name][target_scope][target_visibility]
+            role_actions = (
+                role_policy[role_name]['allowed_actions_for_other'][
+                    target_visibility
+                ]
             )
 
-        # these are the final available permissions
-        available_permissions = role_permissions.intersection(
-            target_valid_permissions
+        # these are the final available actions
+        available_actions = role_actions.intersection(
+            target_valid_actions
         )
 
         if debug:
-            print("target role permissions: %r" % role_permissions)
-            print('available actions for role: %r' % available_permissions)
+            print("target role actions: %r" % role_actions)
+            print('available actions for role: %r' % available_actions)
 
-        return available_permissions
+        return available_actions
 
     except Exception:
         return set({})
 
 
-def check_user_access(userid=2,
+def check_item_access(permissions_model,
+                      userid=2,
                       role='anonymous',
                       action='view',
                       target_name='collection',
                       target_owner=1,
                       target_visibility='private',
                       target_sharedwith=None,
-                      debug=False,
-                      all_role_permissions=None,
-                      all_item_permissions=None):
+                      debug=False):
     '''
-    This does a check for user access to a target.
+    This does a check for user access to a target item.
+
+    Parameters
+    ----------
+
+    permissions_policy : dict
+        A permissions model returned by :py:func:`.load_permissions_json`.
+
+    userid : int
+        The userid of the user requesting access.
+
+    role : str
+        The role of the user requesting access.
+
+    action : str
+        The action requested to be applied to the item.
+
+    target_name : str
+        The name of the item for which the policy will be checked.
+
+    target_owner : int
+        The userid of the user that owns the item for which the policy will be
+        checked.
+
+    target_visibility : str
+        The visibility of the item for which the policy will be checked.
+
+    target_sharedwith: str
+        A CSV string of the userids that the target item is shared with.
+
+    debug : bool
+        If True, will report the various policy decisions applied.
+
+    Returns
+    -------
+
+    bool
+        True if access was granted. False otherwise.
 
     '''
 
-    if not all_role_permissions:
-        all_role_permissions = ROLE_PERMISSIONS
-    if not all_item_permissions:
-        all_item_permissions = ITEM_PERMISSIONS
+    role_policy = permissions_model['role_policy']
 
     if debug:
         print('userid = %s\ntarget_owner = %s\nsharedwith_userids = %s' %
@@ -435,6 +261,7 @@ def check_user_access(userid=2,
                 sharedwith_userids = [int(x) for x in sharedwith_userids]
                 if debug:
                     print('sharedwith_userids = %s' % sharedwith_userids)
+
                 shared_or_owned_ok = (
                     userid in sharedwith_userids or userid == target_owner
                 )
@@ -469,7 +296,7 @@ def check_user_access(userid=2,
         print('target shared or owned test passed = %s' % shared_or_owned_ok)
 
     target_may_be_owned_by_role = (
-        target_name in all_role_permissions[role]['can_own']
+        target_name in role_policy[role]['can_own_items']
     )
 
     if debug:
@@ -478,20 +305,22 @@ def check_user_access(userid=2,
 
     # validate ownership of the target
     if (userid == target_owner and target_may_be_owned_by_role):
-        perms = get_item_permissions(role,
-                                     target_name,
-                                     target_visibility,
-                                     'for_owned',
-                                     debug=debug)
+        perms = get_item_actions(permissions_model,
+                                 role,
+                                 target_name,
+                                 target_visibility,
+                                 'for_owned',
+                                 debug=debug)
 
     # if the target is not owned, then check if it's accessible under its scope
     # and visibility
     elif userid != target_owner:
-        perms = get_item_permissions(role,
-                                     target_name,
-                                     target_visibility,
-                                     'for_others',
-                                     debug=debug)
+        perms = get_item_actions(permissions_model,
+                                 role,
+                                 target_name,
+                                 target_visibility,
+                                 'for_other',
+                                 debug=debug)
 
     # if the target cannot be owned by the role, then fail
     else:
@@ -503,29 +332,77 @@ def check_user_access(userid=2,
     return ((action in perms) and shared_or_owned_ok)
 
 
-def check_role_limits(role,
-                      requested_items=None,
-                      rate_60sec=None,
-                      all_role_permissions=None):
+def check_role_limits(permissions_model,
+                      role,
+                      limit_name,
+                      value_to_check):
     '''
-    This just returns the role limits.
+    This applies the role limits to a value to check.
+
+    Parameters
+    ----------
+
+    permissions_model : dict
+        A permissions model returned by :py:func:`.load_permissions_json`.
+
+    role : str
+        The name of the role to check the limits for.
+
+    limit_name : str
+        The name of limit to check.
+
+    value_to_check : float or int
+        The value to check against the limit.
+
+    Returns
+    -------
+
+    bool
+        Returns True if the limit hasn't been exceeded. Returns False otherwise.
 
     '''
 
-    if not all_role_permissions:
-        all_role_permissions = ROLE_PERMISSIONS
+    role_policy = permissions_model['role_policy']
+    limit_defs = permissions_model['limits']
 
-    if requested_items is not None:
-        return (
-            all_role_permissions[role]['limits']['max_req_items'] <= (
-                requested_items
-            )
-        )
-    elif rate_60sec is not None:
-        return (
-            all_role_permissions[role]['limits']['max_reqs_60sec'] >= (
-                rate_60sec
-            )
-        )
-    else:
-        return all_role_permissions[role]['limits']
+    all_role_limits = role_policy[role]['limits'].get(limit_name)
+
+    # if there's no limit for the requested type, return True to indicate this
+    if not limit_name:
+        return True
+
+    limit_type = all_role_limits["type"]
+    limit_to_apply = all_role_limits["limit"]
+
+    # look up the operator to apply
+    limit_vartype = limit_defs[limit_type]["type"]
+    limit_operator = limit_defs[limit_type]["operator"]
+
+    # cast the value to the appropriate type
+    try:
+        if limit_vartype == 'int':
+            value_to_check = int(value_to_check)
+            limit_to_apply = int(limit_to_apply)
+
+        elif limit_vartype == 'float':
+            value_to_check = float(value_to_check)
+            limit_to_apply = float(limit_to_apply)
+
+    except Exception:
+        LOGGER.error("Could not convert value to be checked "
+                     "to expected type for limit operator")
+        return False
+
+    # parse the operator and apply the limit
+    try:
+        if limit_operator == 'gt':
+            return value_to_check > limit_to_apply
+        elif limit_operator == 'lt':
+            return value_to_check < limit_to_apply
+        else:
+            LOGGER.error("unknown operator requested for limit")
+            return False
+
+    except Exception:
+        LOGGER.error("Could not apply limit operator to value")
+        return False
