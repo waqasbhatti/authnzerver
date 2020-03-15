@@ -8,6 +8,8 @@ recursive-include authnzerver/tests *.py
 include versioneer.py
 include authnzerver/_version.py
 
+include authnzerver/default-permissions-model.json
+
 global-exclude *.pkl
 global-exclude *.pyc
 global-exclude .DS_Store
