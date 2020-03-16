@@ -334,6 +334,73 @@ def check_item_access(permissions_model,
     return ((action in perms) and shared_or_owned_ok)
 
 
+def load_policy_and_check_access(
+        permissions_json,
+        userid=2,
+        role='anonymous',
+        action='view',
+        target_name='collection',
+        target_owner=1,
+        target_visibility='private',
+        target_sharedwith=None,
+        debug=False):
+    '''
+    Does a check for user access to a target item.
+
+    This version loads a permissions JSON from disk every time it is called.
+
+    Parameters
+    ----------
+
+    permissions_policy : dict
+        A permissions model returned by :py:func:`.load_permissions_json`.
+
+    userid : int
+        The userid of the user requesting access.
+
+    role : str
+        The role of the user requesting access.
+
+    action : str
+        The action requested to be applied to the item.
+
+    target_name : str
+        The name of the item for which the policy will be checked.
+
+    target_owner : int
+        The userid of the user that owns the item for which the policy will be
+        checked.
+
+    target_visibility : str
+        The visibility of the item for which the policy will be checked.
+
+    target_sharedwith: str
+        A CSV string of the userids that the target item is shared with.
+
+    debug : bool
+        If True, will report the various policy decisions applied.
+
+    Returns
+    -------
+
+    bool
+        True if access was granted. False otherwise.
+
+    '''
+
+    permissions_model = load_permissions_json(permissions_json)
+    return check_item_access(
+        permissions_model,
+        userid=userid,
+        role=role,
+        action=action,
+        target_name=target_name,
+        target_owner=target_owner,
+        target_visibility=target_visibility,
+        target_sharedwith=target_sharedwith
+    )
+
+
 def check_role_limits(permissions_model,
                       role,
                       limit_name,
@@ -408,3 +475,46 @@ def check_role_limits(permissions_model,
     except Exception:
         LOGGER.error("Could not apply limit operator to value")
         return False
+
+
+def load_policy_and_check_limits(
+        permissions_json,
+        role,
+        limit_name,
+        value_to_check
+):
+    '''
+    Applies the role limits to a value to check.
+
+    This version loads a policy JSON every time it is called.
+
+    Parameters
+    ----------
+
+    permissions_model : dict
+        A permissions model returned by :py:func:`.load_permissions_json`.
+
+    role : str
+        The name of the role to check the limits for.
+
+    limit_name : str
+        The name of limit to check.
+
+    value_to_check : float or int
+        The value to check against the limit.
+
+    Returns
+    -------
+
+    bool
+        Returns True if the limit hasn't been exceeded. Returns False otherwise.
+
+    '''
+
+    permissions_model = load_permissions_json(permissions_json)
+    return check_role_limits(
+        permissions_model,
+        role,
+        limit_name,
+        value_to_check
+    )
