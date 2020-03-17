@@ -101,14 +101,13 @@
       },
       "can_own_items": ["dataset", "object", "collection", "apikey", "preference"],
       "allowed_actions_for_owned": ["list", "view", "create", "delete", "edit",
-                                   "change_visibility"],
+                                    "change_visibility","change_owner"],
       "allowed_actions_for_other": {
         "public": ["list", "view", "delete", "edit",
                    "change_visibility", "change_owner"],
         "unlisted": ["list", "view", "delete", "edit",
                    "change_visibility", "change_owner"],
-        "shared": ["list", "view", "delete",
-                   "change_visibility", "change_owner"],
+        "shared": ["list", "view", "edit"],
         "private": ["list"]
       }
     },
