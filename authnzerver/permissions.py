@@ -437,7 +437,7 @@ def check_role_limits(permissions_model,
     all_role_limits = role_policy[role]['limits'].get(limit_name)
 
     # if there's no limit for the requested type, return True to indicate this
-    if not limit_name:
+    if not all_role_limits:
         return True
 
     limit_type = all_role_limits["type"]
