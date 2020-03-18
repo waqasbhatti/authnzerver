@@ -9,8 +9,26 @@ This contains the configuration variables that define how the server operates.
 '''
 
 import os
+import os.path
+import getpass
+
+######################
+## USEFUL CONSTANTS ##
+######################
+
+this_dir = os.path.abspath(os.path.dirname(__file__))
+default_permissions_file = os.path.abspath(
+    os.path.join(this_dir,
+                 'default-permissions-model.json')
+)
+currentuser = getpass.getuser()
 
 ENVPREFIX = 'AUTHNZERVER'
+
+
+###############
+## MAIN CONF ##
+###############
 
 CONF = {
     'authdb':{
@@ -62,10 +80,10 @@ CONF = {
         'env':'%s_PERMISSIONS' % ENVPREFIX,
         'cmdline':'permissions',
         'type':str,
-        'default':None,
+        'default':default_permissions_file,
         'help':('The JSON file containing the permissions '
                 'model the server will enforce.'),
-        'readable_from_file':'json',
+        'readable_from_file':False,
     },
     'port':{
         'env':'%s_PORT' % ENVPREFIX,
@@ -99,6 +117,38 @@ CONF = {
         'default':4,
         'help':('The number of background workers '
                 'to use when processing requests.'),
+        'readable_from_file':False,
+    },
+    'emailserver':{
+        'env':'%s_EMAILSERVER' % ENVPREFIX,
+        'cmdline':'emailserver',
+        'type':str,
+        'default':'localhost',
+        'help':('The address of the email server to use.'),
+        'readable_from_file':False,
+    },
+    'emailport':{
+        'env':'%s_EMAILPORT' % ENVPREFIX,
+        'cmdline':'emailport',
+        'type':int,
+        'default':25,
+        'help':('The SMTP port of the email server to use.'),
+        'readable_from_file':False,
+    },
+    'emailuser':{
+        'env':'%s_EMAILUSER' % ENVPREFIX,
+        'cmdline':'emailuser',
+        'type':str,
+        'default':currentuser,
+        'help':('The username of the email user to use.'),
+        'readable_from_file':False,
+    },
+    'emailpass':{
+        'env':'%s_EMAILPASS' % ENVPREFIX,
+        'cmdline':'emailpass',
+        'type':str,
+        'default':'',
+        'help':('The password of the email user to use.'),
         'readable_from_file':False,
     },
 }

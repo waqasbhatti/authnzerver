@@ -3,12 +3,15 @@ This tests loading conf variables from the environment or tornado options.
 
 '''
 
-import json
 from textwrap import dedent
 import os
+import os.path
+import getpass
 
 from tornado.options import OptionParser
 from authnzerver import confvars, confload
+
+from authnzerver.permissions import load_permissions_json
 
 
 def generate_secret_file(filepath):
@@ -21,14 +24,13 @@ def generate_secret_file(filepath):
 
 def generate_permissions_json(filepath):
 
-    json_fpath = filepath.join('permissions-model.json')
+    # get the file pointing to the default permissions model
+    thisdir = os.path.dirname(__file__)
+    permfile = os.path.abspath(
+        os.path.join(thisdir,'..','default-permissions-model.json')
+    )
 
-    model = {'test':'yes',
-             'no':1}
-    with open(json_fpath,'w') as outfd:
-        json.dump(model, outfd)
-
-    return str(json_fpath)
+    return permfile
 
 
 def generate_envfile(
@@ -42,7 +44,11 @@ def generate_envfile(
         port=None,
         secret=None,
         sessionexpiry=None,
-        workers=None
+        workers=None,
+        emailserver=None,
+        emailport=None,
+        emailuser=None,
+        emailpass=None
 ):
 
     envfile_path = filepath.join('.env')
@@ -62,6 +68,10 @@ def generate_envfile(
                 AUTHNZERVER_SECRET={secret}
                 AUTHNZERVER_SESSIONEXPIRY={sessionexpiry}
                 AUTHNZERVER_WORKERS={workers}
+                AUTHNZERVER_EMAILSERVER={emailserver}
+                AUTHNZERVER_EMAILPORT={emailport}
+                AUTHNZERVER_EMAILUSER={emailuser}
+                AUTHNZERVER_EMAILPASS={emailpass}
                 """
             )
         )
@@ -138,6 +148,14 @@ def test_load_config_from_env_filesecret(monkeypatch, tmpdir):
                        "60")
     monkeypatch.setenv("AUTHNZERVER_WORKERS",
                        "4")
+    monkeypatch.setenv("AUTHNZERVER_EMAILSERVER",
+                       "smtp.test.org")
+    monkeypatch.setenv("AUTHNZERVER_EMAILPORT",
+                       "25")
+    monkeypatch.setenv("AUTHNZERVER_EMAILUSER",
+                       "testuser")
+    monkeypatch.setenv("AUTHNZERVER_EMAILPASS",
+                       "testpass")
 
     # load the config items now
     loaded_config = confload.load_config(confvars.CONF,
@@ -150,15 +168,26 @@ def test_load_config_from_env_filesecret(monkeypatch, tmpdir):
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '127.0.0.1'
 
-    assert isinstance(loaded_config.permissions, dict)
-    assert loaded_config.permissions['test'] == 'yes'
-    assert loaded_config.permissions['no'] == 1
+    # check if the permission model was loaded correctly
+    loaded_permissions = load_permissions_json(loaded_config.permissions)
+    assert isinstance(loaded_permissions, dict)
+    assert loaded_permissions['roles'] == {'superuser',
+                                           'staff',
+                                           'authenticated',
+                                           'anonymous',
+                                           'locked'}
 
     assert loaded_config.port == 13431
     assert loaded_config.secret == 'super-secret-secret'
 
     assert loaded_config.sessionexpiry == 60
     assert loaded_config.workers == 4
+
+    # email setup check
+    assert loaded_config.emailserver == 'smtp.test.org'
+    assert loaded_config.emailport == 25
+    assert loaded_config.emailuser == 'testuser'
+    assert loaded_config.emailpass == 'testpass'
 
 
 def test_load_config_from_env_textsecret(monkeypatch, tmpdir):
@@ -189,6 +218,14 @@ def test_load_config_from_env_textsecret(monkeypatch, tmpdir):
                        "60")
     monkeypatch.setenv("AUTHNZERVER_WORKERS",
                        "4")
+    monkeypatch.setenv("AUTHNZERVER_EMAILSERVER",
+                       "smtp.test.org")
+    monkeypatch.setenv("AUTHNZERVER_EMAILPORT",
+                       "25")
+    monkeypatch.setenv("AUTHNZERVER_EMAILUSER",
+                       "testuser")
+    monkeypatch.setenv("AUTHNZERVER_EMAILPASS",
+                       "testpass")
 
     # load the config items now
     loaded_config = confload.load_config(confvars.CONF,
@@ -201,15 +238,26 @@ def test_load_config_from_env_textsecret(monkeypatch, tmpdir):
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '127.0.0.1'
 
-    assert isinstance(loaded_config.permissions, dict)
-    assert loaded_config.permissions['test'] == 'yes'
-    assert loaded_config.permissions['no'] == 1
+    # check if the permission model was loaded correctly
+    loaded_permissions = load_permissions_json(loaded_config.permissions)
+    assert isinstance(loaded_permissions, dict)
+    assert loaded_permissions['roles'] == {'superuser',
+                                           'staff',
+                                           'authenticated',
+                                           'anonymous',
+                                           'locked'}
 
     assert loaded_config.port == 13431
     assert loaded_config.secret == 'this is a direct text secret'
 
     assert loaded_config.sessionexpiry == 60
     assert loaded_config.workers == 4
+
+    # email setup check
+    assert loaded_config.emailserver == 'smtp.test.org'
+    assert loaded_config.emailport == 25
+    assert loaded_config.emailuser == 'testuser'
+    assert loaded_config.emailpass == 'testpass'
 
 
 def test_load_config_from_options(monkeypatch, tmpdir):
@@ -233,6 +281,11 @@ def test_load_config_from_options(monkeypatch, tmpdir):
     generated_options.permissions = permissions_json
     generated_options.secret = secret_file
 
+    generated_options.emailserver = 'smtp.test.org'
+    generated_options.emailport = 25
+    generated_options.emailuser = 'me'
+    generated_options.emailpass = 'them'
+
     # load the config items now
     loaded_config = confload.load_config(confvars.CONF,
                                          generated_options,
@@ -244,15 +297,26 @@ def test_load_config_from_options(monkeypatch, tmpdir):
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '192.168.1.1'
 
-    assert isinstance(loaded_config.permissions, dict)
-    assert loaded_config.permissions['test'] == 'yes'
-    assert loaded_config.permissions['no'] == 1
+    # check if the permission model was loaded correctly
+    loaded_permissions = load_permissions_json(loaded_config.permissions)
+    assert isinstance(loaded_permissions, dict)
+    assert loaded_permissions['roles'] == {'superuser',
+                                           'staff',
+                                           'authenticated',
+                                           'anonymous',
+                                           'locked'}
 
     assert loaded_config.port == 15000
     assert loaded_config.secret == 'super-secret-secret'
 
     assert loaded_config.sessionexpiry == 7
     assert loaded_config.workers == 8
+
+    # email setup check
+    assert loaded_config.emailserver == generated_options.emailserver
+    assert loaded_config.emailport == generated_options.emailport
+    assert loaded_config.emailuser == generated_options.emailuser
+    assert loaded_config.emailpass == generated_options.emailpass
 
 
 def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
@@ -278,7 +342,11 @@ def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
         port=5005,
         secret=secret_file,
         sessionexpiry=25,
-        workers=1
+        workers=1,
+        emailserver='smtp.test.org',
+        emailport=25,
+        emailuser='testuser',
+        emailpass='testpass'
     )
 
     # load the config items now
@@ -292,15 +360,26 @@ def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '10.0.0.10'
 
-    assert isinstance(loaded_config.permissions, dict)
-    assert loaded_config.permissions['test'] == 'yes'
-    assert loaded_config.permissions['no'] == 1
+    # check if the permission model was loaded correctly
+    loaded_permissions = load_permissions_json(loaded_config.permissions)
+    assert isinstance(loaded_permissions, dict)
+    assert loaded_permissions['roles'] == {'superuser',
+                                           'staff',
+                                           'authenticated',
+                                           'anonymous',
+                                           'locked'}
 
     assert loaded_config.port == 5005
     assert loaded_config.secret == 'super-secret-secret'
 
     assert loaded_config.sessionexpiry == 25
     assert loaded_config.workers == 1
+
+    # email setup check
+    assert loaded_config.emailserver == 'smtp.test.org'
+    assert loaded_config.emailport == 25
+    assert loaded_config.emailuser == 'testuser'
+    assert loaded_config.emailpass == 'testpass'
 
 
 def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
@@ -326,7 +405,11 @@ def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
         port=5005,
         secret=secret,
         sessionexpiry=25,
-        workers=1
+        workers=1,
+        emailserver='smtp.test.org',
+        emailport=25,
+        emailuser='testuser',
+        emailpass='testpass'
     )
 
     # load the config items now
@@ -340,15 +423,26 @@ def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '10.0.0.10'
 
-    assert isinstance(loaded_config.permissions, dict)
-    assert loaded_config.permissions['test'] == 'yes'
-    assert loaded_config.permissions['no'] == 1
+    # check if the permission model was loaded correctly
+    loaded_permissions = load_permissions_json(loaded_config.permissions)
+    assert isinstance(loaded_permissions, dict)
+    assert loaded_permissions['roles'] == {'superuser',
+                                           'staff',
+                                           'authenticated',
+                                           'anonymous',
+                                           'locked'}
 
     assert loaded_config.port == 5005
     assert loaded_config.secret == 'this is a direct secret bit'
 
     assert loaded_config.sessionexpiry == 25
     assert loaded_config.workers == 1
+
+    # email setup check
+    assert loaded_config.emailserver == 'smtp.test.org'
+    assert loaded_config.emailport == 25
+    assert loaded_config.emailuser == 'testuser'
+    assert loaded_config.emailpass == 'testpass'
 
 
 def test_load_config_env_and_defaults(monkeypatch, tmpdir):
@@ -379,15 +473,26 @@ def test_load_config_env_and_defaults(monkeypatch, tmpdir):
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '127.0.0.1'
 
-    assert isinstance(loaded_config.permissions, dict)
-    assert loaded_config.permissions['test'] == 'yes'
-    assert loaded_config.permissions['no'] == 1
+    # check if the permission model was loaded correctly
+    loaded_permissions = load_permissions_json(loaded_config.permissions)
+    assert isinstance(loaded_permissions, dict)
+    assert loaded_permissions['roles'] == {'superuser',
+                                           'staff',
+                                           'authenticated',
+                                           'anonymous',
+                                           'locked'}
 
     assert loaded_config.port == 13431
     assert loaded_config.secret == 'this is a direct text secret'
 
     assert loaded_config.sessionexpiry == 30
     assert loaded_config.workers == 4
+
+    # email setup check
+    assert loaded_config.emailserver == 'localhost'
+    assert loaded_config.emailport == 25
+    assert loaded_config.emailuser == getpass.getuser()
+    assert loaded_config.emailpass == ''
 
 
 def test_load_config_options_and_defaults(monkeypatch, tmpdir):
@@ -418,12 +523,23 @@ def test_load_config_options_and_defaults(monkeypatch, tmpdir):
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '192.168.1.1'
 
-    assert isinstance(loaded_config.permissions, dict)
-    assert loaded_config.permissions['test'] == 'yes'
-    assert loaded_config.permissions['no'] == 1
+    # check if the permission model was loaded correctly
+    loaded_permissions = load_permissions_json(loaded_config.permissions)
+    assert isinstance(loaded_permissions, dict)
+    assert loaded_permissions['roles'] == {'superuser',
+                                           'staff',
+                                           'authenticated',
+                                           'anonymous',
+                                           'locked'}
 
     assert loaded_config.port == 4002
     assert loaded_config.secret == 'super-secret-secret'
 
     assert loaded_config.sessionexpiry == 30
     assert loaded_config.workers == 4
+
+    # email setup check
+    assert loaded_config.emailserver == 'localhost'
+    assert loaded_config.emailport == 25
+    assert loaded_config.emailuser == getpass.getuser()
+    assert loaded_config.emailpass == ''
