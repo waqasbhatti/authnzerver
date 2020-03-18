@@ -22,44 +22,10 @@ from sqlalchemy.engine import Engine
 from sqlalchemy import event
 from sqlalchemy import (
     Table, Column, Integer, String, Text,
-    Boolean, DateTime, ForeignKey, MetaData
+    Boolean, DateTime, ForeignKey, MetaData, JSON
 )
 
 from argon2 import PasswordHasher
-
-
-##########################
-## JSON type for SQLite ##
-##########################
-
-# taken from:
-# docs.sqlalchemy.org/en/latest/core/custom_types.html#marshal-json-strings
-
-from sqlalchemy.types import TypeDecorator, TEXT
-import json
-
-
-class JSONEncodedDict(TypeDecorator):
-    """Represents an immutable structure as a json-encoded string.
-
-    Usage::
-
-        JSONEncodedDict(255)
-
-    """
-
-    impl = TEXT
-
-    def process_bind_param(self, value, dialect):
-        if value is not None:
-            value = json.dumps(value)
-
-        return value
-
-    def process_result_value(self, value, dialect):
-        if value is not None:
-            value = json.loads(value)
-        return value
 
 
 ########################
@@ -93,7 +59,7 @@ Sessions = Table(
            default=datetime.utcnow,
            nullable=False, index=True),
     Column('expires', DateTime(), nullable=False, index=True),
-    Column('extra_info_json', JSONEncodedDict()),
+    Column('extra_info_json', JSON(none_as_null=True)),
 )
 
 
@@ -133,8 +99,8 @@ Users = Table(
     Column('last_login_try', DateTime(), index=True),
 
     # this is reset everytime a user logs in sucessfully. this is used to check
-    # the number of failed tries since the last successful try. FIXME: can we
-    # use this for throttling login attempts without leaking info?
+    # the number of failed tries since the last successful try.
+    # FIXME: can we use this for throttling login attempts without leaking info?
     Column('failed_login_tries', Integer(), default=0),
 
     Column('created_on', DateTime(),
@@ -197,7 +163,7 @@ APIKeys = Table(
     Column('user_id', Integer(),
            ForeignKey('users.user_id', ondelete="CASCADE"),
            nullable=False),
-    Column('user_role', Integer(),
+    Column('user_role', String(length=100),
            ForeignKey('roles.name', ondelete="CASCADE"),
            nullable=False),
     Column('session_token', Text(),
@@ -216,8 +182,9 @@ pragma journal_size_limit=5242880;
 '''
 
 
-def create_sqlite_auth_db(
+def create_sqlite_authdb(
         auth_db_path,
+        database_metadata=AUTHDB_META,
         echo=False,
         returnconn=False
 ):
@@ -228,10 +195,10 @@ def create_sqlite_auth_db(
 
     engine = create_engine('sqlite:///%s' % os.path.abspath(auth_db_path),
                            echo=echo)
-    AUTHDB_META.create_all(engine)
+    database_metadata.create_all(engine, checkfirst=True)
 
     if returnconn:
-        return engine, AUTHDB_META
+        return engine, database_metadata
     else:
         engine.dispose()
         del engine
@@ -249,6 +216,7 @@ def create_sqlite_auth_db(
 
 
 def create_authdb(authdb_url,
+                  database_metadata=AUTHDB_META,
                   echo=False,
                   returnconn=False):
     """
@@ -257,16 +225,21 @@ def create_authdb(authdb_url,
     """
 
     engine = create_engine(authdb_url, echo=echo)
-    AUTHDB_META.create_all(engine)
+
+    # the create_all fn has checkfirst=True, meaning that it doesn't
+    # recreate existing tables.
+    database_metadata.create_all(engine, checkfirst=True)
 
     if returnconn:
-        return engine, AUTHDB_META
+        return engine, database_metadata
     else:
         engine.dispose()
         del engine
 
 
-def get_auth_db(auth_db_path, echo=False):
+def get_authdb(authdb_path,
+               database_metadata=AUTHDB_META,
+               echo=False):
     """
     This just gets a connection to the auth DB.
 
@@ -274,7 +247,7 @@ def get_auth_db(auth_db_path, echo=False):
 
     # if this is an SQLite DB, make sure to check the auth DB permissions before
     # we load it so we can be sure no one else messes with it
-    potential_file_path = auth_db_path.replace('sqlite:///','')
+    potential_file_path = authdb_path.replace('sqlite:///','')
 
     if os.path.exists(potential_file_path):
 
@@ -289,14 +262,15 @@ def get_auth_db(auth_db_path, echo=False):
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
 
-    engine = create_engine(auth_db_path, echo=echo)
-    AUTHDB_META.bind = engine
+    engine = create_engine(authdb_path, echo=echo)
+    database_metadata.bind = engine
     conn = engine.connect()
 
-    return engine, conn, AUTHDB_META
+    return engine, conn, database_metadata
 
 
 def initial_authdb_inserts(auth_db_path,
+                           database_metadata=AUTHDB_META,
                            superuser_email=None,
                            superuser_pass=None,
                            echo=False):
@@ -313,8 +287,9 @@ def initial_authdb_inserts(auth_db_path,
 
     """
 
-    engine, conn, meta = get_auth_db(auth_db_path,
-                                     echo=echo)
+    engine, conn, meta = get_authdb(auth_db_path,
+                                    database_metadata=database_metadata,
+                                    echo=echo)
 
     # get the roles table and fill it in
     roles = meta.tables['roles']
@@ -355,7 +330,8 @@ def initial_authdb_inserts(auth_db_path,
     result = conn.execute(
         users.insert().values([
             # the superuser
-            {'password': hashed_password,
+            {'user_id':1,
+             'password': hashed_password,
              'email': superuser_email,
              'system_id':str(uuid.uuid4()),
              'email_verified': True,
@@ -364,8 +340,9 @@ def initial_authdb_inserts(auth_db_path,
              'created_on': datetime.utcnow(),
              'last_updated': datetime.utcnow(),
              'full_name': "Superuser account"},
-            # the anonuser
-            {'password': hasher.hash(secrets.token_urlsafe(32)),
+            # the anonuser,
+            {'user_id':2,
+             'password': hasher.hash(secrets.token_urlsafe(32)),
              'email': 'anonuser@localhost',
              'system_id':str(uuid.uuid4()),
              'email_verified': True,
@@ -375,7 +352,8 @@ def initial_authdb_inserts(auth_db_path,
              'last_updated': datetime.utcnow(),
              'full_name': "The systemwide anonymous user"},
             # the dummyuser to fail passwords for nonexistent users against
-            {'password': hasher.hash(secrets.token_urlsafe(32)),
+            {'user_id':3,
+             'password': hasher.hash(secrets.token_urlsafe(32)),
              'email': 'dummyuser@localhost',
              'system_id':str(uuid.uuid4()),
              'email_verified': True,
