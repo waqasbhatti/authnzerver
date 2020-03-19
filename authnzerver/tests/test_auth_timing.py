@@ -22,7 +22,7 @@ def get_test_authdb():
 
     '''
 
-    authdb.create_sqlite_auth_db('test-timing.authdb.sqlite')
+    authdb.create_sqlite_authdb('test-timing.authdb.sqlite')
     authdb.initial_authdb_inserts('sqlite:///test-timing.authdb.sqlite')
 
 

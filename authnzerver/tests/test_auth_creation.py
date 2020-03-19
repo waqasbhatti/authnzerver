@@ -18,7 +18,7 @@ def get_test_authdb():
 
     '''
 
-    authdb.create_sqlite_auth_db('test-creation.authdb.sqlite')
+    authdb.create_sqlite_authdb('test-creation.authdb.sqlite')
     authdb.initial_authdb_inserts('sqlite:///test-creation.authdb.sqlite')
 
 
