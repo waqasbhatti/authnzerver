@@ -87,6 +87,7 @@ def validate_input_password(
     4. must not have a single case-folded character take up more than 20% of the
        length of the password
     5. must not be completely numeric
+    6. must not be in the top 10k passwords list
 
     '''
 
@@ -103,11 +104,24 @@ def validate_input_password(
     else:
         passlen_ok = True
 
+    # check if the password is straight-up dumb
+    if password.casefold() in validators.TOP_10K_PASSWORDS:
+        LOGGER.warning('password for new account: %s is '
+                       'in top 10k passwords list' % email)
+        messages.append('Your password is on the list of the '
+                        'most common passwords and is vulnerable to guessing.')
+        tenk_ok = False
+    else:
+        tenk_ok = True
+
+    # FIXME: also add fuzzy matching to top 10k passwords list to avoid stuff
+    # like 'passwordpasswordpassword'
+
     # check the fuzzy match against the FQDN and email address
     fqdn = socket.getfqdn()
-    fqdn_match = UQRatio(password, fqdn)
-    email_match = UQRatio(password, email)
-    name_match = UQRatio(password, full_name)
+    fqdn_match = UQRatio(password.casefold(), fqdn.casefold())
+    email_match = UQRatio(password.casefold(), email.casefold())
+    name_match = UQRatio(password.casefold(), full_name.casefold())
 
     fqdn_ok = fqdn_match < max_match_threshold
     email_ok = email_match < max_match_threshold
@@ -118,7 +132,7 @@ def validate_input_password(
                        '(similarity: %s) or their email address '
                        '(similarity: %s)' % (email, fqdn_match, email_match))
         messages.append('Your password is too similar to either '
-                        'the domain name of this LCC-Server or your '
+                        'the domain name of this server or your '
                         'own name or email address.')
 
     # next, check if the password is complex enough
@@ -151,7 +165,7 @@ def validate_input_password(
 
     return (
         (passlen_ok and email_ok and name_ok and
-         fqdn_ok and hist_ok and numeric_ok),
+         fqdn_ok and hist_ok and numeric_ok and tenk_ok),
         messages
     )
 

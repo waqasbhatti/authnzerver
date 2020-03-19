@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 import time
 
 
-
 def get_test_authdb():
     '''This just makes a new test auth DB for each test function.
 
@@ -22,7 +21,6 @@ def get_test_authdb():
     authdb.initial_authdb_inserts('sqlite:///test-creation.authdb.sqlite')
 
 
-
 def test_create_user():
     '''
     This runs through various iterations of creating a user.
@@ -30,15 +28,15 @@ def test_create_user():
     '''
     try:
         os.remove('test-creation.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-creation.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-creation.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
 
     get_test_authdb()
@@ -58,10 +56,13 @@ def test_create_user():
     assert ('Your password is too short. It must have at least 12 characters.'
             in user_created['messages'])
     assert ('Your password is too similar to either '
-            'the domain name of this LCC-Server or your '
+            'the domain name of this server or your '
             'own name or email address.' in user_created['messages'])
     assert ('Your password is not complex enough. '
             'One or more characters appear appear too frequently.'
+            in user_created['messages'])
+    assert ('Your password is on the list of the most common '
+            'passwords and is vulnerable to guessing.'
             in user_created['messages'])
 
     # 2. all numeric password
@@ -94,7 +95,7 @@ def test_create_user():
             'One or more characters appear appear too frequently.'
             in user_created['messages'])
     assert ('Your password is too similar to either '
-            'the domain name of this LCC-Server or your '
+            'the domain name of this server or your '
             'own name or email address.' in user_created['messages'])
 
     # 3b. password ~= full name
@@ -110,7 +111,7 @@ def test_create_user():
     assert user_created['user_id'] is None
     assert user_created['send_verification'] is False
     assert ('Your password is too similar to either '
-            'the domain name of this LCC-Server or your '
+            'the domain name of this server or your '
             'own name or email address.' in user_created['messages'])
 
     # 4. password is OK
@@ -149,17 +150,16 @@ def test_create_user():
 
     try:
         os.remove('test-creation.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-creation.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-creation.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
-
 
 
 def test_sessions():
@@ -170,15 +170,15 @@ def test_sessions():
 
     try:
         os.remove('test-creation.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-creation.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-creation.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
 
     get_test_authdb()
@@ -298,13 +298,13 @@ def test_sessions():
 
     try:
         os.remove('test-creation.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-creation.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-creation.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass

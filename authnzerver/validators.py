@@ -55,6 +55,7 @@ LOGGER = logging.getLogger(__name__)
 
 import unicodedata
 import re
+import os.path
 
 from confusable_homoglyphs import confusables
 
@@ -224,6 +225,18 @@ DEFAULT_RESERVED_NAMES = set(
     NOREPLY_ADDRESSES + SENSITIVE_FILENAMES + OTHER_SENSITIVE_NAMES
 )
 
+MOD_DIR = os.path.dirname(__file__)
+TENK_PASSWORDS_FILE = os.path.abspath(
+    os.path.join(MOD_DIR,
+                 'top-10k-passwords.txt')
+)
+with open(TENK_PASSWORDS_FILE,'r') as infd:
+    TOP_10K_PASSWORDS = {x.strip('\n') for x in infd.readlines()}
+
+
+###############
+## FUNCTIONS ##
+###############
 
 def validate_reserved_name(value):
     '''

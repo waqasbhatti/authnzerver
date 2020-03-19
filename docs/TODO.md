@@ -2,7 +2,7 @@
 
 ### Password handling
 
-- [ ] Add list of [10k most common
+- [x] Add list of [10k most common
   passwords](https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10-million-password-list-top-10000.txt),
   load into memory as a set and check against this for all user creation events.
 
