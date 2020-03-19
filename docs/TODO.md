@@ -1,20 +1,13 @@
 ## TODO
 
-- [ ] 2FA using pyotp probably (look up what PyPI uses).
-- [ ] Add WebAuthn using Duo's python web authn library (look up what PyPI uses).
-- [ ] Try to at least conform to OWASP ASVS Level 2.
+### Password handling
+
 - [ ] Add list of [10k most common
   passwords](https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10-million-password-list-top-10000.txt),
   load into memory as a set and check against this for all user creation events.
-- [x] Add actions/access.py and hook up handler to delegate access control
-  decisions to the authnzerver.
-- [ ] Add a full frontend listening as an /authf endpoint, this will include a
-  Bootstrap UI for login, logout, etc. Change the existing /auth endpoint to
-  make sure it only listens to specified IP address ranges, and then rename it
-  to /authb to signify backend auth requests. We'll also need to ship Bootstrap
-  and Tornado templates and copy these over to the basedir for the user to
-  change if required.
-- [ ] Look at NIST 800-162 (ABAC) to see if we can improve the permissions model.
+
+### Request tracking and logging
+
 - [ ] Log all the auth events. Make sure PII (session tokens, passwords, user
       names, emails) never makes it into the logs.
 - [ ] Add request IDs received from the POST into all of the logging messages
@@ -24,26 +17,50 @@
 - [ ] Return the request ID from the backend to the handler, and then from there
   back to the client. Our own authnzerver frontend basehandler should check if
   it received the correct request ID it sent.
-- [x] Add email server settings to the env config bits.
 - [ ] Track invalid login requests and password checks in the cache, and then
   apply exponential timeout to them to slow them down. This should be done in
   the handler with asyncio.sleep so the timeout is enforced on the authnzerver
   end. Disable user accounts after 5 attempts.
+
+### Frontend bits
+
+- [ ] Add a full frontend listening as an /authf endpoint, this will include a
+  Bootstrap UI for login, logout, etc. Change the existing /auth endpoint to
+  make sure it only listens to specified IP address ranges, and then rename it
+  to /authb to signify backend auth requests. We'll also need to ship Bootstrap
+  and Tornado templates and copy these over to the basedir for the user to
+  change if required.
+
+### 2FA
+
+- [ ] 2FA using pyotp probably (look up what PyPI uses).
+- [ ] Add WebAuthn using Duo's python web authn library (look up what PyPI uses).
+
+### OAuth
+
 - [ ] Add OAuth2 client and OpenID Connect clients with the various callback URL
   bits. Check against Google, Twitter, Github, Auth0.
+
+### Misc
+
+- [x] Add actions/access.py and hook up handler to delegate access control
+  decisions to the authnzerver.
+- [x] Add email server settings to the env config bits.
+- [x] Do autosetup correctly. check if the DB is empty, create the required
+  tables if necessary.
+- [x] Add `test_auth_permissions.py` to check delegation of permissions via the
+      payload API.
+- [ ] Try to at least conform to OWASP ASVS Level 2.
+- [ ] Look at NIST 800-162 (ABAC) to see if we can improve the permissions model.
 - [ ] Move from shared key to public/private key to secure frontend-authnzerver
   communications. Probably use PyNACL for this (see below). Also see:
   https://stackoverflow.com/a/59835994 for AES-GCM.
-- [x] Do autosetup correctly. check if the DB is empty, create the required
-  tables if necessary.
 - [ ] Think about changing the permissions model so `allowed_actions_for_owned`
   is further scoped by the owned items (e.g. maybe authenticated users shouldn't
   be able to delete datasets even if they own them).
 - [ ] Maybe memlock pages for secure holding of secrets in memory? (how would
       this even work in Python?)
 - [ ] Maybe add a `change_role` action and figure out how this would work.
-- [ ] Add `test_auth_permissions.py` to check delegation of permissions via the
-      payload API.
 - [ ] Docker container
 
 

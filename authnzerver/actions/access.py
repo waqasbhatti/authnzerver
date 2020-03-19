@@ -135,6 +135,7 @@ def check_user_access(payload,
         users = currproc.authdb_meta.tables['users']
 
         originating_userid = int(payload['user_id'])
+        originating_user_role = payload['user_role']
         target_userid = int(payload['target_owner'])
         target_sharedwith = payload['target_sharedwith']
 
@@ -151,10 +152,33 @@ def check_user_access(payload,
 
         userids_to_check = list(set(userids_to_check))
 
+        # check if the originating_userid is legit
         s = select([
             users.c.user_id
         ]).select_from(users).where(
+            users.c.user_id == originating_userid
+        ).where(
+            users.c.user_role == originating_user_role
+        ).where(
+            users.c.is_active.is_(True)
+        )
+        result = currproc.authdb_conn.execute(s)
+        row = result.scalar()
+
+        if not row or row != originating_userid:
+            return {
+                'success': False,
+                'messages':['Access request check successful. '
+                            'Access granted: False.']
+            }
+
+        # now check if the rest of the user IDs make sense
+        s = select([
+            users.c.user_id,
+        ]).select_from(users).where(
             users.c.user_id.in_(userids_to_check)
+        ).where(
+            users.c.is_active.is_(True)
         )
 
         result = currproc.authdb_conn.execute(s)
@@ -163,17 +187,32 @@ def check_user_access(payload,
 
         try:
 
+            # make sure all of the userids to check were found in the DB
             if rows and len(rows) > 0:
-                return {
-                    'success': access_granted,
-                    'messages':['Access request check successful. '
-                                'Access granted: %s.' % access_granted]
-                }
+
+                users_found = list(list(zip(*rows))[0])
+                if sorted(userids_to_check) == sorted(users_found):
+
+                    return {
+                        'success': access_granted,
+                        'messages':['Access request check successful. '
+                                    'Access granted: %s.' % access_granted]
+                    }
+
+                else:
+
+                    return {
+                        'success': False,
+                        'messages':['Access request check successful. '
+                                    'Access granted: False.']
+                    }
+
             else:
 
                 return {
                     'success': False,
-                    'messages':['Access request check failed.']
+                    'messages':['Access request check successful. '
+                                'Access granted: False.']
                 }
 
         except Exception:
@@ -183,7 +222,6 @@ def check_user_access(payload,
 
             return {
                 'success':False,
-                'user_info':None,
                 'messages':["Access request check failed."],
             }
 
@@ -301,6 +339,8 @@ def check_user_limit(payload,
             users.c.user_id == originating_userid
         ).where(
             users.c.user_role == originating_user_role
+        ).where(
+            users.c.is_active.is_(True)
         )
 
         result = currproc.authdb_conn.execute(s)
@@ -319,7 +359,8 @@ def check_user_limit(payload,
 
                 return {
                     'success': False,
-                    'messages':['Limit check failed.']
+                    'messages':['Limit check successful. '
+                                'Limit check passed: False.']
                 }
 
         except Exception:
