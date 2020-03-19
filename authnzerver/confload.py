@@ -41,6 +41,7 @@ def get_conf_item(env_key,
                   vartype=str,
                   default=None,
                   readable_from_file=False,
+                  raiseonfail=True,
                   basedir=None):
     """This loads a config item from the environment or command-line options.
 
@@ -80,6 +81,14 @@ def get_conf_item(env_key,
         it and read it in, cast to the specified variable type, and return the
         item.
 
+    raiseonfail : bool
+        If this is set to True, the function will raise a ValueError for any
+        missing config items that can't be set from the environment, the envfile
+        or the command-line options. If this is set to False, the function won't
+        immediately raise an exception, but will return None. This latter
+        behavior is useful for indicating which configuration items are missing
+        (e.g. when a server is being started for the first time.)
+
     basedir : str
         The directory where the server will do its work. This is used to fill in
         '{{basedir}}' template values in any conf item. By default, this is the
@@ -111,10 +120,18 @@ def get_conf_item(env_key,
     if ( (confitem is None or len(str(confitem).strip()) == 0) and
          (default is None) ):
 
-        raise ValueError(
-            'Config item: "%s" is invalid/missing, '
-            'no default provided.' % env_key
-        )
+        if raiseonfail:
+            raise ValueError(
+                'Config item: "%s" is invalid/missing, '
+                'no default provided.' % env_key
+            )
+
+        else:
+            LOGGER.error(
+                'Config item: "%s" is invalid/missing, '
+                'no default provided.' % env_key
+            )
+            return None
 
     # if the conf item doesn't exist, but a default exists, process that.
     elif ( (confitem is None or len(str(confitem).strip()) == 0) and

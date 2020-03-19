@@ -68,7 +68,8 @@ import multiprocessing as mp
 #######################
 
 def _setup_auth_worker(authdb_path,
-                       fernet_secret):
+                       fernet_secret,
+                       permissions_json):
     '''This stores secrets and the auth DB path in the worker loop's context.
 
     The worker will then open the DB and set up its Fernet instance by itself.
@@ -81,6 +82,7 @@ def _setup_auth_worker(authdb_path,
     currproc = mp.current_process()
     currproc.auth_db_path = authdb_path
     currproc.fernet_secret = fernet_secret
+    currproc.permissions_json = permissions_json
 
 
 def _close_authentication_database():
@@ -168,7 +170,7 @@ def main():
     ###################
 
     from .external.futures37.process import ProcessPoolExecutor
-    from .secrets import autogen_secrets_authdb
+    from .autosetup import autogen_secrets_authdb
     from .confload import load_config
 
     ##############
@@ -183,12 +185,42 @@ def main():
     ## SET UP CONFIG ##
     ###################
 
-    loaded_config = load_config(CONF,
-                                tornado.options,
-                                envfile=options.envfile)
+    #
+    # handle autosetup
+    #
+
+    # if autosetup is set, we'll generate the secret and auth DB, then exit
+    # immediately
+    if options.autosetup:
+
+        authdb_path, creds, secret_file = autogen_secrets_authdb(
+            options.basedir,
+            interactive=True
+        )
+        LOGGER.info("Auto-setup complete, exiting...")
+        LOGGER.info("To start the authnzerver with these parameters, call "
+                    "authnzrv again with the appropriate values set "
+                    "for the auth DB and the secret key in either the "
+                    "command line options or as environment variables.")
+        sys.exit(0)
+
+    # otherwise, we'll assume that all is well, and we'll proceed to load the
+    # config from an envfile, command line args, or the environment.
+
+    try:
+
+        loaded_config = load_config(CONF,
+                                    options,
+                                    envfile=options.envfile)
+
+    except ValueError:
+
+        LOGGER.error("One or more config variables could not be set "
+                     "from the environment, an envfile, or the command "
+                     "line options. Exiting...")
+        raise
 
     maxworkers = loaded_config.workers
-
     basedir = loaded_config.basedir
     LOGGER.info("The server's base directory is: %s" % os.path.abspath(basedir))
 
@@ -206,61 +238,7 @@ def main():
     #
     authdb = loaded_config.authdb
     secret = loaded_config.secret
-
-    # FIXME: add this in later
-    # permissions = loaded_config.permissions
-
-    # FIXME: figure out better autosetup
-
-    # authdb and secret not provided but basedir was auto-setup in the past
-    if ((not authdb) and
-        (not secret) and
-        (os.path.exists(os.path.join(basedir,'.authnzerver-autosetup-done')))):
-
-        authdb = 'sqlite:///%s' % os.path.abspath(
-            os.path.join(basedir, '.authdb.sqlite')
-        )
-        with open(os.path.join(basedir, '.authnzerver-secret-key'),'r') as infd:
-            secret = infd.read().strip('\n')
-
-    # authdb and secret not provided and this is a completely new run
-    elif ((not authdb) and
-          (not secret) and
-          (loaded_config.autosetup is True) and
-          (not os.path.exists(os.path.join(basedir,
-                                           '.authnzerver-autosetup-done')))):
-
-        authdb_path, admin_credentials, secret_file = autogen_secrets_authdb(
-            loaded_config.basedir,
-            interactive=False
-        )
-
-        authdb = 'sqlite:///%s' % authdb_path
-        with open(secret_file,'r') as infd:
-            secret = infd.read().strip('\n')
-
-        with open(os.path.join(basedir,
-                               '.authnzerver-autosetup-done'),'w') as outfd:
-
-            outfd.write('auto-setup run on: %sZ\n' % datetime.utcnow())
-            outfd.write('authdb path: %s\n' % authdb_path)
-            outfd.write('secret file: %s\n' % secret_file)
-
-    # otherwise, we need authdb and secret from the user
-    elif (((not authdb) or (not secret)) and
-          (not os.path.exists(os.path.join(basedir,
-                                           '.authnzerver-autosetup-done')))):
-
-        raise ValueError(
-            "Can't find either an existing authentication DB or\n"
-            "the secret token and the `autosetup` option was set to False.\n"
-            "Please provide a valid SQLAlchemy DB connection string in the\n"
-            "`%s` environ var or `%s` command-line option,\n"
-            "and make sure you have set the `%s` environ var or\n"
-            "the `%s` command-line option." %
-            (CONF['authdb']['env'], CONF['authdb']['cmdline'],
-             CONF['secret']['env'], CONF['secret']['cmdline'])
-        )
+    permissions = loaded_config.permissions
 
     #
     # this is the background executor we'll pass over to the handler
@@ -268,7 +246,7 @@ def main():
     executor = ProcessPoolExecutor(
         max_workers=maxworkers,
         initializer=_setup_auth_worker,
-        initargs=(authdb, secret),
+        initargs=(authdb, secret, permissions),
         finalizer=_close_authentication_database
     )
 

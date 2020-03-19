@@ -72,6 +72,18 @@ def autogen_secrets_authdb(basedir,
     )
     from cryptography.fernet import Fernet
 
+    if interactive:
+        LOGGER.warning(
+            "Enter a valid SQLAlchemy database URL to use for the auth DB."
+        )
+        print("If you leave this blank and hit Enter, an SQLite auth DB")
+        print("will be created in the base directory: %s" % basedir)
+        input_db_url = input(
+            "Auth DB URL [default: auto generated]: "
+        )
+        if not input_db_url or len(input_db_url) == 0:
+            database_url = None
+
     if database_url is None:
 
         # create our authentication database if it doesn't exist
@@ -84,6 +96,7 @@ def autogen_secrets_authdb(basedir,
 
         # generate the initial DB
         create_sqlite_authdb(authdb_path, echo=False, returnconn=False)
+        database_url = 'sqlite:///%s' % authdb_path
 
     elif 'sqlite:///' in database_url:
 
@@ -131,6 +144,7 @@ def autogen_secrets_authdb(basedir,
                                       superuser_pass=password)
 
     except Exception:
+
         LOGGER.warning(
             "Auth DB is already set up at the provided database URL. "
             "Not overwriting..."
@@ -140,10 +154,12 @@ def autogen_secrets_authdb(basedir,
                          '.authnzerver-admin-credentials')
 
     if os.path.exists(creds):
+
         LOGGER.warning("Admin credentials file already exists. "
                        "Not overwriting...")
 
     else:
+
         with open(creds,'w') as outfd:
             outfd.write('%s %s\n' % (u,p))
             os.chmod(creds, 0o100400)

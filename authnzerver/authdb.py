@@ -237,9 +237,9 @@ def create_authdb(authdb_url,
         del engine
 
 
-def get_authdb(authdb_path,
-               database_metadata=AUTHDB_META,
-               echo=False):
+def get_auth_db(authdb_path,
+                database_metadata=AUTHDB_META,
+                echo=False):
     """
     This just gets a connection to the auth DB.
 
@@ -287,9 +287,9 @@ def initial_authdb_inserts(auth_db_path,
 
     """
 
-    engine, conn, meta = get_authdb(auth_db_path,
-                                    database_metadata=database_metadata,
-                                    echo=echo)
+    engine, conn, meta = get_auth_db(auth_db_path,
+                                     database_metadata=database_metadata,
+                                     echo=echo)
 
     # get the roles table and fill it in
     roles = meta.tables['roles']
