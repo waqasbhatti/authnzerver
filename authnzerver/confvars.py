@@ -140,7 +140,7 @@ CONF = {
         'cmdline':'emailuser',
         'type':str,
         'default':currentuser,
-        'help':('The username of the email user to use.'),
+        'help':('The username to use for login to the email server.'),
         'readable_from_file':False,
     },
     'emailpass':{
@@ -148,7 +148,16 @@ CONF = {
         'cmdline':'emailpass',
         'type':str,
         'default':'',
-        'help':('The password of the email user to use.'),
+        'help':('The password to use for login to the email server.'),
+        'readable_from_file':False,
+    },
+    'emailsender':{
+        'env':'%s_EMAILSENDER' % ENVPREFIX,
+        'cmdline':'emailsender',
+        'type':str,
+        'default':'Authnzerver <authnzerver@localhost>',
+        'help':('The account name and email address that the '
+                'authnzerver will send from.'),
         'readable_from_file':False,
     },
 }
