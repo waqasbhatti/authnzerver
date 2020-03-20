@@ -8,6 +8,11 @@ This contains SQLAlchemy models for the authnzerver.
 
 """
 
+import logging
+
+# get a logger
+LOGGER = logging.getLogger(__name__)
+
 import os.path
 import os
 import stat
@@ -26,6 +31,8 @@ from sqlalchemy import (
 )
 
 from argon2 import PasswordHasher
+
+from .permissions import load_permissions_json
 
 
 ########################
@@ -270,6 +277,7 @@ def get_auth_db(authdb_path,
 
 
 def initial_authdb_inserts(auth_db_path,
+                           permissions_json=None,
                            database_metadata=AUTHDB_META,
                            superuser_email=None,
                            superuser_pass=None,
@@ -293,18 +301,38 @@ def initial_authdb_inserts(auth_db_path,
 
     # get the roles table and fill it in
     roles = meta.tables['roles']
-    res = conn.execute(roles.insert(),[
-        {'name': 'superuser',
-         'desc': 'Accounts that can do anything.'},
-        {'name': 'staff',
-         'desc': 'Users with basic admin privileges.'},
-        {'name': 'authenticated',
-         'desc': 'Logged in regular users.'},
-        {'name': 'anonymous',
-         'desc': 'The anonymous user role.'},
-        {'name': 'locked',
-         'desc': 'An account that has been disabled.'},
-    ])
+
+    if not permissions_json:
+
+        mod_dir = os.path.dirname(__file__)
+        permissions_json = os.path.abspath(
+            os.path.join(mod_dir,'default-permissions-model.json')
+        )
+
+        LOGGER.warning(
+            "Using default permissions policy JSON: %s to define roles." %
+            permissions_json
+        )
+
+    permissions_model = load_permissions_json(permissions_json)
+
+    roles_to_use = permissions_model['roles']
+
+    for k in ('superuser','anonymous','locked'):
+        if k not in roles_to_use:
+            LOGGER.error("The '%s' role is required for the authnzerver "
+                         "to work properly. It must be included in the "
+                         "list of roles in the permissions policy JSON." % k)
+            return None, None
+
+    insert_list = []
+    for role in roles_to_use:
+        insert_list.append(
+            {'name':role,
+             'desc':'Role with %s privileges' % role}
+        )
+
+    res = conn.execute(roles.insert(), insert_list)
     res.close()
 
     # get the users table

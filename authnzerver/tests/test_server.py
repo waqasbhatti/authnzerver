@@ -88,8 +88,10 @@ def test_server_with_env(monkeypatch, tmpdir):
     # send the request to the authnzerver
     resp = requests.post(
         'http://%s:%s' % (server_listen, server_port),
-        data=encrypted_request
+        data=encrypted_request,
+        timeout=1.0
     )
+    resp.raise_for_status()
 
     # decrypt the response
     response_dict = decrypt_request(resp.text, secret)
@@ -117,7 +119,7 @@ def test_server_with_env(monkeypatch, tmpdir):
 
     p.kill()
     try:
-        p.communicate(timeout=0.5)
+        p.communicate(timeout=1.0)
         p.kill()
     except Exception:
         pass

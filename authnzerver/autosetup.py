@@ -72,7 +72,19 @@ def autogen_secrets_authdb(basedir,
     )
     from cryptography.fernet import Fernet
 
+    #
+    # get the default permissions JSON
+    #
+    mod_dir = os.path.dirname(__file__)
+    permissions_json = os.path.abspath(
+        os.path.join(mod_dir, 'default-permissions-model.json')
+    )
+
     if interactive:
+
+        #
+        # get the auth DB URL
+        #
         LOGGER.warning(
             "Enter a valid SQLAlchemy database URL to use for the auth DB."
         )
@@ -83,6 +95,18 @@ def autogen_secrets_authdb(basedir,
         )
         if not input_db_url or len(input_db_url) == 0:
             database_url = None
+
+        LOGGER.warning(
+            "Enter the path to the permissions policy JSON file to use."
+        )
+        print("If you leave this blank and hit Enter, the default permissions")
+        print("policy JSON shipped with authnzerver will be used: %s" %
+              permissions_json)
+        input_permissions_json = input(
+            "Permission JSON path [default: included permissions JSON]: "
+        )
+        if input_permissions_json and len(input_permissions_json) > 0:
+            permissions_json = input_permissions_json
 
     if database_url is None:
 
@@ -140,8 +164,13 @@ def autogen_secrets_authdb(basedir,
 
         # generate the admin users and initial DB info
         u, p = initial_authdb_inserts(database_url,
+                                      permissions_json=permissions_json,
                                       superuser_email=userid,
                                       superuser_pass=password)
+
+        if not u and not p:
+            LOGGER.error("Could not do initial inserts into the auth DB.")
+            return None, None, None
 
     except Exception:
 
