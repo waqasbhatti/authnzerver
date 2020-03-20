@@ -197,11 +197,11 @@ def main():
             options.basedir,
             interactive=True
         )
-        LOGGER.info("Auto-setup complete, exiting...")
-        LOGGER.info("To start the authnzerver with these parameters, call "
-                    "authnzrv again with the appropriate values set "
-                    "for the auth DB and the secret key in either the "
-                    "command line options or as environment variables.")
+        LOGGER.warning("Auto-setup complete, exiting...")
+        LOGGER.warning("To start the authnzerver with these parameters, call "
+                       "authnzrv again with the appropriate values set "
+                       "for the auth DB and the secret key in either the "
+                       "command line options or as environment variables.")
         sys.exit(0)
 
     # otherwise, we'll assume that all is well, and we'll proceed to load the

@@ -123,3 +123,11 @@ def test_server_with_env(monkeypatch, tmpdir):
         p.kill()
     except Exception:
         pass
+
+    # make sure to kill authnzrv on some Linux machines.
+    # use lsof and the port number to find the remaining authnzrv processes and
+    # kill them
+    subprocess.call(
+        "lsof | grep 18158 | awk '{ print $2 }' | sort | uniq | xargs kill",
+        shell=True
+    )
