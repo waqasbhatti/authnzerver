@@ -367,7 +367,7 @@ class AuthHandler(tornado.web.RequestHandler):
                 await asyncio.sleep(wait_time)
 
             # reset the failed counter to zero for each successful attempt
-            elif (payload['request'] == 'user_login' and
+            elif (payload['request'] == 'user-login' and
                   response['success'] is True):
 
                 self.failed_passchecks.pop(

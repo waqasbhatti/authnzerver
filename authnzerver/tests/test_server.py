@@ -351,9 +351,9 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
         assert isinstance(response_dict['response'], dict)
         assert response_dict['response']['user_id'] == 1
 
-        # the latest time should be less than the 2nd time (when throttling was
-        # activated) and also less than the previous time
-        assert ((timing[-1] < timing[1]) and (timing[-1] < timing[-2]))
+        # the latest time should be less than the 1st time (when throttling was
+        # activated) and also less than the immediately previous time
+        assert ((timing[-1] < timing[0]) and (timing[-1] < timing[-2]))
 
     finally:
 
