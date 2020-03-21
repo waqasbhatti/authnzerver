@@ -23,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 
 import json
 from datetime import datetime
+import asyncio
 
 
 class FrontendEncoder(json.JSONEncoder):
@@ -59,6 +60,7 @@ from sqlalchemy.sql import select
 
 from . import authdb
 from . import actions
+from . import cache
 
 
 #########################
@@ -268,7 +270,8 @@ class AuthHandler(tornado.web.RequestHandler):
     def initialize(self,
                    authdb,
                    fernet_secret,
-                   executor):
+                   executor,
+                   cachedir):
         '''
         This sets up stuff.
 
@@ -277,6 +280,7 @@ class AuthHandler(tornado.web.RequestHandler):
         self.authdb = authdb
         self.fernet_secret = fernet_secret
         self.executor = executor
+        self.cachedir = cachedir
 
     async def post(self):
         '''
@@ -294,7 +298,7 @@ class AuthHandler(tornado.web.RequestHandler):
             raise tornado.web.HTTPError(status_code=401)
 
         if payload['request'] == 'echo':
-            LOGGER.error("this handler can't echo things.")
+            LOGGER.error("This handler can't echo things.")
             raise tornado.web.HTTPError(status_code=400)
 
         # if we successfully got past host and decryption validation, then
@@ -307,6 +311,21 @@ class AuthHandler(tornado.web.RequestHandler):
             if reqid is None:
                 raise ValueError("No request ID provided. "
                                  "Ignoring this request.")
+
+            #
+            # put the reqid into a cache and get it back
+            #
+            cached_reqid = cache.cache_add(
+                'received-reqid-%s' % reqid,
+                1,
+                cache_dirname=self.cachedir
+            )
+            # this returns False if the item is already present
+            # we'll drop this request because request IDs should be random
+            if cached_reqid is False:
+                raise ValueError(
+                    "Request ID was repeated. Ignoring this request."
+                )
 
             # run the function associated with the request type
             loop = tornado.ioloop.IOLoop.current()
