@@ -335,6 +335,40 @@ class AuthHandler(tornado.web.RequestHandler):
                 payload['body']
             )
 
+            #
+            # see if the request was user-login or password-check. in this case,
+            # we'll apply backoff to slow down repeated failed passwords
+            #
+            if (payload['request'] in ('user-login', 'user-passcheck') and
+                response['success'] is False):
+
+                # increment the failure counter and return it
+                failed_pass_count = cache.cache_increment(
+                    'failed-pass-%s' % payload['session_token'],
+                    cache_dirname=self.cachedir
+                )
+
+                # asyncio.sleep for an exponentially increasing period of time
+                # until 30.0 seconds ~= 9 tries
+                wait_time = 1.5**(failed_pass_count - 1.0)
+                if wait_time > 30.0:
+                    wait_time = 30.0
+
+                await asyncio.sleep(wait_time)
+
+            # reset the failed counter to zero for each successful attempt
+            elif (payload['request'] in ('user-login', 'user-passcheck') and
+                  response['success'] is True):
+
+                cache.cache_delete(
+                    'failed-pass-%s' % payload['session_token'],
+                    cache_dirname=self.cachedir
+                )
+
+            #
+            # form the response
+            #
+
             response_dict = {"success": response['success'],
                              "reqid": reqid,
                              "response":response,

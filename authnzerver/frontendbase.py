@@ -783,9 +783,9 @@ class BaseHandler(tornado.web.RequestHandler):
 
         # localhost secure cookies over HTTP don't work anymore
         if self.request.remote_ip != '127.0.0.1':
-            self.csecure = True
+            self.session_cookie_secure = True
         else:
-            self.csecure = False
+            self.session_cookie_secure = False
 
         # check if there's an authorization header in the request
         authorization = self.request.headers.get('Authorization')

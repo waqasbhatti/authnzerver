@@ -259,7 +259,8 @@ def main():
         (r'/', AuthHandler,
          {'authdb':authdb,
           'fernet_secret':secret,
-          'executor':executor}),
+          'executor':executor,
+          'cachedir':cachedir}),
     ]
 
     if DEBUG:
