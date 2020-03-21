@@ -102,8 +102,35 @@ def test_server_with_env(monkeypatch, tmpdir):
     assert response_dict['response']['session_token'] is not None
 
     #
-    # 2. TODO: login as the superuser
+    # 2. login as the superuser
     #
+    request_dict = {
+        'request':'user-login',
+        'body':{
+            'session_token':response_dict['response']['session_token'],
+            'email':useremail,
+            'password':password
+        },
+        'reqid':102
+    }
+
+    encrypted_request = encrypt_response(request_dict, secret)
+
+    # send the request to the authnzerver
+    resp = requests.post(
+        'http://%s:%s' % (server_listen, server_port),
+        data=encrypted_request,
+        timeout=1.0
+    )
+    resp.raise_for_status()
+
+    # decrypt the response
+    response_dict = decrypt_request(resp.text, secret)
+
+    assert response_dict['reqid'] == request_dict['reqid']
+    assert response_dict['success'] is True
+    assert isinstance(response_dict['response'], dict)
+    assert response_dict['response']['user_id'] == 1
 
     #
     # 3. TODO: try to access a few items as superuser

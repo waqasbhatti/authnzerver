@@ -43,7 +43,7 @@ def cache_add(key, value,
 
     cachedir = os.path.abspath(cache_dirname)
     cache = FanoutCache(cachedir, timeout=timeout_seconds)
-    added = cache.add(value, expire=expires_seconds)
+    added = cache.add(key, value, expire=expires_seconds)
     cache.close()
 
     return added

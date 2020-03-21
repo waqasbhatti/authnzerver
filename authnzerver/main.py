@@ -260,7 +260,8 @@ def main():
          {'authdb':authdb,
           'fernet_secret':secret,
           'executor':executor,
-          'cachedir':cachedir}),
+          'reqid_cache':set(),
+          'failed_passchecks':{}}),
     ]
 
     if DEBUG:

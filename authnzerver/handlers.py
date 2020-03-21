@@ -60,7 +60,6 @@ from sqlalchemy.sql import select
 
 from . import authdb
 from . import actions
-from . import cache
 
 
 #########################
@@ -271,7 +270,8 @@ class AuthHandler(tornado.web.RequestHandler):
                    authdb,
                    fernet_secret,
                    executor,
-                   cachedir):
+                   reqid_cache,
+                   failed_passchecks):
         '''
         This sets up stuff.
 
@@ -280,7 +280,8 @@ class AuthHandler(tornado.web.RequestHandler):
         self.authdb = authdb
         self.fernet_secret = fernet_secret
         self.executor = executor
-        self.cachedir = cachedir
+        self.reqid_cache = reqid_cache
+        self.failed_passchecks = failed_passchecks
 
     async def post(self):
         '''
@@ -315,17 +316,22 @@ class AuthHandler(tornado.web.RequestHandler):
             #
             # put the reqid into a cache and get it back
             #
-            cached_reqid = cache.cache_add(
-                'received-reqid-%s' % reqid,
-                1,
-                cache_dirname=self.cachedir
-            )
-            # this returns False if the item is already present
-            # we'll drop this request because request IDs should be random
-            if cached_reqid is False:
+            reqid_cache_len = len(self.reqid_cache)
+            self.reqid_cache.add(reqid)
+            if len(self.reqid_cache) == reqid_cache_len:
                 raise ValueError(
                     "Request ID was repeated. Ignoring this request."
                 )
+
+            #
+            # trim the reqid_cache as needed
+            #
+            if len(self.reqid_cache) > 1000:
+                self.reqid_cache.pop()
+
+            #
+            # dispatch the action handler function
+            #
 
             # run the function associated with the request type
             loop = tornado.ioloop.IOLoop.current()
@@ -336,33 +342,44 @@ class AuthHandler(tornado.web.RequestHandler):
             )
 
             #
-            # see if the request was user-login or password-check. in this case,
+            # see if the request was user-login. in this case,
             # we'll apply backoff to slow down repeated failed passwords
             #
-            if (payload['request'] in ('user-login', 'user-passcheck') and
+            if (payload['request'] == 'user-login' and
                 response['success'] is False):
 
                 # increment the failure counter and return it
-                failed_pass_count = cache.cache_increment(
-                    'failed-pass-%s' % payload['session_token'],
-                    cache_dirname=self.cachedir
-                )
+                if (payload['body']['email'] in self.failed_passchecks):
+                    self.failed_passchecks[payload['body']['email']] += 1
+                else:
+                    self.failed_passchecks[payload['body']['email']] = 1
+
+                failed_pass_count = self.failed_passchecks[
+                    payload['body']['email']
+                ]
 
                 # asyncio.sleep for an exponentially increasing period of time
-                # until 30.0 seconds ~= 9 tries
+                # until 40.0 seconds ~= 10 tries
                 wait_time = 1.5**(failed_pass_count - 1.0)
-                if wait_time > 30.0:
-                    wait_time = 30.0
+                if wait_time > 40.0:
+                    wait_time = 40.0
 
                 await asyncio.sleep(wait_time)
 
             # reset the failed counter to zero for each successful attempt
-            elif (payload['request'] in ('user-login', 'user-passcheck') and
+            elif (payload['request'] == 'user_login' and
                   response['success'] is True):
 
-                cache.cache_delete(
-                    'failed-pass-%s' % payload['session_token'],
-                    cache_dirname=self.cachedir
+                self.failed_passchecks.pop(
+                    payload['body']['email'],
+                    None
+                )
+            #
+            # trim the failed_passchecks dict
+            #
+            if len(self.failed_passchecks) > 1000:
+                self.failed_passchecks.pop(
+                    self.failed_passchecks.keys()[0]
                 )
 
             #
