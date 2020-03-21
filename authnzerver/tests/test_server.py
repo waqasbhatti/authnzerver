@@ -287,6 +287,74 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
         diffs_increasing = all(diffs[x+1] > diffs[x] for x in range(3))
         assert diffs_increasing is True
 
+        # now login wih the correct password and see if the login time goes back
+        # to normal
+        session_payload = {
+            'user_id':2,
+            'user_agent':'Mozzarella Killerwhale',
+            'expires':datetime.utcnow()+timedelta(hours=1),
+            'ip_address': '1.1.1.1',
+            'extra_info_json':{'pref_datasets_always_private':True}
+        }
+
+        request_dict = {'request':'session-new',
+                        'body':session_payload,
+                        'reqid':1004}
+
+        encrypted_request = encrypt_response(request_dict, secret)
+
+        # send the request to the authnzerver
+        resp = requests.post(
+            'http://%s:%s' % (server_listen, server_port),
+            data=encrypted_request,
+            timeout=1.0
+        )
+        resp.raise_for_status()
+
+        # decrypt the response
+        session_dict = decrypt_request(resp.text, secret)
+
+        assert session_dict['reqid'] == request_dict['reqid']
+        assert session_dict['success'] is True
+        assert isinstance(session_dict['response'], dict)
+        assert session_dict['response']['session_token'] is not None
+
+        request_dict = {
+            'request':'user-login',
+            'body':{
+                'session_token':session_dict['response']['session_token'],
+                'email':useremail,
+                'password':password
+            },
+            'reqid':1005
+        }
+
+        encrypted_request = encrypt_response(request_dict, secret)
+
+        start_login_time = time.monotonic()
+
+        # send the request to the authnzerver
+        resp = requests.post(
+            'http://%s:%s' % (server_listen, server_port),
+            data=encrypted_request,
+            timeout=60.0
+        )
+        resp.raise_for_status()
+
+        timing.append(time.monotonic() - start_login_time)
+
+        # decrypt the response
+        response_dict = decrypt_request(resp.text, secret)
+
+        assert response_dict['reqid'] == request_dict['reqid']
+        assert response_dict['success'] is True
+        assert isinstance(response_dict['response'], dict)
+        assert response_dict['response']['user_id'] == 1
+
+        # the latest time should be less than the 2nd time (when throttling was
+        # activated) and also less than the previous time
+        assert ((timing[-1] < timing[1]) and (timing[-1] < timing[-2]))
+
     finally:
 
         #
