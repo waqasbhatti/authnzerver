@@ -320,7 +320,8 @@ class AuthHandler(tornado.web.RequestHandler):
             self.reqid_cache.add(reqid)
             if len(self.reqid_cache) == reqid_cache_len:
                 raise ValueError(
-                    "Request ID was repeated. Ignoring this request."
+                    "[%s] Request ID was repeated. Ignoring this request." %
+                    reqid
                 )
 
             #
@@ -332,6 +333,10 @@ class AuthHandler(tornado.web.RequestHandler):
             #
             # dispatch the action handler function
             #
+
+            # inject the request ID into the body of the request so the backend
+            # function can report on it
+            payload['body']['reqid'] = reqid
 
             # run the function associated with the request type
             loop = tornado.ioloop.IOLoop.current()
