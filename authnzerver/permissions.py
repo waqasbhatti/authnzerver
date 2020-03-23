@@ -22,6 +22,17 @@ LOGGER = logging.getLogger(__name__)
 #############
 
 import json
+from hashlib import sha256
+
+
+###################################
+## FUNCTION TO HASH PII FOR LOGS ##
+###################################
+
+def pii_hash(item, salt):
+    return sha256(
+        ("%s%s" % (item, salt)).encode('utf-8')
+    ).hexdigest()[:16]
 
 
 #################################
