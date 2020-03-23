@@ -269,6 +269,7 @@ class AuthHandler(tornado.web.RequestHandler):
     def initialize(self,
                    authdb,
                    fernet_secret,
+                   pii_salt,
                    executor,
                    reqid_cache,
                    failed_passchecks):
@@ -279,6 +280,7 @@ class AuthHandler(tornado.web.RequestHandler):
 
         self.authdb = authdb
         self.fernet_secret = fernet_secret
+        self.pii_salt = pii_salt
         self.executor = executor
         self.reqid_cache = reqid_cache
         self.failed_passchecks = failed_passchecks
@@ -337,6 +339,9 @@ class AuthHandler(tornado.web.RequestHandler):
             # inject the request ID into the body of the request so the backend
             # function can report on it
             payload['body']['reqid'] = reqid
+
+            # inject the PII salt into the body of the request as well
+            payload['body']['pii_salt'] = self.pii_salt
 
             # run the function associated with the request type
             loop = tornado.ioloop.IOLoop.current()

@@ -22,6 +22,14 @@ def generate_secret_file(filepath):
     return str(filepath.join('secret-file.secret'))
 
 
+def generate_salt_file(filepath):
+
+    with open(filepath.join('salt-file.secret'),'w') as outfd:
+        outfd.write('super-secret-salt\n')
+
+    return str(filepath.join('salt-file.secret'))
+
+
 def generate_permissions_json(filepath):
 
     # get the file pointing to the default permissions model
@@ -43,6 +51,7 @@ def generate_envfile(
         permissions=None,
         port=None,
         secret=None,
+        piisalt=None,
         sessionexpiry=None,
         workers=None,
         emailserver=None,
@@ -66,6 +75,7 @@ def generate_envfile(
                 AUTHNZERVER_PERMISSIONS={permissions}
                 AUTHNZERVER_PORT={port}
                 AUTHNZERVER_SECRET={secret}
+                AUTHNZERVER_PIISALT={piisalt}
                 AUTHNZERVER_SESSIONEXPIRY={sessionexpiry}
                 AUTHNZERVER_WORKERS={workers}
                 AUTHNZERVER_EMAILSERVER={emailserver}
@@ -119,8 +129,9 @@ def generate_options(envfile=None,
 
 def test_load_config_from_env_filesecret(monkeypatch, tmpdir):
 
-    # generate the secret file
+    # generate the secret files
     secret_file = generate_secret_file(tmpdir)
+    salt_file = generate_salt_file(tmpdir)
 
     # generate the permissions JSON
     permissions_json = generate_permissions_json(tmpdir)
@@ -144,6 +155,8 @@ def test_load_config_from_env_filesecret(monkeypatch, tmpdir):
                        "13431")
     monkeypatch.setenv("AUTHNZERVER_SECRET",
                        secret_file)
+    monkeypatch.setenv("AUTHNZERVER_PIISALT",
+                       salt_file)
     monkeypatch.setenv("AUTHNZERVER_SESSIONEXPIRY",
                        "60")
     monkeypatch.setenv("AUTHNZERVER_WORKERS",
@@ -179,6 +192,7 @@ def test_load_config_from_env_filesecret(monkeypatch, tmpdir):
 
     assert loaded_config.port == 13431
     assert loaded_config.secret == 'super-secret-secret'
+    assert loaded_config.piisalt == 'super-secret-salt'
 
     assert loaded_config.sessionexpiry == 60
     assert loaded_config.workers == 4
@@ -214,6 +228,8 @@ def test_load_config_from_env_textsecret(monkeypatch, tmpdir):
                        "13431")
     monkeypatch.setenv("AUTHNZERVER_SECRET",
                        'this is a direct text secret')
+    monkeypatch.setenv("AUTHNZERVER_PIISALT",
+                       'this is a direct text salt')
     monkeypatch.setenv("AUTHNZERVER_SESSIONEXPIRY",
                        "60")
     monkeypatch.setenv("AUTHNZERVER_WORKERS",
@@ -249,6 +265,7 @@ def test_load_config_from_env_textsecret(monkeypatch, tmpdir):
 
     assert loaded_config.port == 13431
     assert loaded_config.secret == 'this is a direct text secret'
+    assert loaded_config.piisalt == 'this is a direct text salt'
 
     assert loaded_config.sessionexpiry == 60
     assert loaded_config.workers == 4
@@ -262,8 +279,9 @@ def test_load_config_from_env_textsecret(monkeypatch, tmpdir):
 
 def test_load_config_from_options(monkeypatch, tmpdir):
 
-    # generate the secret file
+    # generate the secret files
     secret_file = generate_secret_file(tmpdir)
+    salt_file = generate_salt_file(tmpdir)
 
     # generate the permissions JSON
     permissions_json = generate_permissions_json(tmpdir)
@@ -280,6 +298,7 @@ def test_load_config_from_options(monkeypatch, tmpdir):
 
     generated_options.permissions = permissions_json
     generated_options.secret = secret_file
+    generated_options.piisalt = salt_file
 
     generated_options.emailserver = 'smtp.test.org'
     generated_options.emailport = 25
@@ -308,6 +327,7 @@ def test_load_config_from_options(monkeypatch, tmpdir):
 
     assert loaded_config.port == 15000
     assert loaded_config.secret == 'super-secret-secret'
+    assert loaded_config.piisalt == 'super-secret-salt'
 
     assert loaded_config.sessionexpiry == 7
     assert loaded_config.workers == 8
@@ -321,8 +341,9 @@ def test_load_config_from_options(monkeypatch, tmpdir):
 
 def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
 
-    # generate the secret file
+    # generate the secret files
     secret_file = generate_secret_file(tmpdir)
+    salt_file = generate_salt_file(tmpdir)
 
     # generate the permissions JSON
     permissions_json = generate_permissions_json(tmpdir)
@@ -341,6 +362,7 @@ def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
         permissions=permissions_json,
         port=5005,
         secret=secret_file,
+        piisalt=salt_file,
         sessionexpiry=25,
         workers=1,
         emailserver='smtp.test.org',
@@ -371,6 +393,7 @@ def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
 
     assert loaded_config.port == 5005
     assert loaded_config.secret == 'super-secret-secret'
+    assert loaded_config.piisalt == 'super-secret-salt'
 
     assert loaded_config.sessionexpiry == 25
     assert loaded_config.workers == 1
@@ -384,8 +407,9 @@ def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
 
 def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
 
-    # generate the secret
+    # generate the secrets
     secret = 'this is a direct secret bit'
+    piisalt = 'this is a direct secret salt'
 
     # generate the permissions JSON
     permissions_json = generate_permissions_json(tmpdir)
@@ -404,6 +428,7 @@ def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
         permissions=permissions_json,
         port=5005,
         secret=secret,
+        piisalt=piisalt,
         sessionexpiry=25,
         workers=1,
         emailserver='smtp.test.org',
@@ -434,6 +459,7 @@ def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
 
     assert loaded_config.port == 5005
     assert loaded_config.secret == 'this is a direct secret bit'
+    assert loaded_config.piisalt == 'this is a direct secret salt'
 
     assert loaded_config.sessionexpiry == 25
     assert loaded_config.workers == 1
@@ -461,6 +487,8 @@ def test_load_config_env_and_defaults(monkeypatch, tmpdir):
                        permissions_json)
     monkeypatch.setenv("AUTHNZERVER_SECRET",
                        'this is a direct text secret')
+    monkeypatch.setenv("AUTHNZERVER_PIISALT",
+                       'this is a direct text salt')
 
     # load the config items now
     loaded_config = confload.load_config(confvars.CONF,
@@ -484,6 +512,7 @@ def test_load_config_env_and_defaults(monkeypatch, tmpdir):
 
     assert loaded_config.port == 13431
     assert loaded_config.secret == 'this is a direct text secret'
+    assert loaded_config.piisalt == 'this is a direct text salt'
 
     assert loaded_config.sessionexpiry == 30
     assert loaded_config.workers == 4
@@ -500,6 +529,9 @@ def test_load_config_options_and_defaults(monkeypatch, tmpdir):
     # generate the secret file
     secret_file = generate_secret_file(tmpdir)
 
+    # generate the salt file
+    salt_file = generate_salt_file(tmpdir)
+
     # generate the permissions JSON
     permissions_json = generate_permissions_json(tmpdir)
 
@@ -511,6 +543,7 @@ def test_load_config_options_and_defaults(monkeypatch, tmpdir):
     generated_options.port = 4002
     generated_options.permissions = permissions_json
     generated_options.secret = secret_file
+    generated_options.piisalt = salt_file
 
     # load the config items now
     loaded_config = confload.load_config(confvars.CONF,
@@ -534,6 +567,7 @@ def test_load_config_options_and_defaults(monkeypatch, tmpdir):
 
     assert loaded_config.port == 4002
     assert loaded_config.secret == 'super-secret-secret'
+    assert loaded_config.piisalt == 'super-secret-salt'
 
     assert loaded_config.sessionexpiry == 30
     assert loaded_config.workers == 4

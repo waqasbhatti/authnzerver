@@ -46,6 +46,8 @@ def autogen_secrets_authdb(basedir,
         - Credentials for a superuser that can be used to edit various
           authnzerver options, and users will be written to
           ``.authnzerver-admin-credentials`` in this directory.
+        - A random salt value will be written to ``.authnzerver-random-salt` in
+          this directory. This is used to hash user IDs and other PII in logs.
 
     database_url : str or None
         If this is a str, must be a valid SQLAlchemy database URL to use to
@@ -60,7 +62,7 @@ def autogen_secrets_authdb(basedir,
     Returns
     -------
 
-    (authdb_path, creds, secret_file) : tuple of str
+    (authdb_path, creds, secret_file, salt_file) : tuple of str
         The names of the files written by this function will be returned as a
         tuple of strings.
 
@@ -198,13 +200,14 @@ def autogen_secrets_authdb(basedir,
                            'credentials written to: %s\n' %
                            creds)
 
-    # finally, we'll generate the server secrets now so we don't have to deal
+    # we'll generate the server secrets now so we don't have to deal
     # with them later
     LOGGER.info('Generating server secret tokens...')
     fernet_secret = Fernet.generate_key()
     fernet_secret_file = os.path.join(basedir,'.authnzerver-secret-key')
 
     if os.path.exists(fernet_secret_file):
+
         LOGGER.warning("Authnzerver communication secrets file already "
                        "exists. Not overwriting...")
 
@@ -214,7 +217,27 @@ def autogen_secrets_authdb(basedir,
             outfd.write(fernet_secret)
         os.chmod(fernet_secret_file, 0o100400)
 
-    if database_url is not None:
-        return database_url, creds, fernet_secret_file
+    # finally, we'll generate the server PII random salt
+    LOGGER.info('Generating server PII random salt...')
+    salt = Fernet.generate_key()
+    salt_file = os.path.join(basedir,'.authnzerver-salt')
+
+    if os.path.exists(salt_file):
+
+        LOGGER.warning("Authnzerver salt file already "
+                       "exists. Not overwriting...")
+
     else:
-        return authdb_path, creds, fernet_secret_file
+
+        with open(salt_file,'wb') as outfd:
+            outfd.write(salt)
+        os.chmod(salt_file, 0o100400)
+
+    #
+    # return everything
+    #
+
+    if database_url is not None:
+        return database_url, creds, fernet_secret_file, salt_file
+    else:
+        return authdb_path, creds, fernet_secret_file, salt_file

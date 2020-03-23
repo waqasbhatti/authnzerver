@@ -102,6 +102,16 @@ CONF = {
                 'communications between authnzerver and any frontend servers.'),
         'readable_from_file':'string',
     },
+    'piisalt':{
+        'env':'%s_PIISALT' % ENVPREFIX,
+        'cmdline':'piisalt',
+        'type':str,
+        'default':None,
+        'help':('A random value used as a salt when SHA256 hashing personally '
+                'identifiable information (PII), such as user IDs and '
+                'session tokens, etc. for authnzerver logs.'),
+        'readable_from_file':'string',
+    },
     'sessionexpiry':{
         'env':'%s_SESSIONEXPIRY' % ENVPREFIX,
         'cmdline':'sessionexpiry',

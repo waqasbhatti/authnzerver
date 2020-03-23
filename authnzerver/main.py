@@ -240,6 +240,9 @@ def main():
     secret = loaded_config.secret
     permissions = loaded_config.permissions
 
+    # get the PII salt from the loaded config
+    pii_salt = loaded_config.piisalt
+
     #
     # this is the background executor we'll pass over to the handler
     #
@@ -259,6 +262,7 @@ def main():
         (r'/', AuthHandler,
          {'authdb':authdb,
           'fernet_secret':secret,
+          'pii_salt':pii_salt,
           'executor':executor,
           'reqid_cache':set(),
           'failed_passchecks':{}}),
