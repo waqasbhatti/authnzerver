@@ -193,7 +193,7 @@ def main():
     # immediately
     if options.autosetup:
 
-        authdb_path, creds, secret_file = autogen_secrets_authdb(
+        authdb_path, creds, secret_file, salt_file = autogen_secrets_authdb(
             options.basedir,
             interactive=True
         )
@@ -231,7 +231,7 @@ def main():
     port = loaded_config.port
     listen = loaded_config.listen
     sessionexpiry = loaded_config.sessionexpiry
-    LOGGER.info('Session cookie expiry is set to: %s days' % sessionexpiry)
+    LOGGER.info('Session token expiry is set to: %s days' % sessionexpiry)
 
     #
     # set up the authdb, secret, and permissions model
