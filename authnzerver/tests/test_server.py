@@ -26,7 +26,7 @@ def test_server_with_env(monkeypatch, tmpdir):
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file = autogen_secrets_authdb(
+    authdb_path, creds, secrets_file, salt_file = autogen_secrets_authdb(
         basedir,
         interactive=False
     )
@@ -34,6 +34,10 @@ def test_server_with_env(monkeypatch, tmpdir):
     # read in the secrets file for the secret
     with open(secrets_file,'r') as infd:
         secret = infd.read().strip('\n')
+
+    # read in the salts file for the salt
+    with open(salt_file,'r') as infd:
+        salt = infd.read().strip('\n')
 
     # read the creds file so we can try logging in
     with open(creds,'r') as infd:
@@ -53,6 +57,7 @@ def test_server_with_env(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_LISTEN", server_listen)
     monkeypatch.setenv("AUTHNZERVER_PORT", server_port)
     monkeypatch.setenv("AUTHNZERVER_SECRET", secret)
+    monkeypatch.setenv("AUTHNZERVER_PIISALT", salt)
     monkeypatch.setenv("AUTHNZERVER_SESSIONEXPIRY", "60")
     monkeypatch.setenv("AUTHNZERVER_WORKERS", "1")
     monkeypatch.setenv("AUTHNZERVER_EMAILSERVER", "smtp.test.org")
@@ -167,7 +172,7 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file = autogen_secrets_authdb(
+    authdb_path, creds, secrets_file, salt_file = autogen_secrets_authdb(
         basedir,
         interactive=False
     )
@@ -175,6 +180,10 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
     # read in the secrets file for the secret
     with open(secrets_file,'r') as infd:
         secret = infd.read().strip('\n')
+
+    # read in the salts file for the salt
+    with open(salt_file,'r') as infd:
+        salt = infd.read().strip('\n')
 
     # read the creds file so we can try logging in
     with open(creds,'r') as infd:
@@ -194,6 +203,7 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_LISTEN", server_listen)
     monkeypatch.setenv("AUTHNZERVER_PORT", server_port)
     monkeypatch.setenv("AUTHNZERVER_SECRET", secret)
+    monkeypatch.setenv("AUTHNZERVER_PIISALT", salt)
     monkeypatch.setenv("AUTHNZERVER_SESSIONEXPIRY", "60")
     monkeypatch.setenv("AUTHNZERVER_WORKERS", "1")
     monkeypatch.setenv("AUTHNZERVER_EMAILSERVER", "smtp.test.org")

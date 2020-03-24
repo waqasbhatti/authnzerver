@@ -50,10 +50,15 @@ import secrets
 import multiprocessing as mp
 
 from sqlalchemy import select
+from argon2 import PasswordHasher
 
 from .. import authdb
+from ..permissions import pii_hash
 
-from argon2 import PasswordHasher
+
+############################
+## PASSWORD HASHER OBJECT ##
+############################
 
 pass_hasher = PasswordHasher()
 
@@ -65,20 +70,57 @@ pass_hasher = PasswordHasher()
 def auth_session_new(payload,
                      override_authdb_path=None,
                      raiseonfail=False):
+    '''Generates a new session token.
+
+    Parameters
+    ----------
+
+    payload : dict
+        This is the input payload dict. Required items:
+
+        - ip_address: str
+        - user_agent: str
+        - user_id: int or None (None indicates an anonymous user)
+        - expires: datetime object or date string in ISO format
+        - extra_info_json: dict or None
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    Returns
+    -------
+
+    dict
+        The dict returned is of the form::
+
+        {'success: True or False,
+         'session_token': str session token 32 bytes long in base64 format,
+         'expires': str date in ISO format,
+         'messages': list of str messages to pass on to the user if any}
+
     '''
-    This generates a new session token.
 
-    override_authdb_path allows testing without an executor.
-
-    Request payload keys required:
-
-    ip_address, user_agent, user_id, expires, extra_info_json
-
-    Returns:
-
-    a 32 byte session token in base64 from secrets.token_urlsafe(32)
-
-    '''
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'session_token':None,
+                'expires':None,
+                'messages':["Invalid session initiation request."],
+            }
 
     # fail immediately if the required payload items are not present
     for item in ('ip_address',
@@ -88,6 +130,11 @@ def auth_session_new(payload,
                  'extra_info_json'):
 
         if item not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid session initiation request, missing %s.' %
+                (payload['reqid'], item)
+            )
 
             return {
                 'success':False,
@@ -141,9 +188,25 @@ def auth_session_new(payload,
 
         # get the insert object from sqlalchemy
         sessions = currproc.authdb_meta.tables['sessions']
-        insert = sessions.insert().values(**payload)
+        insert = sessions.insert().values({
+            'ip_address':payload['ip_address'],
+            'user_agent':payload['user_agent'],
+            'user_id':payload['user_id'],
+            'expires':payload['expires'],
+            'extra_info_json':payload['extra_info_json'],
+        })
         result = currproc.authdb_conn.execute(insert)
         result.close()
+
+        LOGGER.info(
+            "[%s] New session initiated for "
+            "user_id: %s with IP address: %s, user agent: %s. Expires on: %s" %
+            (payload['reqid'],
+             pii_hash(payload['user_id'], payload['pii_salt']),
+             pii_hash(payload['ip_address'], payload['pii_salt']),
+             pii_hash(payload['user_agent'], payload['pii_salt']),
+             payload['expires'])
+        )
 
         return {
             'success':True,
@@ -153,8 +216,18 @@ def auth_session_new(payload,
                         "Session initiated."]
         }
 
-    except Exception:
-        LOGGER.exception('could not create a new session')
+    except Exception as e:
+
+        LOGGER.error(
+            "[%s] Could not create a new session for "
+            "user_id: %s with IP address: %s, user agent: %s. "
+            "Exception was: %r" %
+            (payload['reqid'],
+             pii_hash(payload['user_id'], payload['pii_salt']),
+             pii_hash(payload['ip_address'], payload['pii_salt']),
+             pii_hash(payload['user_agent'], payload['pii_salt']),
+             e)
+        )
 
         if raiseonfail:
             raise
@@ -170,7 +243,7 @@ def auth_session_new(payload,
 def auth_session_set_extrainfo(payload,
                                raiseonfail=False,
                                override_authdb_path=None):
-    '''This adds info the extra_info_json key of a session column.
+    '''This adds info to the extra_info_json key of a session column.
 
     Parameters
     ----------
