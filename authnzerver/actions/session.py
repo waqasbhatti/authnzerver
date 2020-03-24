@@ -243,7 +243,7 @@ def auth_session_new(payload,
 def auth_session_set_extrainfo(payload,
                                raiseonfail=False,
                                override_authdb_path=None):
-    '''This adds info to the extra_info_json key of a session column.
+    '''Adds info to the extra_info_json key of a session column.
 
     Parameters
     ----------
@@ -253,6 +253,13 @@ def auth_session_set_extrainfo(payload,
 
         - session_token : str, the session token to update
         - extra_info : dict, the update dict to put into the extra_info_json
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
 
     raiseonfail : bool
         If True, and something goes wrong, this will raise an Exception instead
@@ -269,17 +276,32 @@ def auth_session_set_extrainfo(payload,
 
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'session_token':None,
+                'expires':None,
+                'messages':["Invalid session set_extrainfo request."],
+            }
+
     for key in ('session_token',
                 'extra_info'):
 
         if key not in payload:
 
-            LOGGER.error('invalid set_extrainfo request')
+            LOGGER.error(
+                '[%s] Invalid session set_extrainfo request, missing %s.' %
+                (payload['reqid'], key)
+            )
 
             return {
                 'success':False,
                 'session_info':None,
-                'messages':["Invalid set_extrainfo request: "
+                'messages':["Invalid session set_extrainfo request: "
                             "missing or invalid parameters."],
             }
 
@@ -332,13 +354,39 @@ def auth_session_set_extrainfo(payload,
 
             serialized_result = dict(rows)
 
+            LOGGER.info(
+                "[%s] Session info updated for "
+                "user_id: %s with IP address: %s, "
+                "user agent: %s, session_token: %s. "
+                "Session expires on: %s" %
+                (payload['reqid'],
+                 pii_hash(serialized_result['user_id'],
+                          payload['pii_salt']),
+                 pii_hash(serialized_result['ip_address'],
+                          payload['pii_salt']),
+                 pii_hash(serialized_result['user_agent'],
+                          payload['pii_salt']),
+                 pii_hash(serialized_result['session_token'],
+                          payload['pii_salt']),
+                 serialized_result['expires'])
+            )
+
             return {
                 'success':True,
                 'session_info':serialized_result,
                 'messages':["Session extra_info update successful."],
             }
 
-        except Exception:
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] Session info update failed for session token: %s. "
+                "Exception was: %r." %
+                (payload['reqid'],
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 e)
+            )
 
             return {
                 'success':False,
@@ -346,10 +394,16 @@ def auth_session_set_extrainfo(payload,
                 'messages':["Session extra_info update failed."],
             }
 
-    except Exception:
+    except Exception as e:
 
-        LOGGER.warning('Session token not found or '
-                       'could not check if it exists')
+        LOGGER.error(
+            "[%s] Session info update failed for session token: %s. "
+            "Exception was: %r." %
+            (payload['reqid'],
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             e)
+        )
 
         return {
             'success':False,
@@ -358,25 +412,60 @@ def auth_session_set_extrainfo(payload,
         }
 
 
-def auth_session_exists(payload,
-                        raiseonfail=False,
-                        override_authdb_path=None):
+def auth_session_exists(
+        payload,
+        override_authdb_path=None,
+        raiseonfail=False,
+):
     '''
-    This checks if the provided session token exists.
+    Checks if the provided session token exists.
 
-    Request payload keys required:
+    Parameters
+    ----------
 
-    session_token
+    payload : dict
+        This is a dict, with the following keys required:
 
-    Returns:
+        - session_token: str
 
-    All sessions columns for session_key if token exists and has not expired.
-    None if token has expired. Will also call auth_session_delete.
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    Returns
+    -------
+
+    dict
+         Returns a dict containing all of the session info if it exists and has
+         not expired.
 
     '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'session_info':None,
+                'messages':["Invalid session info request."],
+            }
 
     if 'session_token' not in payload:
-        LOGGER.error('no session token provided')
+        LOGGER.error(
+            '[%s] Invalid session info request, missing session_token.' %
+            payload['reqid']
+        )
 
         return {
             'success':False,
@@ -409,6 +498,7 @@ def auth_session_exists(payload,
         users = currproc.authdb_meta.tables['users']
         s = select([
             users.c.user_id,
+            users.c.system_id,
             users.c.full_name,
             users.c.email,
             users.c.email_verified,
@@ -436,15 +526,39 @@ def auth_session_exists(payload,
 
             serialized_result = dict(rows)
 
+            LOGGER.info(
+                "[%s] Session info request successful for "
+                "user_id: %s with IP address: %s, "
+                "user agent: %s, session_token: %s. "
+                "Session expires on: %s" %
+                (payload['reqid'],
+                 pii_hash(serialized_result['user_id'],
+                          payload['pii_salt']),
+                 pii_hash(serialized_result['ip_address'],
+                          payload['pii_salt']),
+                 pii_hash(serialized_result['user_agent'],
+                          payload['pii_salt']),
+                 pii_hash(serialized_result['session_token'],
+                          payload['pii_salt']),
+                 serialized_result['expires'])
+            )
+
             return {
                 'success':True,
                 'session_info':serialized_result,
                 'messages':["Session look up successful."],
             }
 
-        except Exception:
-            LOGGER.error("Session look up for token: %s failed." %
-                         session_token)
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] Session info lookup failed for session token: %s. "
+                "Exception was: %r." %
+                (payload['reqid'],
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 e)
+            )
 
             return {
                 'success':False,
@@ -452,10 +566,16 @@ def auth_session_exists(payload,
                 'messages':["Session look up failed."],
             }
 
-    except Exception:
+    except Exception as e:
 
-        LOGGER.warning('session token not found or '
-                       'could not check if it exists')
+        LOGGER.error(
+            "[%s] Session info lookup failed for session token: %s. "
+            "Exception was: %r." %
+            (payload['reqid'],
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             e)
+        )
 
         return {
             'success':False,
@@ -464,28 +584,65 @@ def auth_session_exists(payload,
         }
 
 
-def auth_session_delete(payload,
-                        raiseonfail=False,
-                        override_authdb_path=None):
+def auth_session_delete(
+        payload,
+        override_authdb_path=None,
+        raiseonfail=False,
+):
     '''
-    This removes a session token.
+    Removes a session token, effectively ending a session.
 
-    Request payload keys required:
+    Parameters
+    ----------
 
-    session_token
+    payload : dict
+        This is a dict with the following required keys:
 
-    Returns:
+        - session_token: str
 
-    Deletes the row corresponding to the session_key in the sessions table.
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict with a success key indicating if the session was deleted
+        successfully.
 
     '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'messages':["Invalid session delete request."],
+            }
 
     if 'session_token' not in payload:
-        LOGGER.error('no session token provided')
+
+        LOGGER.error(
+            '[%s] Invalid session delete request, missing session_token.' %
+            payload['reqid']
+        )
 
         return {
             'success':False,
-            'messages':["No session token provided."],
+            'messages':["Invalid session delete request. "
+                        "No session token provided."],
         }
 
     session_token = payload['session_token']
@@ -516,14 +673,28 @@ def auth_session_delete(payload,
         result = currproc.authdb_conn.execute(delete)
         result.close()
 
+        LOGGER.info(
+            "[%s] Session delete request successful for "
+            "session_token: %s. " %
+            (payload['reqid'],
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success':True,
             'messages':["Session deleted successfully."],
         }
 
-    except Exception:
+    except Exception as e:
 
-        LOGGER.exception('could not delete the session')
+        LOGGER.error(
+            "[%s] Session delete request failed for "
+            "session_token: %s. Exception was: %r." %
+            (payload['reqid'],
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']), e)
+        )
 
         if raiseonfail:
             raise
@@ -534,25 +705,57 @@ def auth_session_delete(payload,
         }
 
 
-def auth_delete_sessions_userid(payload,
-                                raiseonfail=False,
-                                override_authdb_path=None):
-    '''This removes all session tokens corresponding to a user ID.
+def auth_delete_sessions_userid(
+        payload,
+        override_authdb_path=None,
+        raiseonfail=False,
+):
+    '''Removes all session tokens corresponding to a user ID.
 
     If keep_current_session is True, will not delete the session token passed in
     the payload. This allows for "delete all my other logins" functionality.
 
-    Request payload keys required:
+    Parameters
+    ----------
 
-    session_token
-    user_id
-    keep_current_session
+    payload : dict
+        This is a dict with the following required keys:
 
-    Returns:
+        - session_token: str
+        - user_id: int
+        - keep_current_session: bool
 
-    Deletes the row corresponding to the session_key in the sessions table.
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict with a success key indicating if the sessions were
+        deleted successfully.
 
     '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'messages':["Invalid session delete request."],
+            }
 
     for key in ('user_id',
                 'session_token',
@@ -560,8 +763,10 @@ def auth_delete_sessions_userid(payload,
 
         if key not in payload:
 
-            LOGGER.error('missing or invalid parameters for '
-                         'auth_delete_sessions_userid')
+            LOGGER.error(
+                '[%s] Invalid session delete request, missing %s.' %
+                (payload['reqid'], key)
+            )
 
             return {
                 'success':False,
@@ -609,14 +814,30 @@ def auth_delete_sessions_userid(payload,
         result = currproc.authdb_conn.execute(delete)
         result.close()
 
+        LOGGER.info(
+            "[%s] Session delete request successful for "
+            "user_id: %s, keep_current_session was set to %s." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             payload['keep_current_session'])
+        )
+
         return {
             'success':True,
             'messages':["Sessions deleted successfully."],
         }
 
-    except Exception:
+    except Exception as e:
 
-        LOGGER.exception('could not delete the requested sessions.')
+        LOGGER.error(
+            "[%s] Session delete request failed for "
+            "user_id: %s. Exception was: %s." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             e)
+        )
 
         if raiseonfail:
             raise
@@ -629,15 +850,31 @@ def auth_delete_sessions_userid(payload,
 
 def auth_kill_old_sessions(
         session_expiry_days=7,
+        override_authdb_path=None,
         raiseonfail=False,
-        override_authdb_path=None
 ):
     '''
-    This kills all expired sessions.
+    Kills all expired sessions.
 
-    payload is:
+    Parameters
+    ----------
 
-    {'session_expiry_days': session older than this number will be removed}
+    session_expiry_days : int
+        All sessions older than the current datetime + this value will be
+        deleted.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict with a success key indicating if the sessions were
+        deleted successfully.
 
     '''
 
@@ -693,7 +930,7 @@ def auth_kill_old_sessions(
 
     else:
 
-        LOGGER.info(
+        LOGGER.warning(
             'No sessions older than %sZ found to delete.' %
             earliest_date.isoformat()
         )
@@ -724,6 +961,13 @@ def auth_password_check(payload,
 
         - session_token
         - password
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
 
     override_authdb_path : str or None
         The SQLAlchemy database URL to use if not using the default auth DB.
@@ -805,6 +1049,13 @@ def auth_password_check(payload,
         except Exception:
             pass
 
+        LOGGER.error(
+            '[%s] Password check failed for session_token: %s. '
+            'Missing request items.' %
+            (payload['reqid'],
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_id':None,
@@ -849,6 +1100,12 @@ def auth_password_check(payload,
             except Exception:
                 pass
 
+            LOGGER.error(
+                '[%s] Password check failed for session_token: %s. '
+                'The session token provided does not exist.' %
+                (payload['reqid'],
+                 pii_hash(payload['session_token'], payload['pii_salt']))
+            )
             return {
                 'success':False,
                 'user_id':None,
@@ -897,8 +1154,15 @@ def auth_password_check(payload,
                 except Exception as e:
 
                     LOGGER.error(
-                        "Password mismatch for user: %s, exception type: %s" %
-                        (user_info['user_id'], e)
+                        '[%s] Password check failed for session_token: %s. '
+                        'The password provided does not match the one on '
+                        'record for user_id: %s. Exception was: %r' %
+                        (payload['reqid'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(user_info['user_id'],
+                                  payload['pii_salt']),
+                         e)
                     )
                     pass_ok = False
 
@@ -931,6 +1195,16 @@ def auth_password_check(payload,
                 if (user_info['is_active'] and
                     user_info['user_role'] != 'locked'):
 
+                    LOGGER.info(
+                        '[%s] Password check successful for session_token: %s. '
+                        'Matched user with user_id: %s. ' %
+                        (payload['reqid'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(user_info['user_id'],
+                                  payload['pii_salt']))
+                    )
+
                     return {
                         'success':True,
                         'user_id': user_info['user_id'],
@@ -939,6 +1213,17 @@ def auth_password_check(payload,
 
                 # if the user account is locked, return a failure
                 else:
+
+                    LOGGER.error(
+                        '[%s] Password check failed for session_token: %s. '
+                        'Matched user with user_id: %s is not active '
+                        'or is locked.' %
+                        (payload['reqid'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(user_info['user_id'],
+                                  payload['pii_salt']))
+                    )
 
                     return {
                         'success':False,
