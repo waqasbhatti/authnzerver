@@ -55,6 +55,7 @@ from fuzzywuzzy.fuzz import UQRatio
 
 from .. import authdb
 from .session import auth_session_exists
+from ..permissions import pii_hash
 
 from argon2 import PasswordHasher
 
@@ -75,10 +76,11 @@ def validate_input_password(
         full_name,
         email,
         password,
+        pii_salt,
         min_length=12,
         max_match_threshold=20
 ):
-    '''This validates user input passwords.
+    '''Validates user input passwords.
 
     1. must be at least min_length characters (we'll truncate the password at
        1024 characters since we don't want to store entire novels)
@@ -89,6 +91,37 @@ def validate_input_password(
     5. must not be completely numeric
     6. must not be in the top 10k passwords list
 
+    Parameters
+    ----------
+
+    full_name : str
+        The full name of the user creating the account.
+
+    email : str
+        The email address of the user creating the account.
+
+    password : str
+        The password of the user creating the account.
+
+    pii_salt : str
+        The PII salt value passed in from a wrapping function. Used to censor
+        personally identifying information in the logs emitted from this
+        function.
+
+    min_length : int
+        The minimum required character length of the password.
+
+    max_match_threshold : int
+        The maximum UQRatio required to fuzzy-match the input password against
+        the server's domain name, the user's email, or their name.
+
+    Returns
+    -------
+
+    bool
+        Returns True if the password is OK to use and meets all
+        specification. False otherwise.
+
     '''
 
     messages = []
@@ -97,7 +130,9 @@ def validate_input_password(
     # is all white space
     if len(squeeze(password.strip())) < min_length:
 
-        LOGGER.warning('password for new account: %s is too short' % email)
+        LOGGER.warning('Password for new account '
+                       'with email: %s is too short (%s chars < required %s).' %
+                       (pii_hash(email, pii_salt), len(password), min_length))
         messages.append('Your password is too short. '
                         'It must have at least %s characters.' % min_length)
         passlen_ok = False
@@ -106,8 +141,10 @@ def validate_input_password(
 
     # check if the password is straight-up dumb
     if password.casefold() in validators.TOP_10K_PASSWORDS:
-        LOGGER.warning('password for new account: %s is '
-                       'in top 10k passwords list' % email)
+        LOGGER.warning('Password for new account '
+                       'with email: %s was found in the '
+                       'top 10k passwords list.' %
+                       (pii_hash(email, pii_salt),))
         messages.append('Your password is on the list of the '
                         'most common passwords and is vulnerable to guessing.')
         tenk_ok = False
@@ -128,9 +165,13 @@ def validate_input_password(
     name_ok = name_match < max_match_threshold
 
     if not fqdn_ok or not email_ok or not name_ok:
-        LOGGER.warning('password for new account: %s matches FQDN '
-                       '(similarity: %s) or their email address '
-                       '(similarity: %s)' % (email, fqdn_match, email_match))
+        LOGGER.warning('Password for new account '
+                       'with email: %s matches FQDN '
+                       '(similarity: %s), their name (similarity: %s), '
+                       ' or their email address '
+                       '(similarity: %s).' %
+                       (pii_hash(email, pii_salt),
+                        fqdn_match, name_match, email_match))
         messages.append('Your password is too similar to either '
                         'the domain name of this server or your '
                         'own name or email address.')
@@ -138,18 +179,21 @@ def validate_input_password(
     # next, check if the password is complex enough
     histogram = {}
     for char in password:
-        if char.lower() not in histogram:
-            histogram[char.lower()] = 1
+        if char.casefold() not in histogram:
+            histogram[char.casefold()] = 1
         else:
-            histogram[char.lower()] = histogram[char.lower()] + 1
+            histogram[char.casefold()] = histogram[char.casefold()] + 1
 
     hist_ok = True
 
     for h in histogram:
         if (histogram[h]/len(password)) > 0.2:
             hist_ok = False
-            LOGGER.warning('one character is more than '
-                           '0.2 x length of the password')
+            LOGGER.warning('Password for new account '
+                           'with email: %s does not have enough entropy. '
+                           'One character is more than '
+                           '0.2 x length of the password.' %
+                           pii_hash(email, pii_salt))
             messages.append(
                 'Your password is not complex enough. '
                 'One or more characters appear appear too frequently.'
@@ -159,6 +203,9 @@ def validate_input_password(
     # check if the password is all numeric
     if password.isdigit():
         numeric_ok = False
+        LOGGER.warning('Password for new account '
+                       'with email: %s is all numbers.' %
+                       pii_hash(email, pii_salt))
         messages.append('Your password cannot be all numbers.')
     else:
         numeric_ok = True
