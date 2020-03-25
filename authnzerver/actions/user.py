@@ -218,21 +218,63 @@ def validate_input_password(
 
 
 def change_user_password(payload,
-                         raiseonfail=False,
                          override_authdb_path=None,
+                         raiseonfail=False,
                          min_pass_length=12,
                          max_similarity=30):
-    '''This changes the user's password.
+    '''Changes the user's password.
 
-    payload requires the following keys:
+    Parameters
+    ----------
 
-    - user_id
-    - full_name
-    - email
-    - current_password
-    - new_password
+    payload : dict
+        This is a dict with the following required keys:
+
+        - user_id: int
+        - full_name: str
+        - email: str
+        - current_password: str
+        - new_password: str
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    min_pass_length : int
+        The minimum required character length of the password.
+
+    max_similarity : int
+        The maximum UQRatio required to fuzzy-match the input password against
+        the server's domain name, the user's email, or their name.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict with the user's user_id and email as keys if successful.
 
     '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_id':None,
+                'email':None,
+                'messages':["Invalid password change request."],
+            }
 
     for key in ('user_id',
                 'full_name',
@@ -241,6 +283,12 @@ def change_user_password(payload,
                 'new_password'):
 
         if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid password change request, missing %s.' %
+                (payload['reqid'], key)
+            )
+
             return {
                 'success':False,
                 'user_id':None,
@@ -269,13 +317,44 @@ def change_user_password(payload,
     # get the current password
     sel = select([
         users.c.password,
-    ]).select_from(users).where(
-        (users.c.user_id == payload['user_id'])
+    ]).select_from(
+        users
+    ).where(
+        users.c.user_id == payload['user_id']
+    ).where(
+        users.c.email == payload['email']
+    ).where(
+        users.c.is_active.is_(True)
     )
+
     result = currproc.authdb_conn.execute(sel)
     rows = result.fetchone()
     result.close()
 
+    if not rows or len(rows) == 0:
+
+        LOGGER.error(
+            "[%s] Password change request failed for "
+            "user_id: %s, email: %s. "
+            "The user was not found in the DB or is inactive." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['email'],
+                      payload['pii_salt']))
+        )
+
+        return {
+            'success':False,
+            'user_id':payload['user_id'],
+            'email':payload['email'],
+            'messages':['Your current password did '
+                        'not match the stored password.']
+        }
+
+    #
+    # proceed with hashing
+    #
     current_password = payload['current_password'][:1024]
     new_password = payload['new_password'][:1024]
 
@@ -286,6 +365,18 @@ def change_user_password(payload,
         pass_check = False
 
     if not pass_check:
+
+        LOGGER.error(
+            "[%s] Password change request failed for "
+            "user_id: %s, email: %s. "
+            "The input password did not match the stored password." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['email'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_id':payload['user_id'],
@@ -302,6 +393,18 @@ def change_user_password(payload,
         same_check = False
 
     if same_check:
+
+        LOGGER.error(
+            "[%s] Password change request failed for "
+            "user_id: %s, email: %s. "
+            "The new password was the same as the current password." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['email'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_id':payload['user_id'],
@@ -320,6 +423,7 @@ def change_user_password(payload,
         payload['full_name'],
         payload['email'],
         new_password,
+        payload['pii_salt'],
         min_length=min_pass_length,
         max_match_threshold=max_similarity
     )
@@ -350,6 +454,17 @@ def change_user_password(payload,
 
         if rows and rows['password'] == hashed_password:
             messages.append('Password changed successfully.')
+
+            LOGGER.info(
+                "[%s] Password change request succeeded for "
+                "user_id: %s, email: %s." %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']),
+                 pii_hash(payload['email'],
+                          payload['pii_salt']))
+            )
+
             return {
                 'success':True,
                 'user_id':payload['user_id'],
@@ -358,7 +473,20 @@ def change_user_password(payload,
             }
 
         else:
+
             messages.append('Password could not be changed.')
+
+            LOGGER.error(
+                "[%s] Password change request failed for "
+                "user_id: %s, email: %s. "
+                "The user row could not be updated in the DB." %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']),
+                 pii_hash(payload['email'],
+                          payload['pii_salt']))
+            )
+
             return {
                 'success':False,
                 'user_id':payload['user_id'],
@@ -367,6 +495,18 @@ def change_user_password(payload,
             }
 
     else:
+
+        LOGGER.error(
+            "[%s] Password change request failed for "
+            "user_id: %s, email: %s. "
+            "The new password entered is insecure." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['email'],
+                      payload['pii_salt']))
+        )
+
         messages.append("The new password you entered is insecure. "
                         "It must be at least 12 characters long and "
                         "be sufficiently complex.")
@@ -382,16 +522,51 @@ def change_user_password(payload,
 ## USER HANDLING ##
 ###################
 
-def create_new_user(payload,
-                    min_pass_length=12,
-                    max_similarity=30,
-                    raiseonfail=False,
-                    override_authdb_path=None):
-    '''This makes a new user.
+def create_new_user(
+        payload,
+        min_pass_length=12,
+        max_similarity=30,
+        override_authdb_path=None,
+        raiseonfail=False,
+):
+    '''Makes a new user.
 
-    payload keys: full_name, email, password
+    payload : dict
+        This is a dict with the following required keys:
 
-    Returns the user_id and email if successful.
+        - full_name: str
+        - email: str
+        - password: str
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    min_pass_length : int
+        The minimum required character length of the password.
+
+    max_similarity : int
+        The maximum UQRatio required to fuzzy-match the input password against
+        the server's domain name, the user's email, or their name.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict with the user's user_id and user_email, and a boolean for
+        send_verification.
+
+    Notes
+    -----
 
     The emailverify_sent_datetime is set to the current time. The initial
     account's is_active is set to False and user_role is set to 'locked'.
@@ -414,11 +589,29 @@ def create_new_user(payload,
 
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_email':None,
+                'user_id':None,
+                'send_verification':False,
+                'messages':["Invalid user creation request."],
+            }
+
     for key in ('full_name',
                 'email',
                 'password'):
 
         if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid user creation request, missing %s.' %
+                (payload['reqid'], key)
+            )
 
             return {
                 'success':False,
@@ -436,6 +629,15 @@ def create_new_user(payload,
     email_ok = email_regex_ok and email_confusables_ok
 
     if not email_ok:
+
+        LOGGER.error(
+            "[%s] User creation request failed for "
+            "email: %s. "
+            "The email address provided is not valid." %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']))
+        )
 
         return {
             'success':False,
@@ -484,6 +686,16 @@ def create_new_user(payload,
     )
 
     if not passok:
+
+        LOGGER.error(
+            "[%s] User creation request failed for "
+            "email: %s. "
+            "The password provided is not secure." %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_email':email,
@@ -518,15 +730,9 @@ def create_new_user(payload,
 
         user_added = True
 
-        LOGGER.info('new user created: %s' % payload['email'])
-
     # this will catch stuff like people trying to sign up again with their email
     # address
     except Exception:
-
-        LOGGER.warning('could not create a new user with '
-                       'email: %s probably because they exist already'
-                       % payload['email'])
 
         user_added = False
 
@@ -547,8 +753,15 @@ def create_new_user(payload,
     # send a verification email
     if user_added and rows:
 
-        LOGGER.info('new user ID: %s for email: %s, is_active = %s'
-                    % (rows['user_id'], rows['email'], rows['is_active']))
+        LOGGER.info(
+            "[%s] User creation request succeeded for "
+            "email: %s. New user_id: %s" %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(rows['user_id'], payload['pii_salt']))
+        )
+
         messages.append(
             'User account created. Please verify your email address to log in.'
         )
@@ -564,9 +777,13 @@ def create_new_user(payload,
     # if the user wasn't added successfully, then they exist in the DB already
     elif (not user_added) and rows:
 
-        LOGGER.warning(
-            'attempt to create new user with existing email: %s'
-            % email
+        LOGGER.error(
+            "[%s] User creation request failed for "
+            "email: %s. "
+            "The email provided probably exists in the DB already. " %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']))
         )
 
         # check the timedelta between now and the emailverify_sent_datetime
@@ -579,11 +796,12 @@ def create_new_user(payload,
             (verification_timedelta > timedelta(hours=24))
         )
         LOGGER.warning(
-            'existing user_id = %s, '
-            'is active = %s, '
-            'email verification originally sent at = %sZ, '
+            '[%s] Existing user_id = %s for new user creation '
+            'request with email = %s, '
+            'is_active = %s. Email verification originally sent at = %sZ, '
             'will resend verification = %s' %
-            (rows['user_id'],
+            (payload['reqid'],
+             pii_hash(rows['user_id'],payload['pii_salt']),
              rows['is_active'],
              rows['emailverify_sent_datetime'].isoformat(),
              resend_verification)
@@ -603,6 +821,13 @@ def create_new_user(payload,
     # otherwise, the user wasn't added successfully and they don't already exist
     # in the database so something else went wrong.
     else:
+
+        LOGGER.error(
+            '[%s] User creation request failed for email: %s. '
+            'Could not add row to the DB.' %
+            (payload['reqid'],
+             pii_hash(rows['user_id'],payload['pii_salt']))
+        )
 
         messages.append(
             'User account created. Please verify your email address to log in.'
