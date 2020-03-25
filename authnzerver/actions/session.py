@@ -984,8 +984,20 @@ def auth_password_check(payload,
 
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_id':None,
+                'messages':["Invalid password check request."],
+            }
+
     # check broken request
     request_ok = True
+
     for item in ('password', 'session_token'):
         if item not in payload:
             request_ok = False
@@ -1017,7 +1029,9 @@ def auth_password_check(payload,
 
         # dummy session request
         session_info = auth_session_exists(
-            {'session_token':'nope'},
+            {'session_token':'nope',
+             'reqid':payload['reqid'],
+             'pii_salt':payload['pii_salt']},
             raiseonfail=raiseonfail,
             override_authdb_path=override_authdb_path
         )
@@ -1066,7 +1080,9 @@ def auth_password_check(payload,
     else:
 
         session_info = auth_session_exists(
-            {'session_token':payload['session_token']},
+            {'session_token':payload['session_token'],
+             'reqid':payload['reqid'],
+             'pii_salt':payload['pii_salt']},
             raiseonfail=raiseonfail,
             override_authdb_path=override_authdb_path
         )
@@ -1236,15 +1252,9 @@ def auth_password_check(payload,
 def auth_user_login(payload,
                     override_authdb_path=None,
                     raiseonfail=False):
-    '''This logs a user in.
+    '''Logs a user in.
 
-    override_authdb_path allows testing without an executor.
-
-    payload keys required:
-
-    valid session_token, email, password
-
-    login flow for frontend:
+    Login flow for frontend:
 
     session cookie get -> check session exists -> check user login -> old
     session delete (no matter what) -> new session create (with actual user_id
@@ -1256,7 +1266,48 @@ def auth_user_login(payload,
     FIXME: update (and fake-update) the Users table with the last_login_try and
     last_login_success.
 
+    Parameters
+    ----------
+
+    payload : dict
+        The payload dict should contain the following keys:
+
+        - session_token: str
+        - email: str
+        - password: str
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        The SQLAlchemy database URL to use if not using the default auth DB.
+
+    raiseonfail : bool
+        If True, and something goes wrong, this will raise an Exception instead
+        of returning normally with a failure condition.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing the result of the password verification check.
+
     '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_id':None,
+                'messages':["Invalid user login request."],
+            }
 
     # check broken
     request_ok = True
@@ -1291,7 +1342,9 @@ def auth_user_login(payload,
 
         # dummy session request
         session_info = auth_session_exists(
-            {'session_token':'nope'},
+            {'session_token':'nope',
+             'reqid':payload['reqid'],
+             'pii_salt':payload['pii_salt']},
             raiseonfail=raiseonfail,
             override_authdb_path=override_authdb_path
         )
@@ -1324,9 +1377,20 @@ def auth_user_login(payload,
             pass
 
         # run a fake session delete
-        auth_session_delete({'session_token':'nope'},
+        auth_session_delete({'session_token':'nope',
+                             'reqid':payload['reqid'],
+                             'pii_salt':payload['pii_salt']},
                             raiseonfail=raiseonfail,
                             override_authdb_path=override_authdb_path)
+
+        LOGGER.error(
+            '[%s] User login failed for session_token: %s and '
+            'provided email address: %s. '
+            'Missing request items.' %
+            (payload['reqid'],
+             pii_hash(payload['session_token'], payload['pii_salt']),
+             pii_hash(payload['email'], payload['pii_salt']))
+        )
 
         return {
             'success':False,
@@ -1338,7 +1402,9 @@ def auth_user_login(payload,
     else:
 
         session_info = auth_session_exists(
-            {'session_token':payload['session_token']},
+            {'session_token':payload['session_token'],
+             'reqid':payload['reqid'],
+             'pii_salt':payload['pii_salt']},
             raiseonfail=raiseonfail,
             override_authdb_path=override_authdb_path
         )
@@ -1374,9 +1440,20 @@ def auth_user_login(payload,
 
             # run a fake session delete
             auth_session_delete(
-                {'session_token':'nope'},
+                {'session_token':'nope',
+                 'reqid':payload['reqid'],
+                 'pii_salt':payload['pii_salt']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
+            )
+
+            LOGGER.error(
+                '[%s] User login failed for session_token: %s and '
+                'email address: %s. '
+                'The session token provided does not exist.' %
+                (payload['reqid'],
+                 pii_hash(payload['session_token'], payload['pii_salt']),
+                 pii_hash(payload['email'], payload['pii_salt']))
             )
 
             return {
@@ -1431,8 +1508,18 @@ def auth_user_login(payload,
                 except Exception as e:
 
                     LOGGER.error(
-                        "Password mismatch for user: %s, exception type: %s" %
-                        (user_info['user_id'], e)
+                        '[%s] User login failed for session_token: %s and '
+                        'email address: %s. '
+                        'The password provided does not match the one on '
+                        'record for user_id: %s. Exception was: %r' %
+                        (payload['reqid'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(payload['email'],
+                                  payload['pii_salt']),
+                         pii_hash(user_info['user_id'],
+                                  payload['pii_salt']),
+                         e)
                     )
                     pass_ok = False
 
@@ -1449,7 +1536,9 @@ def auth_user_login(payload,
             # always re-ask for a new session token on the next request after
             # login if it fails or succeeds.
             auth_session_delete(
-                {'session_token':payload['session_token']},
+                {'session_token':payload['session_token'],
+                 'reqid':payload['reqid'],
+                 'pii_salt':payload['pii_salt']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
@@ -1474,6 +1563,19 @@ def auth_user_login(payload,
                 if (user_info['is_active'] and
                     user_info['user_role'] != 'locked'):
 
+                    LOGGER.info(
+                        '[%s] User login successful for session_token: %s and '
+                        'email address: %s. '
+                        'Matched user with user_id: %s. ' %
+                        (payload['reqid'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(payload['email'],
+                                  payload['pii_salt']),
+                         pii_hash(user_info['user_id'],
+                                  payload['pii_salt']))
+                    )
+
                     return {
                         'success':True,
                         'user_id': user_info['user_id'],
@@ -1482,6 +1584,20 @@ def auth_user_login(payload,
 
                 # if the user account is locked, return a failure
                 else:
+
+                    LOGGER.error(
+                        '[%s] User login failed for session_token: %s and '
+                        'email address: %s. '
+                        'Matched user with user_id: %s is not active '
+                        'or is locked.' %
+                        (payload['reqid'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(payload['email'],
+                                  payload['pii_salt']),
+                         pii_hash(user_info['user_id'],
+                                  payload['pii_salt']))
+                    )
 
                     return {
                         'success':False,
@@ -1494,13 +1610,7 @@ def auth_user_login(payload,
 def auth_user_logout(payload,
                      override_authdb_path=None,
                      raiseonfail=False):
-    '''This logs out a user.
-
-    override_authdb_path allows testing without an executor.
-
-    payload keys required:
-
-    valid session_token, user_id
+    '''Logs out a user.
 
     Deletes the session token from the session store. On the next request
     (redirect from POST /auth/logout to GET /), the frontend will issue a new
@@ -1508,12 +1618,68 @@ def auth_user_logout(payload,
 
     The frontend MUST unset the cookie as well.
 
+    Parameters
+    ----------
+
+    payload : dict
+        The payload dict should contain the following keys:
+
+        - session_token: str
+        - user_id: int
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        The SQLAlchemy database URL to use if not using the default auth DB.
+
+    raiseonfail : bool
+        If True, and something goes wrong, this will raise an Exception instead
+        of returning normally with a failure condition.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing the result of the password verification check.
+
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_id':None,
+                'messages':["Invalid user logout request."],
+            }
+
+    for key in ('session_token','user_id'):
+        if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid user logout request, missing %s.' %
+                (payload['reqid'], key)
+            )
+            return {
+                'success':False,
+                'messages':["Invalid user logout request. "
+                            "No %s provided." % key],
+            }
+
     # check if the session token exists
-    session = auth_session_exists(payload,
-                                  override_authdb_path=override_authdb_path,
-                                  raiseonfail=raiseonfail)
+    session = auth_session_exists(
+        {'session_token':payload['session_token'],
+         'reqid':payload['reqid'],
+         'pii_salt':payload['pii_salt']},
+        override_authdb_path=override_authdb_path,
+        raiseonfail=raiseonfail)
 
     if session['success']:
 
@@ -1521,12 +1687,24 @@ def auth_user_logout(payload,
         if payload['user_id'] == session['session_info']['user_id']:
 
             deleted = auth_session_delete(
-                payload,
+                {'session_token':payload['session_token'],
+                 'reqid':payload['reqid'],
+                 'pii_salt':payload['pii_salt']},
                 override_authdb_path=override_authdb_path,
                 raiseonfail=raiseonfail
             )
 
             if deleted['success']:
+
+                LOGGER.info(
+                    "[%s] User logout request successful for "
+                    "session_token: %s, user_id: %s. " %
+                    (payload['reqid'],
+                     pii_hash(payload['session_token'],
+                              payload['pii_salt']),
+                     pii_hash(payload['user_id'],
+                              payload['pii_salt']))
+                )
 
                 return {
                     'success':True,
@@ -1537,10 +1715,15 @@ def auth_user_logout(payload,
             else:
 
                 LOGGER.error(
-                    'something went wrong when '
-                    'trying to remove session ID: %s, '
-                    'for user ID: %s' % (payload['session_token'],
-                                         payload['user_id'])
+                    "[%s] User logout request failed for "
+                    "session_token: %s, user_id: %s. "
+                    "Invalid user_id provided for "
+                    "corresponding session token." %
+                    (payload['reqid'],
+                     pii_hash(payload['session_token'],
+                              payload['pii_salt']),
+                     pii_hash(payload['user_id'],
+                              payload['pii_salt']))
                 )
                 return {
                     'success':False,
@@ -1551,11 +1734,16 @@ def auth_user_logout(payload,
 
         else:
             LOGGER.error(
-                'tried to log out but session token = %s '
-                'and user_id = %s do not match. '
-                'expected user_id = %s' % (payload['session_token'],
-                                           payload['user_id'],
-                                           session['user_id']))
+                "[%s] User logout request failed for "
+                "session_token: %s, user_id: %s. "
+                "Invalid user_id provided for "
+                "corresponding session token." %
+                (payload['reqid'],
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']))
+            )
             return {
                 'success':False,
                 'user_id':payload['user_id'],
@@ -1564,6 +1752,17 @@ def auth_user_logout(payload,
 
     else:
 
+        LOGGER.error(
+            "[%s] User logout request failed for "
+            "session_token: %s, user_id: %s. "
+            "Invalid user_id provided for "
+            "corresponding session token." %
+            (payload['reqid'],
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']))
+        )
         return {
             'success':False,
             'user_id':payload['user_id'],
