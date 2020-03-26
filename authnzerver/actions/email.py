@@ -849,7 +849,7 @@ def send_forgotpass_verification_email(payload,
                 'success':False,
                 'user_id':None,
                 'email_address':None,
-                'verifyemail_sent_datetime':None,
+                'forgotemail_sent_datetime':None,
                 'messages':["Invalid forgot-password email request."],
             }
 
@@ -920,18 +920,15 @@ def send_forgotpass_verification_email(payload,
 
     if not user_info:
 
-        return {
-            'success':False,
-            'user_id':None,
-            'email_address':None,
-            'forgotemail_sent_datetime':None,
-            'messages':([
-                "Invalid password reset email request."
-            ])
-        }
-
-    # see if the user is not locked or inactive
-    if not (user_info['is_active'] and user_info['user_role'] != 'locked'):
+        LOGGER.error(
+            "[%s] Forgot-password email request failed for "
+            "email: %s, session_token: %s."
+            "User matching the provided email address "
+            "doesn't exist or is not active." %
+            (payload['reqid'],
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
 
         return {
             'success':False,
@@ -961,6 +958,16 @@ def send_forgotpass_verification_email(payload,
 
     if not send_email:
 
+        LOGGER.error(
+            "[%s] Forgot-password email request failed for "
+            "email: %s, session_token: %s."
+            "A forgot-password email was already sent to "
+            "this user within the last 24 hours." %
+            (payload['reqid'],
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_id':None,
@@ -981,6 +988,15 @@ def send_forgotpass_verification_email(payload,
     )
 
     if not session_info['success']:
+
+        LOGGER.error(
+            "[%s] Forgot-password email request failed for "
+            "email: %s, session_token: %s."
+            "The session associated with the request is not valid." %
+            (payload['reqid'],
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
 
         return {
             'success':False,
@@ -1025,7 +1041,6 @@ def send_forgotpass_verification_email(payload,
     subject = FORGOTPASS_VERIFICATION_EMAIL_SUBJECT.format(
         server_name=payload['server_name']
     )
-    recipients = [user_info['email']]
 
     # send the email
     email_sent = authnzerver_send_email(
@@ -1057,6 +1072,16 @@ def send_forgotpass_verification_email(payload,
         result = currproc.authdb_conn.execute(upd)
         result.close()
 
+        LOGGER.info(
+            '[%s] Forgot-password email request succeeded for '
+            'email: %s, session_token: %s.'
+            'Email sent on: %s UTC.' %
+            (payload['reqid'],
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']),
+             emailforgotpass_sent_datetime.isoformat())
+        )
+
         return {
             'success':True,
             'user_id':user_info['user_id'],
@@ -1069,6 +1094,16 @@ def send_forgotpass_verification_email(payload,
         }
 
     else:
+
+        LOGGER.error(
+            '[%s] Forgot-password email request failed for '
+            'email: %s, session_token: %s.'
+            'The email server could not send the '
+            'email to the specified address.' %
+            (payload['reqid'],
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
 
         return {
             'success':False,
