@@ -778,7 +778,7 @@ def internal_toggle_user_lock(payload,
             "[%s] Invalid user lock toggle request for user_id: %s. "
             "Unknown action requested: %s" %
             (payload['reqid'],
-             pii_hash(payload['user_id'],
+             pii_hash(payload['target_userid'],
                       payload['pii_salt']),
              action)
         )
@@ -795,7 +795,7 @@ def internal_toggle_user_lock(payload,
             "[%s] Invalid user lock toggle request for user_id: %s. "
             "Systemwide anonymous/locked users cannot be edited." %
             (payload['reqid'],
-             pii_hash(payload['user_id'],
+             pii_hash(payload['target_userid'],
                       payload['pii_salt']))
         )
 
@@ -880,7 +880,7 @@ def internal_toggle_user_lock(payload,
             LOGGER.info(
                 "[%s] User lock toggle request succeeded for user_id: %s. " %
                 (payload['reqid'],
-                 pii_hash(payload['user_id'],
+                 pii_hash(payload['target_userid'],
                           payload['pii_salt']))
             )
 
@@ -896,7 +896,7 @@ def internal_toggle_user_lock(payload,
                 "[%s] User lock toggle request failed for user_id: %s. "
                 "Exception was: %s" %
                 (payload['reqid'],
-                 pii_hash(payload['user_id'],
+                 pii_hash(payload['target_userid'],
                           payload['pii_salt']), e)
             )
 
@@ -915,15 +915,12 @@ def internal_toggle_user_lock(payload,
             "[%s] User lock toggle request failed for user_id: %s. "
             "Exception was: %s" %
             (payload['reqid'],
-             pii_hash(payload['user_id'],
+             pii_hash(payload['target_userid'],
                       payload['pii_salt']), e)
         )
 
         if raiseonfail:
             raise
-
-        LOGGER.error('User lock toggle not found or '
-                     'could not check if it exists')
 
         return {
             'success':False,

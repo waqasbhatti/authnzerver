@@ -21,7 +21,6 @@ def get_test_authdb():
     authdb.initial_authdb_inserts('sqlite:///test-userlock.authdb.sqlite')
 
 
-
 def test_user_lock():
     '''
     This tests if we can add session info to a session dict.
@@ -30,15 +29,15 @@ def test_user_lock():
 
     try:
         os.remove('test-userlock.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-userlock.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-userlock.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
 
     get_test_authdb()
@@ -46,7 +45,9 @@ def test_user_lock():
     # create the user
     user_payload = {'full_name':'Test User',
                     'email':'testuser-userlock@test.org',
-                    'password':'aROwQin9L8nNtPTEMLXd'}
+                    'password':'aROwQin9L8nNtPTEMLXd',
+                    'pii_salt':'super-secret-salt',
+                    'reqid':1}
     user_created = actions.create_new_user(
         user_payload,
         override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
@@ -62,7 +63,9 @@ def test_user_lock():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -77,7 +80,9 @@ def test_user_lock():
     emailverify = (
         actions.verify_user_email_address(
             {'email':user_payload['email'],
-             'user_id': user_created['user_id']},
+             'user_id': user_created['user_id'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
         )
     )
@@ -93,7 +98,9 @@ def test_user_lock():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -110,18 +117,22 @@ def test_user_lock():
 
     user_locked = actions.internal_toggle_user_lock(
         {'target_userid': emailverify['user_id'],
-         'action': 'lock'},
+         'action': 'lock',
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-userlock-authdb.sqlite',
         raiseonfail=True
     )
 
     assert user_locked['success'] is True
     assert user_locked['user_info']['user_role'] == 'locked'
-    assert user_locked['user_info']['is_active'] == False
+    assert user_locked['user_info']['is_active'] is False
 
     # check if the session token for this logged in user still exists
     info_check = actions.auth_session_exists(
-        {'session_token':session_token2['session_token']},
+        {'session_token':session_token2['session_token'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
     )
     assert info_check['success'] is False
@@ -132,7 +143,9 @@ def test_user_lock():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -147,13 +160,14 @@ def test_user_lock():
     login = actions.auth_user_login(
         {'session_token':session_token3['session_token'],
          'email': user_payload['email'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
     )
 
     # this should fail
     assert login['success'] is False
-
 
     #
     # 2. unlock the user now
@@ -161,13 +175,15 @@ def test_user_lock():
 
     user_unlocked = actions.internal_toggle_user_lock(
         {'target_userid': emailverify['user_id'],
-         'action': 'unlock'},
+         'action': 'unlock',
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-userlock-authdb.sqlite',
         raiseonfail=True
     )
     assert user_unlocked['success'] is True
     assert user_unlocked['user_info']['user_role'] == 'authenticated'
-    assert user_unlocked['user_info']['is_active'] == True
+    assert user_unlocked['user_info']['is_active'] is True
 
     # try to login
     session_payload = {
@@ -175,7 +191,9 @@ def test_user_lock():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -190,7 +208,9 @@ def test_user_lock():
     login = actions.auth_user_login(
         {'session_token':session_token3['session_token'],
          'email': user_payload['email'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
     )
 
@@ -211,13 +231,13 @@ def test_user_lock():
 
     try:
         os.remove('test-userlock.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-userlock.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-userlock.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
