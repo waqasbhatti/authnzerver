@@ -681,6 +681,7 @@ def create_new_user(
         full_name,
         email,
         input_password,
+        payload['pii_salt'],
         min_length=min_pass_length,
         max_match_threshold=max_similarity
     )
@@ -797,11 +798,12 @@ def create_new_user(
         )
         LOGGER.warning(
             '[%s] Existing user_id = %s for new user creation '
-            'request with email = %s, '
-            'is_active = %s. Email verification originally sent at = %sZ, '
+            'request with email = %s, is_active = %s. '
+            'Email verification originally sent at = %sZ, '
             'will resend verification = %s' %
             (payload['reqid'],
-             pii_hash(rows['user_id'],payload['pii_salt']),
+             pii_hash(rows['user_id'], payload['pii_salt']),
+             pii_hash(payload['email'], payload['pii_salt']),
              rows['is_active'],
              rows['emailverify_sent_datetime'].isoformat(),
              resend_verification)

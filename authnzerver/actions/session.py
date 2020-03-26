@@ -189,6 +189,7 @@ def auth_session_new(payload,
         # get the insert object from sqlalchemy
         sessions = currproc.authdb_meta.tables['sessions']
         insert = sessions.insert().values({
+            'session_token':session_token,
             'ip_address':payload['ip_address'],
             'user_agent':payload['user_agent'],
             'user_id':payload['user_id'],

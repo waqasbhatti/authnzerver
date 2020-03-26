@@ -44,7 +44,9 @@ def test_create_user():
     # 1. dumb password
     payload = {'full_name':'Test User',
                'email':'testuser@test.org',
-               'password':'password'}
+               'password':'password',
+               'reqid':1,
+               'pii_salt':'super-random-salt'}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -68,7 +70,9 @@ def test_create_user():
     # 2. all numeric password
     payload = {'full_name':'Test User',
                'email':'testuser@test.org',
-               'password':'239420349823904802398402375025'}
+               'password':'239420349823904802398402375025',
+               'reqid':1,
+               'pii_salt':'super-random-salt'}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -82,7 +86,9 @@ def test_create_user():
     # 3a. password ~= email address
     payload = {'full_name': 'Test User',
                'email':'testuser@test.org',
-               'password':'testuser'}
+               'password':'testuser',
+               'reqid':1,
+               'pii_salt':'super-random-salt'}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -101,7 +107,9 @@ def test_create_user():
     # 3b. password ~= full name
     payload = {'full_name': 'Test User',
                'email':'testuser@test.org',
-               'password':'TestUser123'}
+               'password':'TestUser123',
+               'reqid':1,
+               'pii_salt':'super-random-salt'}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -117,7 +125,9 @@ def test_create_user():
     # 4. password is OK
     payload = {'full_name': 'Test User',
                'email':'testuser@test.org',
-               'password':'aROwQin9L8nNtPTEMLXd'}
+               'password':'aROwQin9L8nNtPTEMLXd',
+               'reqid':1,
+               'pii_salt':'super-random-salt'}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -132,7 +142,9 @@ def test_create_user():
     # 5. try to create a new user with an existing email address
     payload = {'full_name': 'Test User',
                'email':'testuser@test.org',
-               'password':'aROwQin9L8nNtPTEMLXd'}
+               'password':'aROwQin9L8nNtPTEMLXd',
+               'reqid':1,
+               'pii_salt':'super-random-salt'}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -189,7 +201,9 @@ def test_sessions():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.2.3.4',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'reqid':1,
+        'pii_salt':'super-random-salt'
     }
 
     # check creation
@@ -202,14 +216,18 @@ def test_sessions():
 
     # check deletion
     deleted = actions.auth_session_delete(
-        {'session_token':session_token1['session_token']},
+        {'session_token':session_token1['session_token'],
+         'reqid':1,
+         'pii_salt':'super-random-salt'},
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
     )
     assert deleted['success'] is True
 
     # check readback of deleted
     check = actions.auth_session_exists(
-        {'session_token':session_token1['session_token']},
+        {'session_token':session_token1['session_token'],
+         'reqid':1,
+         'pii_salt':'super-random-salt'},
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
     )
     assert check['success'] is False
@@ -220,7 +238,9 @@ def test_sessions():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.2.3.4',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'reqid':1,
+        'pii_salt':'super-random-salt'
     }
 
     # check creation
@@ -234,7 +254,9 @@ def test_sessions():
 
     # get items for session_token
     check = actions.auth_session_exists(
-        {'session_token':session_token2['session_token']},
+        {'session_token':session_token2['session_token'],
+         'reqid':1,
+         'pii_salt':'super-random-salt'},
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
     )
 
@@ -274,7 +296,9 @@ def test_sessions():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(seconds=5),
         'ip_address': '1.2.3.4',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'reqid':1,
+        'pii_salt':'super-random-salt'
     }
 
     # check creation
@@ -290,7 +314,9 @@ def test_sessions():
     time.sleep(10.0)
 
     check = actions.auth_session_exists(
-        {'session_token':session_token3['session_token']},
+        {'session_token':session_token3['session_token'],
+         'reqid':1,
+         'pii_salt':'super-random-salt'},
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
     )
 

@@ -55,7 +55,7 @@ Roles = Table(
 Sessions = Table(
     'sessions',
     AUTHDB_META,
-    Column('session_token',String(), primary_key=True),
+    Column('session_token',String(), primary_key=True, nullable=False),
     Column('ip_address', String(length=280), nullable=False),
     # some annoying people send zero-length client-headers
     # we won't allow them to initiate a session
