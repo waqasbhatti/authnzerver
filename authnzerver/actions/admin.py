@@ -28,6 +28,7 @@ from sqlalchemy import select, asc
 
 from .. import authdb
 from .session import auth_session_exists
+from ..permissions import pii_hash, load_permissions_json
 
 
 ##################
@@ -47,6 +48,13 @@ def list_users(payload,
         This is the input payload dict. Required items:
 
         - user_id: int or None. If None, all users will be returned
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
@@ -72,8 +80,23 @@ def list_users(payload,
 
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["Invalid user info request."],
+            }
+
     if 'user_id' not in payload:
-        LOGGER.error('no user_id provided')
+
+        LOGGER.error(
+            '[%s] Invalid password change request, missing %s.' %
+            (payload['reqid'], 'user_id')
+        )
 
         return {
             'success':False,
@@ -108,6 +131,7 @@ def list_users(payload,
 
             s = select([
                 users.c.user_id,
+                users.c.system_id,
                 users.c.full_name,
                 users.c.email,
                 users.c.is_active,
@@ -115,12 +139,15 @@ def list_users(payload,
                 users.c.last_login_success,
                 users.c.created_on,
                 users.c.user_role,
-            ]).order_by(asc(users.c.user_id)).select_from(users)
+            ]).order_by(
+                asc(users.c.user_id)
+            ).select_from(users)
 
         else:
 
             s = select([
                 users.c.user_id,
+                users.c.system_id,
                 users.c.full_name,
                 users.c.email,
                 users.c.is_active,
@@ -128,7 +155,9 @@ def list_users(payload,
                 users.c.last_login_success,
                 users.c.created_on,
                 users.c.user_role,
-            ]).order_by(asc(users.c.user_id)).select_from(users).where(
+            ]).order_by(
+                asc(users.c.user_id)
+            ).select_from(users).where(
                 users.c.user_id == user_id
             )
 
@@ -140,13 +169,28 @@ def list_users(payload,
 
             serialized_result = [dict(x) for x in rows]
 
+            LOGGER.info(
+                "[%s] User lookup request succeeded. "
+                "user_id provided: %s." %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']))
+            )
             return {
                 'success':True,
                 'user_info':serialized_result,
                 'messages':["User look up successful."],
             }
 
-        except Exception:
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] User lookup request failed. "
+                "user_id provided: %s. Exception: %s" %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']), e)
+            )
 
             if raiseonfail:
                 raise
@@ -157,13 +201,18 @@ def list_users(payload,
                 'messages':["User look up failed."],
             }
 
-    except Exception:
+    except Exception as e:
+
+        LOGGER.error(
+            "[%s] User lookup request failed. "
+            "user_id provided: %s. Exception: %s" %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']), e)
+        )
 
         if raiseonfail:
             raise
-
-        LOGGER.warning('user info not found or '
-                       'could not check if it exists')
 
         return {
             'success':False,
@@ -178,6 +227,7 @@ def list_users(payload,
 
 def edit_user(payload,
               raiseonfail=False,
+              override_permissions_json=None,
               override_authdb_path=None):
     '''This edits users.
 
@@ -193,6 +243,13 @@ def edit_user(payload,
         - target_userid: int, the user to edit
         - update_dict: dict, the update dict
 
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
         Only these items can be edited::
 
             {'full_name', 'email',     <- by user and superuser
@@ -203,6 +260,18 @@ def edit_user(payload,
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    override_permissions_json : str or None
+        If given as a str, is the alternative path to the permissions JSON to
+        load and use for this request. Normally, the path to the permissions
+        JSON has already been specified as a process-local variable by the main
+        authnzerver start up routines. If you want to use some other permissions
+        model JSON (e.g. for testing), provide that here.
+
+        Note that we load the permissions JSON from disk every time we need to
+        take a decision. This might be a bit slower, but allows for much faster
+        policy changes by just changing the permissions JSON file and not having
+        to restart the authnzerver.
 
     override_authdb_path : str or None
         If given as a str, is the alternative path to the auth DB.
@@ -219,6 +288,17 @@ def edit_user(payload,
 
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["Invalid user edit request."],
+            }
+
     for key in ('user_id',
                 'user_role',
                 'session_token',
@@ -227,7 +307,10 @@ def edit_user(payload,
 
         if key not in payload:
 
-            LOGGER.error('no %s provided for edit_user' % key)
+            LOGGER.error(
+                '[%s] Invalid user edit request, missing %s.' %
+                (payload['reqid'], key)
+            )
             return {
                 'success':False,
                 'user_info':None,
@@ -241,7 +324,21 @@ def edit_user(payload,
     update_dict = payload['update_dict']
 
     if not isinstance(update_dict, dict):
-        LOGGER.error('no update_dict provided for edit_user' % key)
+
+        LOGGER.error(
+            "[%s] User edit request failed for "
+            "user_id: %s, role: %s, session_token: %s, target_userid: %s. "
+            "An update dict was not provided." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             payload['user_role'],
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_info':None,
@@ -250,7 +347,19 @@ def edit_user(payload,
 
     if target_userid in (2,3):
 
-        LOGGER.error('Editing anonymous/locked user accounts not allowed')
+        LOGGER.error(
+            "[%s] User edit request failed for "
+            "user_id: %s, role: %s, session_token: %s, target_userid: %s. "
+            "Editing systemwide anonymous or locked accounts is not allowed." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             payload['user_role'],
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']))
+        )
         return {
             'success':False,
             'user_info':None,
@@ -265,6 +374,10 @@ def edit_user(payload,
 
         if override_authdb_path:
             currproc.auth_db_path = override_authdb_path
+
+        # override permissions JSON if necessary
+        if override_permissions_json:
+            currproc.permissions_json = override_permissions_json
 
         if not engine:
             (currproc.authdb_engine,
@@ -282,7 +395,9 @@ def edit_user(payload,
             # check if the user_id == target_userid
             # if so, check if session_token is valid and belongs to user_id
             session_info = auth_session_exists(
-                {'session_token':session_token},
+                {'session_token':session_token,
+                 'pii_salt':payload['pii_salt'],
+                 'reqid':payload['reqid']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
@@ -301,7 +416,22 @@ def edit_user(payload,
                 # check if the update keys are valid
                 if len(update_check) > 0:
 
-                    LOGGER.warning('extra elements in update_dict not allowed')
+                    LOGGER.error(
+                        "[%s] User edit request failed for "
+                        "user_id: %s, role: %s, "
+                        "session_token: %s, target_userid: %s. "
+                        "User updating their own info can only"
+                        "do so for full_name, email." %
+                        (payload['reqid'],
+                         pii_hash(payload['user_id'],
+                                  payload['pii_salt']),
+                         payload['user_role'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(payload['target_userid'],
+                                  payload['pii_salt']))
+                    )
+
                     return {
                         'success':False,
                         'user_info':None,
@@ -311,8 +441,20 @@ def edit_user(payload,
 
             else:
 
-                LOGGER.warning('no existing user matching session '
-                               'for user edit attempt')
+                LOGGER.error(
+                    "[%s] User edit request failed for "
+                    "user_id: %s, role: %s, "
+                    "session_token: %s, target_userid: %s. "
+                    "Valid session not found for the originating user_id." %
+                    (payload['reqid'],
+                     pii_hash(payload['user_id'],
+                              payload['pii_salt']),
+                     payload['user_role'],
+                     pii_hash(payload['session_token'],
+                              payload['pii_salt']),
+                     pii_hash(payload['target_userid'],
+                              payload['pii_salt']))
+                )
                 return {
                     'success':False,
                     'user_info':None,
@@ -326,7 +468,9 @@ def edit_user(payload,
             # check if the user_id == target_userid
             # if so, check if session_token is valid and belongs to user_id
             session_info = auth_session_exists(
-                {'session_token':session_token},
+                {'session_token':session_token,
+                 'pii_salt':payload['pii_salt'],
+                 'reqid':payload['reqid']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
@@ -346,7 +490,22 @@ def edit_user(payload,
 
                 # check if the update keys are valid
                 if len(update_check) > 0:
-                    LOGGER.warning('extra elements in update_dict not allowed')
+
+                    LOGGER.error(
+                        "[%s] User edit request failed for "
+                        "user_id: %s, role: %s, "
+                        "session_token: %s, target_userid: %s. "
+                        "Extra non-editable elements found in update_dict." %
+                        (payload['reqid'],
+                         pii_hash(payload['user_id'],
+                                  payload['pii_salt']),
+                         payload['user_role'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(payload['target_userid'],
+                                  payload['pii_salt']))
+                    )
+
                     return {
                         'success':False,
                         'user_info':None,
@@ -355,11 +514,30 @@ def edit_user(payload,
                     }
 
                 # check if the roles provided are valid
+                permissions_model = load_permissions_json(
+                    currproc.permission_json
+                )
+
                 if ('user_role' in update_dict and
                     (update_dict['user_role'] not in
-                     ('superuser','staff','authenticated','locked'))):
+                     permissions_model['roles'])):
 
-                    LOGGER.warning('unknown role change request in update_dict')
+                    LOGGER.error(
+                        "[%s] User edit request failed for "
+                        "user_id: %s, role: %s, "
+                        "session_token: %s, target_userid: %s. "
+                        "Invalid role change in update_dict "
+                        "to an non-existent role." %
+                        (payload['reqid'],
+                         pii_hash(payload['user_id'],
+                                  payload['pii_salt']),
+                         payload['user_role'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(payload['target_userid'],
+                                  payload['pii_salt']))
+                    )
+
                     return {
                         'success':False,
                         'user_info':None,
@@ -369,8 +547,21 @@ def edit_user(payload,
 
             else:
 
-                LOGGER.warning('no existing superuser matching session '
-                               'for user edit attempt')
+                LOGGER.error(
+                    "[%s] User edit request failed for "
+                    "user_id: %s, role: %s, "
+                    "session_token: %s, target_userid: %s. "
+                    "Session token provided is invalid "
+                    "for a superuser account." %
+                    (payload['reqid'],
+                     pii_hash(payload['user_id'],
+                              payload['pii_salt']),
+                     payload['user_role'],
+                     pii_hash(payload['session_token'],
+                              payload['pii_salt']),
+                     pii_hash(payload['target_userid'],
+                              payload['pii_salt']))
+                )
                 return {
                     'success':False,
                     'user_info':None,
@@ -381,8 +572,21 @@ def edit_user(payload,
         # any other case is a failure
         else:
 
-            LOGGER.warning('no existing matching session or user_id'
-                           'for user edit attempt')
+            LOGGER.error(
+                "[%s] User edit request failed for "
+                "user_id: %s, role: %s, "
+                "session_token: %s, target_userid: %s. "
+                "Session token provided is invalid." %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']),
+                 payload['user_role'],
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 pii_hash(payload['target_userid'],
+                          payload['pii_salt']))
+            )
+
             return {
                 'success':False,
                 'user_info':None,
@@ -397,6 +601,7 @@ def edit_user(payload,
         users = currproc.authdb_meta.tables['users']
 
         # execute the update
+        # NOTE: here, we don't filter on is_active to allow unlocking of users
         upd = users.update(
         ).where(
             users.c.user_id == target_userid
@@ -421,13 +626,41 @@ def edit_user(payload,
 
             serialized_result = dict(rows)
 
+            LOGGER.info(
+                "[%s] User edit request succeeded for "
+                "user_id: %s, role: %s, "
+                "session_token: %s, target_userid: %s." %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']),
+                 payload['user_role'],
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 pii_hash(payload['target_userid'],
+                          payload['pii_salt']))
+            )
+
             return {
                 'success':True,
                 'user_info':serialized_result,
                 'messages':["User update successful."],
             }
 
-        except Exception:
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] User edit request failed for "
+                "user_id: %s, role: %s, "
+                "session_token: %s, target_userid: %s. Exception: %s" %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']),
+                 payload['user_role'],
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 pii_hash(payload['target_userid'],
+                          payload['pii_salt']), e)
+            )
 
             if raiseonfail:
                 raise
@@ -438,13 +671,24 @@ def edit_user(payload,
                 'messages':["User update failed."],
             }
 
-    except Exception:
+    except Exception as e:
+
+        LOGGER.error(
+            "[%s] User edit request failed for "
+            "user_id: %s, role: %s, "
+            "session_token: %s, target_userid: %s. Exception: %s" %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             payload['user_role'],
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']), e)
+        )
 
         if raiseonfail:
             raise
-
-        LOGGER.error('user update not found or '
-                     'could not check if it exists')
 
         return {
             'success':False,
@@ -488,12 +732,25 @@ def internal_toggle_user_lock(payload,
 
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["Invalid user lock toggle request."],
+            }
+
     from .session import auth_delete_sessions_userid
 
     for key in ('target_userid',
                 'action'):
 
         if key not in payload:
+
+            # FIXME: continue from here
 
             LOGGER.error('no %s provided for toggle_user_lock' % key)
             return {
