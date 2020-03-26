@@ -16,7 +16,6 @@ ProcessPoolExecutor or ThreadPoolExecutor.
 ####################
 
 import logging
-import numpy as np
 from datetime import datetime, timedelta
 import random
 from base64 import b64encode, b64decode
@@ -32,7 +31,6 @@ from cryptography.fernet import Fernet, InvalidToken
 
 # we need this to send objects with the following types to the frontend:
 # - bytes
-# - ndarray
 # - datetime
 import json
 
@@ -41,19 +39,12 @@ class FrontendEncoder(json.JSONEncoder):
 
     def default(self, obj):
 
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, datetime):
+        if isinstance(obj, datetime):
             return obj.isoformat()
         elif isinstance(obj, bytes):
             return obj.decode()
         elif isinstance(obj, complex):
             return (obj.real, obj.imag)
-        elif (isinstance(obj, (float, np.float64, np.float_)) and
-              not np.isfinite(obj)):
-            return None
-        elif isinstance(obj, (np.int8, np.int16, np.int32, np.int64)):
-            return int(obj)
         else:
             return json.JSONEncoder.default(self, obj)
 
