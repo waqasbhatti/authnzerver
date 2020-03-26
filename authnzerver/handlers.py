@@ -172,9 +172,9 @@ request_functions = {
     'user-resetpass':actions.verify_password_reset,
     'user-lock':actions.toggle_user_lock,
     # email actions
-    'user-signup-email':actions.send_signup_verification_email,
-    'user-verify-email':actions.verify_user_email_address,
-    'user-forgotpass-email':actions.send_forgotpass_verification_email,
+    'user-signup-sendemail':actions.send_signup_verification_email,
+    'user-verify-emailaddr':actions.verify_user_email_address,
+    'user-forgotpass-sendemail':actions.send_forgotpass_verification_email,
     # apikey actions
     'apikey-new':actions.issue_new_apikey,
     'apikey-verify':actions.verify_apikey,
@@ -267,9 +267,7 @@ class AuthHandler(tornado.web.RequestHandler):
     '''
 
     def initialize(self,
-                   authdb,
-                   fernet_secret,
-                   pii_salt,
+                   config,
                    executor,
                    reqid_cache,
                    failed_passchecks):
@@ -278,9 +276,17 @@ class AuthHandler(tornado.web.RequestHandler):
 
         '''
 
-        self.authdb = authdb
-        self.fernet_secret = fernet_secret
-        self.pii_salt = pii_salt
+        self.config = config
+        self.authdb = self.config.authdb
+        self.fernet_secret = self.config.fernet_secret
+        self.pii_salt = self.config.piisalt
+
+        self.emailsender = self.config.emailsender
+        self.emailserver = self.config.emailserver
+        self.emailport = self.config.emailport
+        self.emailuser = self.config.emailuser
+        self.emailpass = self.config.emailpass
+
         self.executor = executor
         self.reqid_cache = reqid_cache
         self.failed_passchecks = failed_passchecks
@@ -342,6 +348,15 @@ class AuthHandler(tornado.web.RequestHandler):
 
             # inject the PII salt into the body of the request as well
             payload['body']['pii_salt'] = self.pii_salt
+
+            # inject the email settings into the body if an email function is
+            # called
+            if 'sendemail' in payload['request']:
+                payload['body']['smtp_sender'] = self.emailsender
+                payload['body']['smtp_user'] = self.emailuser
+                payload['body']['smtp_pass'] = self.emailpass
+                payload['body']['smtp_server'] = self.emailserver
+                payload['smtp_port'] = self.emailport
 
             # run the function associated with the request type
             loop = tornado.ioloop.IOLoop.current()
