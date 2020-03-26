@@ -844,28 +844,68 @@ def create_new_user(
 def delete_user(payload,
                 raiseonfail=False,
                 override_authdb_path=None):
-    '''
-    This deletes the user.
+    '''Deletes a user.
 
     This can only be called by the user themselves or the superuser.
 
-    This will immediately invalidate all sessions corresponding to this user.
+    This will also immediately invalidate all sessions corresponding to the
+    target user.
 
     Superuser accounts cannot be deleted.
 
-    payload must contain:
+    Parameters
+    ----------
 
-    - email
-    - user_id
-    - password
+    payload : dict
+        This is a dict with the following required keys:
 
+        - email: str
+        - user_id: int
+        - password: str
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing a success key indicating if the user was
+        deleted.
     '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'email':None,
+                'user_id':None,
+                'messages':["Invalid user deletion request."],
+            }
 
     for key in ('email',
                 'user_id',
                 'password'):
 
         if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid user deletion request, missing %s.' %
+                (payload['reqid'], key)
+            )
 
             return {
                 'success': False,
@@ -903,11 +943,24 @@ def delete_user(payload,
         users
     ).where(
         users.c.user_id == payload['user_id']
+    ).where(
+        users.c.email == payload['email']
     )
     result = currproc.authdb_conn.execute(sel)
     row = result.fetchone()
 
-    if (not row) or (row['email'] != payload['email']):
+    if not row or len(row) == 0:
+
+        LOGGER.error(
+            "[%s] User deletion request failed for "
+            "email: %s, user_id: %s. "
+            "The email address provided does not match the one on record." %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']))
+        )
 
         return {
             'success': False,
@@ -921,9 +974,17 @@ def delete_user(payload,
         pass_ok = pass_hasher.verify(row['password'],
                                      payload['password'][:1024])
     except Exception as e:
+
         LOGGER.error(
-            "Password mismatch for user: %s, exception type: %s" %
-            (payload['user_id'], e)
+            "[%s] User deletion request failed for "
+            "email: %s, user_id: %s. "
+            "The password provided does not match "
+            "the one on record. Exception: %s" %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']), e)
         )
         pass_ok = False
 
@@ -936,9 +997,18 @@ def delete_user(payload,
         }
 
     if row['user_role'] == 'superuser':
+
         LOGGER.error(
-            "Can't delete superusers."
+            "[%s] User deletion request failed for "
+            "email: %s, user_id: %s. "
+            "Superusers can't be deleted." %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']))
         )
+
         return {
             'success': False,
             'user_id':payload['user_id'],
@@ -978,6 +1048,18 @@ def delete_user(payload,
     rows = result.fetchall()
 
     if rows and len(rows) > 0:
+
+        LOGGER.error(
+            "[%s] User deletion request failed for "
+            "email: %s, user_id: %s. "
+            "The database rows for this user could not be deleted." %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success': False,
             'user_id':payload['user_id'],
@@ -985,6 +1067,17 @@ def delete_user(payload,
             'messages':["Could not delete user from DB."]
         }
     else:
+
+        LOGGER.warning(
+            "[%s] User deletion request succeeded for "
+            "email: %s, user_id: %s. " %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success': True,
             'user_id':payload['user_id'],
@@ -999,21 +1092,67 @@ def verify_password_reset(payload,
                           min_pass_length=12,
                           max_similarity=30):
     '''
-    This verifies a password reset request.
+    Verifies a password reset request.
 
-    payload must contain:
+    Parameters
+    ----------
 
-    - email_address
-    - new_password
-    - session_token
+    payload : dict
+        This is a dict with the following required keys:
+
+        - email_address: str
+        - new_password: str
+        - session_token: str
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    min_pass_length : int
+        The minimum required character length of the password.
+
+    max_similarity : int
+        The maximum UQRatio required to fuzzy-match the input password against
+        the server's domain name, the user's email, or their name.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing a success key indicating if the user's
+        password was reset.
 
     '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'messages':["Invalid password reset request."],
+            }
 
     for key in ('email_address',
                 'new_password',
                 'session_token'):
 
         if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid password reset request, missing %s.' %
+                (payload['reqid'], key)
+            )
 
             return {
                 'success':False,
@@ -1040,12 +1179,25 @@ def verify_password_reset(payload,
 
     # check the session
     session_info = auth_session_exists(
-        {'session_token':payload['session_token']},
+        {'session_token':payload['session_token'],
+         'pii_salt':payload['pii_salt'],
+         'reqid':payload['reqid']},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path
     )
 
     if not session_info['success']:
+
+        LOGGER.error(
+            "[%s] Password reset request failed for "
+            "email: %s, session_token: %s. "
+            "Provided session token was not found in the DB or has expired." %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']))
+        )
 
         return {
             'success':False,
@@ -1063,6 +1215,8 @@ def verify_password_reset(payload,
         users
     ).where(
         users.c.email == payload['email_address']
+    ).where(
+        users.c.is_active.is_(True)
     )
 
     result = currproc.authdb_conn.execute(sel)
@@ -1070,6 +1224,17 @@ def verify_password_reset(payload,
     result.close()
 
     if not user_info or len(user_info) == 0:
+
+        LOGGER.error(
+            "[%s] Password reset request failed for "
+            "email: %s, session_token: %s. "
+            "User email was not found in the DB or the user is inactive." %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']))
+        )
 
         return {
             'success':False,
@@ -1092,9 +1257,19 @@ def verify_password_reset(payload,
     # don't fail here, but note that the user is re-using the password they
     # forgot. FIXME: should we actually fail here?
     if pass_same:
-        LOGGER.warning('user %s is re-using their '
-                       'password that they ostensibly forgot' %
-                       user_info['email_address'])
+
+        LOGGER.warning(
+            "[%s] Password reset request warning for "
+            "email: %s, session_token: %s, user_id: %s. "
+            "User is attempting to reuse the password they supposedly forgot." %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(user_info['user_id'],
+                      payload['pii_salt']))
+        )
 
     # hash the user's password
     hashed_password = pass_hasher.hash(new_password)
@@ -1105,17 +1280,31 @@ def verify_password_reset(payload,
         user_info['full_name'],
         payload['email_address'],
         new_password,
+        payload['pii_salt'],
         min_length=min_pass_length,
         max_match_threshold=max_similarity
     )
 
     if not passok:
 
+        LOGGER.error(
+            "[%s] Password reset request failed for "
+            "email: %s, session_token: %s, user_id: %s. "
+            "The new password is insecure." %
+            (payload['reqid'],
+             pii_hash(payload['email'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(user_info['user_id'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'messages':([
-                "Invalid password for password reset request."
-            ])
+                "Insecure password for password reset request."
+            ] + messages)
         }
 
     # if the password passes validation, hash it and store it
@@ -1144,6 +1333,19 @@ def verify_password_reset(payload,
         result.close()
 
         if rows and rows['password'] == hashed_password:
+
+            LOGGER.info(
+                "[%s] Password reset request succeeded for "
+                "email: %s, session_token: %s, user_id: %s. " %
+                (payload['reqid'],
+                 pii_hash(payload['email'],
+                          payload['pii_salt']),
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 pii_hash(user_info['user_id'],
+                          payload['pii_salt']))
+            )
+
             messages.append('Password changed successfully.')
             return {
                 'success':True,
@@ -1151,6 +1353,20 @@ def verify_password_reset(payload,
             }
 
         else:
+
+            LOGGER.error(
+                "[%s] Password reset request failed for "
+                "email: %s, session_token: %s, user_id: %s. "
+                "The database row for the user could not be updated." %
+                (payload['reqid'],
+                 pii_hash(payload['email'],
+                          payload['pii_salt']),
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 pii_hash(user_info['user_id'],
+                          payload['pii_salt']))
+            )
+
             messages.append('Password could not be changed.')
             return {
                 'success':False,
