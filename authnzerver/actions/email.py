@@ -71,7 +71,7 @@ Hello,
 This is an automated message from the {server_name} at: {server_baseurl}.
 
 We received an account sign up request for: {user_email}. This request
-was initiated using the browser:
+was made using the browser:
 
 {browser_identifier}
 
@@ -83,13 +83,18 @@ Please enter this code:
 
 into the account verification form at: {server_baseurl}{account_verify_url}
 
-to verify that you initiated this request. This code will expire in 15
-minutes. You will also need to enter your email address and password
+to verify that you made this request. This code will expire on
+
+{verification_expiry}
+
+You will also need to enter your email address and password
 to log in.
 
 If you do not recognize the browser and IP address above or did not
 initiate this request, someone else may have used your email address
 in error. Feel free to ignore this email.
+
+You can see your IP address here: https://www.google.com/search?q=my+ip+address
 
 Thanks,
 {server_name} admins
@@ -118,12 +123,15 @@ Please enter this code:
 
 into the account verification form at: {server_baseurl}{password_forgot_url}
 
-to verify that you initiated this request. This code will expire in 15
-minutes.
+to verify that you made this request. This code will expire on
+
+{verification_expiry}
 
 If you do not recognize the browser and IP address above or did not
 initiate this request, someone else may have used your email address
 in error. Feel free to ignore this email.
+
+You can see your IP address here: https://www.google.com/search?q=my+ip+address
 
 Thanks,
 {server_name} admins
@@ -152,12 +160,15 @@ Please enter this code:
 
 into the account verification form at: {server_baseurl}{password_change_url}
 
-to verify that you initiated this request. This code will expire in 15
-minutes.
+to verify that you made this request. This code will expire on
+
+{verification_expiry}
 
 If you do not recognize the browser and IP address above or did not
 initiate this request, someone else may have used your email address
 in error. Feel free to ignore this email.
+
+You can see your IP address here: https://www.google.com/search?q=my+ip+address
 
 Thanks,
 {server_name} admins
@@ -341,9 +352,18 @@ def send_signup_verification_email(payload,
 
     '''
 
-    # FIXME: add PII hashing
-    # FIXME: add logging
-    # FIXME: add in verification_expiry (seconds) to minutes, etc. handling
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_id':None,
+                'email_address':None,
+                'verifyemail_sent_datetime':None,
+                'messages':["Invalid verify email request."],
+            }
 
     for key in ('email_address',
                 'session_token',
@@ -360,18 +380,34 @@ def send_signup_verification_email(payload,
                 'created_info'):
 
         if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid verify email request, missing %s.' %
+                (payload['reqid'], key)
+            )
+
             return {
                 'success':False,
                 'user_id':None,
                 'email_address':None,
                 'verifyemail_sent_datetime':None,
                 'messages':([
-                    "Invalid verification email request."
+                    "Invalid verify email request."
                 ])
             }
 
     # check if we don't need to send an email to this user
     if payload['created_info']['send_verification'] is False:
+
+        LOGGER.error(
+            '[%s] Verify email request failed for '
+            'user_id: %s, email: %s, session_token: %s.'
+            'Not allowed to send a verification email to this user.' %
+            (payload['reqid'],
+             pii_hash(payload['created_info']['user_id'], payload['pii_salt']),
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
 
         return {
             'success':False,
@@ -410,38 +446,49 @@ def send_signup_verification_email(payload,
         users.c.email,
         users.c.is_active,
         users.c.user_role,
-    ]).select_from(users).where(users.c.email == payload['email_address'])
+    ]).select_from(users).where(
+        users.c.email == payload['email_address']
+    ).where(
+        users.c.user_id == payload['created_info']['user_id']
+    )
     user_results = currproc.authdb_conn.execute(user_sel)
     user_info = user_results.fetchone()
     user_results.close()
 
     if not user_info:
 
+        LOGGER.error(
+            '[%s] Verify email request failed for '
+            'user_id: %s, email: %s, session_token: %s.'
+            'The specified user does not exist.' %
+            (payload['reqid'],
+             pii_hash(payload['created_info']['user_id'], payload['pii_salt']),
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_id':None,
             'email_address':None,
             'verifyemail_sent_datetime':None,
             'messages':([
-                "Invalid verification email request."
+                "Invalid verify email request."
             ])
         }
 
     if user_info['is_active'] or user_info['user_role'] != 'locked':
 
-        return {
-            'success':False,
-            'user_id':None,
-            'email_address':None,
-            'verifyemail_sent_datetime':None,
-            'messages':([
-                "Not sending an email verification request to an existing user."
-            ])
-        }
-
-    # check if the email address we're supposed to send to is the same as the
-    # one for the user
-    if payload['email_address'] != user_info['email']:
+        LOGGER.error(
+            '[%s] Verify email request failed for '
+            'user_id: %s, email: %s, session_token: %s.'
+            'The specified user is already active and '
+            'does not need a verification email.' %
+            (payload['reqid'],
+             pii_hash(payload['created_info']['user_id'], payload['pii_salt']),
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
 
         return {
             'success':False,
@@ -449,27 +496,38 @@ def send_signup_verification_email(payload,
             'email_address':None,
             'verifyemail_sent_datetime':None,
             'messages':([
-                "Not sending an email verification "
-                "request to a nonexistent user."
+                "Not sending an verify email request to an existing user."
             ])
         }
 
     # check the session
     session_info = auth_session_exists(
-        {'session_token':payload['session_token']},
+        {'session_token':payload['session_token'],
+         'pii_salt':payload['pii_salt'],
+         'reqid':payload['reqid']},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path
     )
 
     if not session_info['success']:
 
+        LOGGER.error(
+            '[%s] Verify email request failed for '
+            'user_id: %s, email: %s, session_token: %s.'
+            'The session requesting a verify email is not valid.' %
+            (payload['reqid'],
+             pii_hash(payload['created_info']['user_id'], payload['pii_salt']),
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_id':None,
             'email_address':None,
             'verifyemail_sent_datetime':None,
             'messages':([
-                "Invalid verification email request."
+                "Invalid verify email request."
             ])
         }
 
@@ -480,31 +538,39 @@ def send_signup_verification_email(payload,
     # TODO: we'll use geoip to get the location of the person who initiated the
     # request.
 
+    # get the verification token's expiry datetime
+    verification_expiry_td = timedelta(seconds=payload['verification_expiry'])
+    verification_expiry_dt = (
+        datetime.utcnow() + verification_expiry_td
+    ).isoformat()
+
     # generate the email message
     msgtext = SIGNUP_VERIFICATION_EMAIL_TEMPLATE.format(
         server_baseurl=payload['server_baseurl'],
         server_name=payload['server_name'],
         account_verify_url=payload['account_verify_url'],
-        verification_code=payload['fernet_verification_token'],
+        verification_code=payload['verification_token'],
+        verification_expiry='%s (UTC time)' % verification_expiry_dt,
         browser_identifier=browser.replace('_','.'),
         ip_address=ip_addr,
         user_email=payload['email_address'],
     )
-    sender = '%s admin <%s>' % (payload['server_name'],
-                                payload['smtp_sender'])
+    sender = payload['smtp_sender']
     recipients = [user_info['email']]
+    subject = SIGNUP_VERIFICATION_EMAIL_SUBJECT.format(
+        server_name=payload['server_name']
+    )
 
     # send the email
     email_sent = authnzerver_send_email(
         sender,
-        SIGNUP_VERIFICATION_EMAIL_SUBJECT.format(
-            server_name=payload['server_name']
-        ),
+        subject,
         msgtext,
         recipients,
         payload['smtp_server'],
         payload['smtp_user'],
         payload['smtp_pass'],
+        payload['pii_salt'],
         port=payload['smtp_port']
     )
 
@@ -527,18 +593,39 @@ def send_signup_verification_email(payload,
         result = currproc.authdb_conn.execute(upd)
         result.close()
 
+        LOGGER.info(
+            '[%s] Verify email request succeeded for '
+            'user_id: %s, email: %s, session_token: %s.'
+            'Email sent on: %s UTC.' %
+            (payload['reqid'],
+             pii_hash(payload['created_info']['user_id'], payload['pii_salt']),
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']),
+             emailverify_sent_datetime.isoformat())
+        )
+
         return {
             'success':True,
             'user_id':user_info['user_id'],
             'email_address':user_info['email'],
             'verifyemail_sent_datetime':emailverify_sent_datetime,
             'messages':([
-                "Email verification request sent successfully to %s"
-                % recipients
+                "Verify email sent successfully."
             ])
         }
 
     else:
+
+        LOGGER.error(
+            '[%s] Verify email request failed for '
+            'user_id: %s, email: %s, session_token: %s.'
+            'The email server could not send the email '
+            'to the specified address.' %
+            (payload['reqid'],
+             pii_hash(payload['created_info']['user_id'], payload['pii_salt']),
+             pii_hash(payload['email_address'], payload['pii_salt']),
+             pii_hash(payload['session_token'], payload['pii_salt']))
+        )
 
         return {
             'success':False,
@@ -546,8 +633,7 @@ def send_signup_verification_email(payload,
             'email_address':None,
             'verifyemail_sent_datetime':None,
             'messages':([
-                "Could not send email to %s for the user verification request."
-                % recipients
+                "Could not send email for the verify email request."
             ])
         }
 
@@ -555,24 +641,67 @@ def send_signup_verification_email(payload,
 def verify_user_email_address(payload,
                               raiseonfail=False,
                               override_authdb_path=None):
-    '''This verifies the email address of the user.
-
-    payload must have the following keys: email
+    '''Sets the verification status of the email address of the user.
 
     This is called by the frontend after it verifies that the token challenge to
     verify the user's email succeeded and has not yet expired. This will set the
     user_role to 'authenticated' and the is_active column to True.
 
+    Parameters
+    ----------
+
+    payload : dict
+        This is a dict with the following key:
+
+        - email
+
+        Finally, the payload must also include the following keys (usually added
+        in by a wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing the user_id, is_active, and user_role values
+        if verification status is successfully set.
+
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_id':None,
+                'is_active':False,
+                'user_role':'locked',
+                'messages':["Invalid email verification toggle request."],
+            }
+
     if 'email' not in payload:
+
+        LOGGER.error(
+            '[%s] Invalid email verification toggle request, missing %s.' %
+            (payload['reqid'], 'email')
+        )
 
         return {
             'success':False,
             'user_id':None,
             'is_active': False,
             'user_role':'locked',
-            'messages':["Invalid email verification request."]
+            'messages':["Invalid email verification toggle request."]
         }
 
     # this checks if the database connection is live
@@ -618,22 +747,41 @@ def verify_user_email_address(payload,
 
     if rows:
 
+        LOGGER.info(
+            '[%s] Email verification toggle request succeeded for '
+            'user_id: %s, email: %s, role: %s, is_active: %s.' %
+            (payload['reqid'],
+             pii_hash(rows['user_id'], payload['pii_salt']),
+             pii_hash(payload['email'], payload['pii_salt']),
+             pii_hash(rows['user_role'], payload['pii_salt']),
+             rows['is_active'])
+        )
+
         return {
             'success':True,
             'user_id':rows['user_id'],
             'is_active':rows['is_active'],
             'user_role':rows['user_role'],
-            'messages':["Email verification request succeeded."]
+            'messages':["Email verification toggle request succeeded."]
         }
 
     else:
 
+        LOGGER.error(
+            '[%s] Email verification toggle request failed for '
+            'email: %s.'
+            'The database rows corresponding to '
+            'the user could not be updated.' %
+            (payload['reqid'],
+             pii_hash(rows['user_id'], payload['pii_salt']))
+        )
+
         return {
             'success':False,
-            'user_id':payload['user_id'],
+            'user_id':None,
             'is_active':False,
             'user_role':'locked',
-            'messages':["Email verification request failed."]
+            'messages':["Email verification toggle request failed."]
         }
 
 
@@ -644,7 +792,7 @@ def verify_user_email_address(payload,
 def send_forgotpass_verification_email(payload,
                                        raiseonfail=False,
                                        override_authdb_path=None):
-    '''This actually sends the verification email.
+    '''This actually sends the forgot password email.
 
     Parameters
     -----------
@@ -692,6 +840,19 @@ def send_forgotpass_verification_email(payload,
 
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_id':None,
+                'email_address':None,
+                'verifyemail_sent_datetime':None,
+                'messages':["Invalid forgot-password email request."],
+            }
+
     for key in ('email_address',
                 'session_token',
                 'server_name',
@@ -706,13 +867,19 @@ def send_forgotpass_verification_email(payload,
                 'smtp_port'):
 
         if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid forgot-password request, missing %s.' %
+                (payload['reqid'], key)
+            )
+
             return {
                 'success':False,
                 'user_id':None,
                 'email_address':None,
                 'forgotemail_sent_datetime':None,
                 'messages':([
-                    "Invalid verification email request."
+                    "Invalid forgot-password email request."
                 ])
             }
 
@@ -806,7 +973,9 @@ def send_forgotpass_verification_email(payload,
 
     # check the session
     session_info = auth_session_exists(
-        {'session_token':payload['session_token']},
+        {'session_token':payload['session_token'],
+         'pii_salt':payload['pii_salt'],
+         'reqid':payload['reqid']},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path
     )
@@ -834,31 +1003,40 @@ def send_forgotpass_verification_email(payload,
     # TODO: we'll use geoip to get the location of the person who initiated the
     # request.
 
+    # get the verification token's expiry datetime
+    verification_expiry_td = timedelta(seconds=payload['verification_expiry'])
+    verification_expiry_dt = (
+        datetime.utcnow() + verification_expiry_td
+    ).isoformat()
+
     # generate the email message
     msgtext = FORGOTPASS_VERIFICATION_EMAIL_TEMPLATE.format(
         server_baseurl=payload['server_baseurl'],
         password_forgot_url=payload['password_forgot_url'],
         server_name=payload['server_name'],
-        verification_code=payload['fernet_verification_token'],
+        verification_code=payload['verification_token'],
+        verification_expiry='%s (UTC time)' % verification_expiry_dt,
         browser_identifier=browser.replace('_','.'),
         ip_address=ip_addr,
         user_email=payload['email_address'],
     )
-    sender = '%s admin <%s>' % (payload['server_name'],
-                                payload['smtp_sender'])
+    sender = payload['smtp_sender']
+    recipients = [user_info['email']]
+    subject = FORGOTPASS_VERIFICATION_EMAIL_SUBJECT.format(
+        server_name=payload['server_name']
+    )
     recipients = [user_info['email']]
 
     # send the email
     email_sent = authnzerver_send_email(
         sender,
-        FORGOTPASS_VERIFICATION_EMAIL_SUBJECT.format(
-            server_name=payload['server_name']
-        ),
+        subject,
         msgtext,
         recipients,
         payload['smtp_server'],
         payload['smtp_user'],
         payload['smtp_pass'],
+        payload['pii_salt'],
         port=payload['smtp_port']
     )
 
