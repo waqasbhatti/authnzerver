@@ -700,10 +700,12 @@ def edit_user(payload,
 def internal_toggle_user_lock(payload,
                               raiseonfail=False,
                               override_authdb_path=None):
-    '''This locks/unlocks user accounts. Can only be run internally.
+    '''Locks/unlocks user accounts.
 
-    The use-case is automatically locking user accounts if there are too many
-    incorrect password attempts. The lock can be permanent or temporary.
+    This version of the function should only be run internally (i.e. not called
+    by a client). The use-case is automatically locking user accounts if there
+    are too many incorrect password attempts. The lock can be permanent or
+    temporary.
 
     Parameters
     ----------
@@ -713,6 +715,13 @@ def internal_toggle_user_lock(payload,
 
         - target_userid: int, the user to lock/unlock
         - action: str {'unlock','lock'}
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
@@ -749,10 +758,11 @@ def internal_toggle_user_lock(payload,
                 'action'):
 
         if key not in payload:
+            LOGGER.error(
+                '[%s] Invalid user lock toggle request, missing %s.' %
+                (payload['reqid'], key)
+            )
 
-            # FIXME: continue from here
-
-            LOGGER.error('no %s provided for toggle_user_lock' % key)
             return {
                 'success':False,
                 'user_info':None,
@@ -763,7 +773,16 @@ def internal_toggle_user_lock(payload,
     action = payload['action']
 
     if action not in ('unlock','lock'):
-        LOGGER.error('Unknown action requested for toggle_user_lock')
+
+        LOGGER.error(
+            "[%s] Invalid user lock toggle request for user_id: %s. "
+            "Unknown action requested: %s" %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             action)
+        )
+
         return {
             'success':False,
             'user_info':None,
@@ -772,7 +791,14 @@ def internal_toggle_user_lock(payload,
 
     if target_userid in (2,3):
 
-        LOGGER.error('Editing anonymous/locked user accounts not allowed')
+        LOGGER.error(
+            "[%s] Invalid user lock toggle request for user_id: %s. "
+            "Systemwide anonymous/locked users cannot be edited." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_info':None,
@@ -821,6 +847,7 @@ def internal_toggle_user_lock(payload,
         # check the update and return new values
         sel = select([
             users.c.user_id,
+            users.c.system_id,
             users.c.user_role,
             users.c.full_name,
             users.c.email,
@@ -839,7 +866,9 @@ def internal_toggle_user_lock(payload,
             auth_delete_sessions_userid(
                 {'user_id':target_userid,
                  'session_token':None,
-                 'keep_current_session':False},
+                 'keep_current_session':False,
+                 'pii_salt':payload['pii_salt'],
+                 'reqid':payload['reqid']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
@@ -848,13 +877,28 @@ def internal_toggle_user_lock(payload,
 
             serialized_result = dict(rows)
 
+            LOGGER.info(
+                "[%s] User lock toggle request succeeded for user_id: %s. " %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']))
+            )
+
             return {
                 'success':True,
                 'user_info':serialized_result,
                 'messages':["User lock toggle successful."],
             }
 
-        except Exception:
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] User lock toggle request failed for user_id: %s. "
+                "Exception was: %s" %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']), e)
+            )
 
             if raiseonfail:
                 raise
@@ -865,7 +909,15 @@ def internal_toggle_user_lock(payload,
                 'messages':["User lock toggle failed."],
             }
 
-    except Exception:
+    except Exception as e:
+
+        LOGGER.error(
+            "[%s] User lock toggle request failed for user_id: %s. "
+            "Exception was: %s" %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']), e)
+        )
 
         if raiseonfail:
             raise
@@ -883,7 +935,10 @@ def internal_toggle_user_lock(payload,
 def toggle_user_lock(payload,
                      raiseonfail=False,
                      override_authdb_path=None):
-    '''This locks/unlocks user accounts. Can only be run by superusers.
+    '''Locks/unlocks user accounts.
+
+    Can only be run by superusers and is suitable for use when called from a
+    frontend.
 
     Parameters
     ----------
@@ -896,6 +951,13 @@ def toggle_user_lock(payload,
         - session_token: str, session token of superuser
         - target_userid: int, the user to lock/unlock
         - action: str {'unlock','lock'}
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
@@ -915,6 +977,17 @@ def toggle_user_lock(payload,
 
     '''
 
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["Invalid user lock toggle request."],
+            }
+
     for key in ('user_id',
                 'user_role',
                 'session_token',
@@ -922,8 +995,11 @@ def toggle_user_lock(payload,
                 'action'):
 
         if key not in payload:
+            LOGGER.error(
+                '[%s] Invalid user lock toggle request, missing %s.' %
+                (payload['reqid'], key)
+            )
 
-            LOGGER.error('no %s provided for toggle_user_lock' % key)
             return {
                 'success':False,
                 'user_info':None,
@@ -936,22 +1012,109 @@ def toggle_user_lock(payload,
     target_userid = payload['target_userid']
     action = payload['action']
 
+    # only superusers can toggle locks
+    if user_role != 'superuser':
+
+        LOGGER.error(
+            "[%s] Invalid user lock toggle request "
+            "by user_id: %s with role: %s, "
+            "session_token: %s, target user_id: %s "
+            "User does not have a superuser role." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_role'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']))
+        )
+
+        return {
+            'success':False,
+            'user_info':None,
+            'messages':["You don't have lock/unlock privileges."],
+        }
+
+    # don't lock the calling user out
+    if target_userid == user_id:
+
+        LOGGER.error(
+            "[%s] Invalid user lock toggle request "
+            "by user_id: %s with role: %s, "
+            "session_token: %s, target user_id: %s "
+            "User attempted to toggle lock on their own account." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_role'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']))
+        )
+
+        return {
+            'success':False,
+            'user_info':None,
+            'messages':["You can't lock/unlock your own user account."],
+        }
+
+    # unknown action attempted
     if action not in ('unlock','lock'):
-        LOGGER.error('Unknown action requested for toggle_user_lock')
+
+        LOGGER.error(
+            "[%s] Invalid user lock toggle request "
+            "by user_id: %s with role: %s, "
+            "session_token: %s, target user_id: %s "
+            "Unknown action requested: %s" %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_role'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']), action)
+        )
+
         return {
             'success':False,
             'user_info':None,
             'messages':["Unknown action requested for toggle_user_lock."],
         }
 
+    # attempt to edit systemwide accounts
     if target_userid in (2,3):
 
-        LOGGER.error('Editing anonymous/locked user accounts not allowed')
+        LOGGER.error(
+            "[%s] Invalid user lock toggle request "
+            "by user_id: %s with role: %s, "
+            "session_token: %s, target user_id: %s "
+            "Systemwide anonymous/locked accounts can't be edited." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_role'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']))
+        )
+
         return {
             'success':False,
             'user_info':None,
             'messages':["Editing anonymous/locked user accounts not allowed."],
         }
+
+    #
+    # finally, process the attempt
+    #
 
     try:
 
@@ -972,58 +1135,44 @@ def toggle_user_lock(payload,
                 )
             )
 
-        # the case where the superuser updates a user's info (or their own info)
-        if user_role == 'superuser':
+        # check if session_token is valid and belongs to user_id
+        session_info = auth_session_exists(
+            {'session_token':session_token,
+             'pii_salt':payload['pii_salt'],
+             'reqid':payload['reqid']},
+            raiseonfail=raiseonfail,
+            override_authdb_path=override_authdb_path
+        )
 
-            # check if the user_id == target_userid
-            # if so, check if session_token is valid and belongs to user_id
-            session_info = auth_session_exists(
-                {'session_token':session_token},
-                raiseonfail=raiseonfail,
-                override_authdb_path=override_authdb_path
-            )
-
-            # check if the session info user_id matches the provided user_id and
-            # role
-            if (session_info and
+        # check if the session info user_id matches the provided user_id and
+        # role
+        if not (session_info and
                 session_info['success'] and
                 session_info['session_info']['is_active'] is True and
                 session_info['session_info']['user_id'] == user_id and
                 session_info['session_info']['user_role'] == user_role):
 
-                update_ok = True
+            LOGGER.error(
+                "[%s] Invalid user lock toggle request "
+                "by user_id: %s with role: %s, "
+                "session_token: %s, target user_id: %s "
+                "Session token does not match the expected user ID or role." %
+                (payload['reqid'],
+                 pii_hash(payload['user_id'],
+                          payload['pii_salt']),
+                 pii_hash(payload['user_role'],
+                          payload['pii_salt']),
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 pii_hash(payload['target_userid'],
+                          payload['pii_salt']))
+            )
 
-            else:
-                update_ok = False
-
-                LOGGER.warning('no existing superuser matching session '
-                               'for user edit attempt')
-                return {
-                    'success':False,
-                    'user_info':None,
-                    'messages':["Superuser session info not available "
-                                "for this user edit attempt."],
-                }
-
-            if not update_ok:
-
-                return {
-                    'success':False,
-                    'user_info':None,
-                    'messages':["Superuser session info not available "
-                                "for this user edit attempt."],
-                }
-
-        # any other case is a failure
-        else:
-
-            LOGGER.warning('no existing matching session or user_id'
-                           'for user lock toggle attempt')
             return {
                 'success':False,
                 'user_info':None,
-                'messages':["user_id or session info not available "
-                            "for this user lock toggle attempt."],
+                'messages':["Superuser session info not available "
+                            "for this user edit attempt."],
             }
 
         #
@@ -1036,13 +1185,26 @@ def toggle_user_lock(payload,
         )
         return res
 
-    except Exception:
+    except Exception as e:
+
+        LOGGER.error(
+            "[%s] Invalid user lock toggle request "
+            "by user_id: %s with role: %s, "
+            "session_token: %s, target user_id: %s "
+            "Exception was: %r." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_role'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']), e)
+        )
 
         if raiseonfail:
             raise
-
-        LOGGER.error('User lock toggle not found or '
-                     'could not check if it exists')
 
         return {
             'success':False,
