@@ -53,6 +53,7 @@ from sqlalchemy import select
 
 from .. import authdb
 from .session import auth_session_exists
+from ..permissions import pii_hash
 
 
 ######################
@@ -62,31 +63,67 @@ from .session import auth_session_exists
 def issue_new_apikey(payload,
                      raiseonfail=False,
                      override_authdb_path=None):
-    '''This issues a new API key.
+    '''Issues a new API key.
 
-    payload must have the following keys:
+    Parameters
+    ----------
 
-    audience: the service this API key is being issued for
-    subject: the specific API endpoint this API key is being issued for
-    apiversion: the API version that the API key is valid for
+    payload : dict
+        The payload dict must have the following keys:
 
-    expires_days: the number of days after which the API key will expire
-    not_valid_before: the amount of seconds after utcnow() when the API key
-                      becomes valid
+        - audience: str, the service this API key is being issued for
+        - subject: str, the specific API endpoint API key is being issued for
+        - apiversion: int or str, the API version that the API key is valid for
+        - expires_days: int, the number of days after which the API key will
+          expire
+        - not_valid_before: float or int, the amount of seconds after utcnow()
+          when the API key becomes valid
+        - user_id: int, the user ID of the user requesting the API key
+        - user_role: str, the user role of the user requesting the API key
+        - ip_address: str, the IP address to tie the API key to
+        - user_agent: str, the browser user agent requesting the API key
+        - session_token: str, the session token of the user requesting the API
+          key
 
-    user_id: the user ID of the user requesting the API key
-    user_role: the user role of the user requesting the API key
-    ip_address: the IP address to tie the API key to
-    user_agent: the browser user agent requesting the API key
-    session_token: the session token of the user requesting the API key
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
 
-    API keys are tied to an IP address and client header combination. This will
-    return an signed and encrypted Fernet API key that contains the user_id,
-    random token, IP address, client header, and expiry date in ISO
-    format. We'll then be able to use this info to verify the API key without
-    hitting the database all the time.
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    Returns
+    -------
+
+    dict
+        The dict returned is of the form::
+
+            {'success': True or False,
+             'apikey': apikey dict,
+             'expires': expiry datetime in ISO format,
+             'messages': list of str messages if any}
+
+    Notes
+    -----
+
+    API keys are tied to an IP address and client header combination.
+
+    This function will return a dict with all the API key information. This
+    entire dict should be serialized to JSON, encrypted and time-stamp signed by
+    the frontend as the final "API key", and finally sent back to the client.
 
     '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'apikey':None,
+                'expires':None,
+                'messages':["Invalid API key request."],
+            }
 
     for key in ('user_id',
                 'user_role',
@@ -98,6 +135,12 @@ def issue_new_apikey(payload,
                 'user_agent',
                 'session_token',
                 'apiversion'):
+
+        if key not in payload:
+            LOGGER.error(
+                '[%s] Invalid API key request, missing %s.' %
+                (payload['reqid'], key)
+            )
 
         if key not in payload:
             return {
@@ -124,12 +167,35 @@ def issue_new_apikey(payload,
 
     # check the session
     session_info = auth_session_exists(
-        {'session_token':payload['session_token']},
+        {'session_token':payload['session_token'],
+         'pii_salt':payload['pii_salt'],
+         'reqid':payload['reqid']},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path
     )
 
     if not session_info['success']:
+
+        LOGGER.error(
+            "[%s] Invalid API key request. "
+            "user_id: %s, session_token: %s, role: %s, "
+            "ip_address: %s, user_agent: %s requested an API key for "
+            "audience: %s, subject: %s, apiversion: %s."
+            "Session token of requestor was not found in the DB." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             payload['user_role'],
+             pii_hash(payload['ip_address'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_agent'],
+                      payload['pii_salt']),
+             payload['audience'],
+             payload['subject'],
+             payload['apiversion'])
+        )
 
         return {
             'success':False,
@@ -151,6 +217,27 @@ def issue_new_apikey(payload,
     )
 
     if not session_ok:
+
+        LOGGER.error(
+            "[%s] Invalid API key request. "
+            "user_id: %s, session_token: %s, role: %s, "
+            "ip_address: %s, user_agent: %s requested an API key for "
+            "audience: %s, subject: %s, apiversion: %s."
+            "Session token info of requestor does not match payload info." %
+            (payload['reqid'],
+             pii_hash(payload['user_id'],
+                      payload['pii_salt']),
+             pii_hash(payload['session_token'],
+                      payload['pii_salt']),
+             payload['user_role'],
+             pii_hash(payload['ip_address'],
+                      payload['pii_salt']),
+             pii_hash(payload['user_agent'],
+                      payload['pii_salt']),
+             payload['audience'],
+             payload['subject'],
+             payload['apiversion'])
+        )
 
         return {
             'success':False,
@@ -215,6 +302,30 @@ def issue_new_apikey(payload,
     #
     # return the API key to the frontend
     #
+
+    LOGGER.info(
+        "[%s] API key request successful. "
+        "user_id: %s, session_token: %s, role: %s, "
+        "ip_address: %s, user_agent: %s requested an API key for "
+        "audience: %s, subject: %s, apiversion: %s."
+        "API key not valid before: %s, expires on: %s." %
+        (payload['reqid'],
+         pii_hash(payload['user_id'],
+                  payload['pii_salt']),
+         pii_hash(payload['session_token'],
+                  payload['pii_salt']),
+         payload['user_role'],
+         pii_hash(payload['ip_address'],
+                  payload['pii_salt']),
+         pii_hash(payload['user_agent'],
+                  payload['pii_salt']),
+         payload['audience'],
+         payload['subject'],
+         payload['apiversion'],
+         notvalidbefore.isoformat(),
+         expires.isoformat())
+    )
+
     messages = (
         "API key generated successfully for user_id = %s, expires: %s." %
         (payload['user_id'],
@@ -234,18 +345,58 @@ def issue_new_apikey(payload,
 def verify_apikey(payload,
                   raiseonfail=False,
                   override_authdb_path=None):
-    '''This checks if an API key is valid.
+    '''Checks if an API key is valid.
 
-    payload requires the following keys:
+    Parameters
+    ----------
 
-    - apikey dict: the decrypted and verified API key info dict from frontend.
+    payload : dict
+        This dict contains a single key:
+
+        - apikey_dict: the decrypted and verified API key info dict from the
+          frontend.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    Returns
+    -------
+
+    dict
+        The dict returned is of the form::
+
+            {'success': True if API key is OK and False otherwise,
+             'messages': list of str messages if any}
 
     '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'apikey':None,
+                'expires':None,
+                'messages':["Invalid API key request."],
+            }
+
     if 'apikey_dict' not in payload:
+
+        LOGGER.error(
+            '[%s] Invalid API key request, missing %s.' %
+            (payload['reqid'], 'apikey_dict')
+        )
+
         return {
             'success':False,
             'messages':["Some required keys are missing from payload."]
         }
+
     apikey_dict = payload['apikey_dict']
 
     # this checks if the database connection is live
@@ -293,6 +444,20 @@ def verify_apikey(payload,
 
     if row is not None and len(row) != 0:
 
+        LOGGER.info(
+            '[%s] API key verified successfully. '
+            'user_id: %s, role: %s, audience: %s, subject: %s, '
+            'apiversion: %s, expires on: %s' %
+            (payload['reqid'],
+             pii_hash(apikey_dict['uid'],
+                      payload['pii_salt']),
+             apikey_dict['rol'],
+             apikey_dict['aud'],
+             apikey_dict['sub'],
+             apikey_dict['ver'],
+             apikey_dict['exp'])
+        )
+
         return {
             'success':True,
             'messages':[(
@@ -302,6 +467,20 @@ def verify_apikey(payload,
         }
 
     else:
+
+        LOGGER.error(
+            '[%s] API key verification failed. Failed key '
+            'user_id: %s, role: %s, audience: %s, subject: %s, '
+            'apiversion: %s, expires on: %s' %
+            (payload['reqid'],
+             pii_hash(apikey_dict['uid'],
+                      payload['pii_salt']),
+             apikey_dict['rol'],
+             apikey_dict['aud'],
+             apikey_dict['sub'],
+             apikey_dict['ver'],
+             apikey_dict['exp'])
+        )
 
         return {
             'success':False,
