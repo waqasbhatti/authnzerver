@@ -16,6 +16,15 @@ import logging
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
+log_sub = '{'
+log_fmt = '[{levelname:1.1} {asctime} {module}:{lineno}] {message}'
+log_date_fmt = '%y%m%d %H:%M:%S'
+logging.basicConfig(
+    level=logging.INFO,
+    style=log_sub,
+    format=log_fmt,
+    datefmt=log_date_fmt,
+)
 
 
 #############
