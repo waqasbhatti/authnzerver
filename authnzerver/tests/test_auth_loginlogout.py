@@ -11,7 +11,6 @@ import os
 from datetime import datetime, timedelta
 
 
-
 def get_test_authdb():
     '''This just makes a new test auth DB for each test function.
 
@@ -19,7 +18,6 @@ def get_test_authdb():
 
     authdb.create_sqlite_authdb('test-loginlogout.authdb.sqlite')
     authdb.initial_authdb_inserts('sqlite:///test-loginlogout.authdb.sqlite')
-
 
 
 def test_login_logout():
@@ -31,24 +29,25 @@ def test_login_logout():
 
     try:
         os.remove('test-loginlogout.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-loginlogout.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-loginlogout.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
-
 
     get_test_authdb()
 
     # create the user
     user_payload = {'full_name':'Test User',
                     'email':'testuser3@test.org',
-                    'password':'aROwQin9L8nNtPTEMLXd'}
+                    'password':'aROwQin9L8nNtPTEMLXd',
+                    'pii_salt':'super-secret-salt',
+                    'reqid':1}
     user_created = actions.create_new_user(
         user_payload,
         override_authdb_path='sqlite:///test-loginlogout.authdb.sqlite'
@@ -58,14 +57,15 @@ def test_login_logout():
     assert ('User account created. Please verify your email address to log in.'
             in user_created['messages'])
 
-
     # create a new session token
     session_payload = {
         'user_id':2,
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -81,7 +81,9 @@ def test_login_logout():
     login = actions.auth_user_login(
         {'session_token':session_token1['session_token'],
          'email': user_payload['email'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-loginlogout.authdb.sqlite',
         raiseonfail=True
     )
@@ -93,7 +95,9 @@ def test_login_logout():
     emailverify = (
         actions.verify_user_email_address(
             {'email':user_payload['email'],
-             'user_id': user_created['user_id']},
+             'user_id': user_created['user_id'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-loginlogout.authdb.sqlite',
             raiseonfail=True
         )
@@ -110,7 +114,9 @@ def test_login_logout():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -126,7 +132,9 @@ def test_login_logout():
     login = actions.auth_user_login(
         {'session_token':session_token2['session_token'],
          'email': user_payload['email'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-loginlogout.authdb.sqlite',
         raiseonfail=True
     )
@@ -136,7 +144,9 @@ def test_login_logout():
     # make sure the session token we used to log in is gone
     # check if our session was deleted correctly
     session_still_exists = actions.auth_session_exists(
-        {'session_token':session_token2['session_token']},
+        {'session_token':session_token2['session_token'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-loginlogout.authdb.sqlite'
     )
     assert session_still_exists['success'] is False
@@ -147,7 +157,9 @@ def test_login_logout():
          'user_agent':'Mozzarella Killerwhale',
          'expires':datetime.utcnow()+timedelta(hours=1),
          'ip_address': '1.1.1.1',
-         'extra_info_json':{'pref_datasets_always_private':True}},
+         'extra_info_json':{'pref_datasets_always_private':True},
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-loginlogout.authdb.sqlite',
         raiseonfail=True
     )
@@ -155,7 +167,9 @@ def test_login_logout():
     # now see if we can log out
     logged_out = actions.auth_user_logout(
         {'session_token':authenticated_session_token['session_token'],
-         'user_id': login['user_id']},
+         'user_id': login['user_id'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-loginlogout.authdb.sqlite',
         raiseonfail=True
     )
@@ -164,7 +178,9 @@ def test_login_logout():
 
     # check if our session was deleted correctly
     session_still_exists = actions.auth_session_exists(
-        {'session_token':authenticated_session_token},
+        {'session_token':authenticated_session_token,
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-loginlogout.authdb.sqlite',
         raiseonfail=True
     )
@@ -173,13 +189,13 @@ def test_login_logout():
 
     try:
         os.remove('test-loginlogout.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-loginlogout.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-loginlogout.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
