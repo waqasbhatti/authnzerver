@@ -84,11 +84,16 @@ def validate_input_password(
 
     1. must be at least min_length characters (we'll truncate the password at
        1024 characters since we don't want to store entire novels)
+
     2. must not match within max_match_threshold of their email or full_name
+
     3. must not match within max_match_threshold of the site's FQDN
+
     4. must not have a single case-folded character take up more than 20% of the
        length of the password
+
     5. must not be completely numeric
+
     6. must not be in the top 10k passwords list
 
     Parameters
@@ -550,6 +555,9 @@ def create_new_user(
         raiseonfail=False,
 ):
     '''Makes a new user.
+
+    Parameters
+    ----------
 
     payload : dict
         This is a dict with the following required keys:

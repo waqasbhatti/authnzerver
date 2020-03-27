@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# secrets.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# autosetup.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''
-This contains functions to set up the authnzerver automatically on first-start.
+'''This contains functions to set up the authnzerver automatically on first-start.
 
 '''
 
@@ -38,15 +37,19 @@ def autogen_secrets_authdb(basedir,
 
     basedir : str
         The base directory of the authnzerver.
+
         - The authentication database will be written to a file called
           ``.authdb.sqlite`` in this directory.
+
         - The secret token to authenticate HTTP communications between the
           authnzerver and a frontend server will be written to a file called
           ``.authnzerver-secret-key`` in this directory.
+
         - Credentials for a superuser that can be used to edit various
           authnzerver options, and users will be written to
           ``.authnzerver-admin-credentials`` in this directory.
-        - A random salt value will be written to ``.authnzerver-random-salt` in
+
+        - A random salt value will be written to ``.authnzerver-random-salt`` in
           this directory. This is used to hash user IDs and other PII in logs.
 
     database_url : str or None
