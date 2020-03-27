@@ -11,11 +11,10 @@ import os
 from datetime import datetime, timedelta
 import time
 import secrets
-
-import numpy as np
-from numpy.testing import assert_allclose
+import statistics
 
 from pytest import mark
+
 
 def get_test_authdb():
     '''This just makes a new test auth DB for each test function.
@@ -26,7 +25,7 @@ def get_test_authdb():
     authdb.initial_authdb_inserts('sqlite:///test-timing.authdb.sqlite')
 
 
-@mark.skip(reason="timing is unreliable at the moment")
+# @mark.skip(reason="timing is unreliable at the moment")
 def test_login_timing():
     '''This tests obfuscating the presence/absence of users based on password
     checks.
@@ -37,15 +36,15 @@ def test_login_timing():
 
     try:
         os.remove('test-timing.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-timing.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-timing.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
 
     get_test_authdb()
@@ -53,7 +52,9 @@ def test_login_timing():
     # create the user
     user_payload = {'full_name':'Test User',
                     'email':'testuser4@test.org',
-                    'password':'aROwQin9L8nNtPTEMLXd'}
+                    'password':'aROwQin9L8nNtPTEMLXd',
+                    'pii_salt':'super-secret-salt',
+                    'reqid':1}
     user_created = actions.create_new_user(
         user_payload,
         override_authdb_path='sqlite:///test-timing.authdb.sqlite'
@@ -69,7 +70,9 @@ def test_login_timing():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -84,7 +87,9 @@ def test_login_timing():
     login = actions.auth_user_login(
         {'session_token':session_token1['session_token'],
          'email': user_payload['email'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-timing.authdb.sqlite'
     )
 
@@ -95,7 +100,9 @@ def test_login_timing():
     emailverify = (
         actions.verify_user_email_address(
             {'email':user_payload['email'],
-             'user_id': user_created['user_id']},
+             'user_id': user_created['user_id'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-timing.authdb.sqlite'
         )
     )
@@ -111,7 +118,9 @@ def test_login_timing():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -126,18 +135,19 @@ def test_login_timing():
     login = actions.auth_user_login(
         {'session_token':session_token2['session_token'],
          'email': user_payload['email'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-timing.authdb.sqlite'
     )
 
     assert login['success'] is True
 
-
     # basic tests for timing attacks
 
     # incorrect passwords
     incorrect_timings = []
-    for _ in range(1000):
+    for _ in range(500):
 
         # now make a new session token
         session_payload = {
@@ -145,7 +155,9 @@ def test_login_timing():
             'user_agent':'Mozzarella Killerwhale',
             'expires':datetime.utcnow()+timedelta(hours=1),
             'ip_address': '1.1.1.1',
-            'extra_info_json':{'pref_datasets_always_private':True}
+            'extra_info_json':{'pref_datasets_always_private':True},
+            'pii_salt':'super-secret-salt',
+            'reqid':1
         }
 
         # check creation of session
@@ -158,16 +170,17 @@ def test_login_timing():
         actions.auth_user_login(
             {'session_token':session_token2['session_token'],
              'email': user_payload['email'],
-             'password':secrets.token_urlsafe(16)},
+             'password':secrets.token_urlsafe(16),
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-timing.authdb.sqlite'
         )
         end = time.time()
         incorrect_timings.append(end - start)
 
-
     # correct passwords
     correct_timings = []
-    for _ in range(1000):
+    for _ in range(500):
 
         # now make a new session token
         session_payload = {
@@ -175,7 +188,9 @@ def test_login_timing():
             'user_agent':'Mozzarella Killerwhale',
             'expires':datetime.utcnow()+timedelta(hours=1),
             'ip_address': '1.1.1.1',
-            'extra_info_json':{'pref_datasets_always_private':True}
+            'extra_info_json':{'pref_datasets_always_private':True},
+            'pii_salt':'super-secret-salt',
+            'reqid':1
         }
 
         # check creation of session
@@ -188,16 +203,17 @@ def test_login_timing():
         actions.auth_user_login(
             {'session_token':session_token2['session_token'],
              'email': user_payload['email'],
-             'password':user_payload['password']},
+             'password':user_payload['password'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-timing.authdb.sqlite'
         )
         end = time.time()
         correct_timings.append(end - start)
 
-
     # wronguser passwords
     wronguser_timings = []
-    for _ in range(1000):
+    for _ in range(500):
 
         # now make a new session token
         session_payload = {
@@ -205,7 +221,9 @@ def test_login_timing():
             'user_agent':'Mozzarella Killerwhale',
             'expires':datetime.utcnow()+timedelta(hours=1),
             'ip_address': '1.1.1.1',
-            'extra_info_json':{'pref_datasets_always_private':True}
+            'extra_info_json':{'pref_datasets_always_private':True},
+            'pii_salt':'super-secret-salt',
+            'reqid':1
         }
 
         # check creation of session
@@ -218,16 +236,17 @@ def test_login_timing():
         actions.auth_user_login(
             {'session_token':session_token2['session_token'],
              'email': secrets.token_urlsafe(16),
-             'password':secrets.token_urlsafe(16)},
+             'password':secrets.token_urlsafe(16),
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-timing.authdb.sqlite'
         )
         end = time.time()
         wronguser_timings.append(end - start)
 
-
     # broken requests
     broken_timings = []
-    for _ in range(1000):
+    for _ in range(500):
 
         # now make a new session token
         session_payload = {
@@ -235,7 +254,9 @@ def test_login_timing():
             'user_agent':'Mozzarella Killerwhale',
             'expires':datetime.utcnow()+timedelta(hours=1),
             'ip_address': '1.1.1.1',
-            'extra_info_json':{'pref_datasets_always_private':True}
+            'extra_info_json':{'pref_datasets_always_private':True},
+            'pii_salt':'super-secret-salt',
+            'reqid':1
         }
 
         # check creation of session
@@ -248,37 +269,33 @@ def test_login_timing():
         actions.auth_user_login(
             {'session_token':'correcthorsebatterystaple',
              'email': user_payload['email'],
-             'password':user_payload['password']},
+             'password':user_payload['password'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-timing.authdb.sqlite'
         )
         end = time.time()
         broken_timings.append(end - start)
 
+    correct_median = statistics.median(correct_timings)
+    incorrect_median = statistics.median(incorrect_timings)
+    broken_median = statistics.median(broken_timings)
+    wronguser_median = statistics.median(wronguser_timings)
 
-    correct_timings = np.array(correct_timings)
-    incorrect_timings = np.array(incorrect_timings)
-    broken_timings = np.array(broken_timings)
-    wronguser_timings = np.array(wronguser_timings)
-
-    correct_median = np.median(correct_timings)
-    incorrect_median = np.median(incorrect_timings)
-    broken_median = np.median(broken_timings)
-    wronguser_median = np.median(wronguser_timings)
-
-    # all timings should match within 7 milliseconds or so
-    assert_allclose(correct_median, incorrect_median, atol=7.0e-3)
-    assert_allclose(correct_median, broken_median, atol=7.0e-3)
-    assert_allclose(correct_median, wronguser_median, atol=7.0e-3)
+    # all timings should match within 10 milliseconds or so
+    assert abs(correct_median - incorrect_median) < 0.01
+    assert abs(correct_median - broken_median) < 0.01
+    assert abs(correct_median - wronguser_median) < 0.01
 
     try:
         os.remove('test-timing.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-timing.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-timing.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
