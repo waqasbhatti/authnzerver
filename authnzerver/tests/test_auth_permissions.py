@@ -44,7 +44,9 @@ def test_role_permissions():
     # create the user
     user_payload = {'full_name': 'Test User',
                     'email':'testuser-permcheck@test.org',
-                    'password':'aROwQin9L8nNtPTEMLXd'}
+                    'password':'aROwQin9L8nNtPTEMLXd',
+                    'pii_salt':'super-secret-salt',
+                    'reqid':1}
     user_created = actions.create_new_user(
         user_payload,
         override_authdb_path='sqlite:///test-permcheck.authdb.sqlite'
@@ -58,7 +60,9 @@ def test_role_permissions():
     emailverify = (
         actions.verify_user_email_address(
             {'email':user_payload['email'],
-             'user_id': user_created['user_id']},
+             'user_id': user_created['user_id'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-permcheck.authdb.sqlite'
         )
     )
@@ -66,7 +70,9 @@ def test_role_permissions():
     # make a non-verified user
     user_payload2 = {'full_name': 'Test User',
                      'email':'testuser-permcheck2@test.org',
-                     'password':'aROwQin9L8nNtPTEMLXd'}
+                     'password':'aROwQin9L8nNtPTEMLXd',
+                     'pii_salt':'super-secret-salt',
+                     'reqid':1}
     user_created2 = actions.create_new_user(
         user_payload2,
         override_authdb_path='sqlite:///test-permcheck.authdb.sqlite'
@@ -288,7 +294,9 @@ def test_role_limits():
     # create the user
     user_payload = {'full_name': 'Test User',
                     'email':'testuser-permcheck@test.org',
-                    'password':'aROwQin9L8nNtPTEMLXd'}
+                    'password':'aROwQin9L8nNtPTEMLXd',
+                    'pii_salt':'super-secret-salt',
+                    'reqid':1}
     user_created = actions.create_new_user(
         user_payload,
         override_authdb_path='sqlite:///test-permcheck.authdb.sqlite'
@@ -302,7 +310,9 @@ def test_role_limits():
     emailverify = (
         actions.verify_user_email_address(
             {'email':user_payload['email'],
-             'user_id': user_created['user_id']},
+             'user_id': user_created['user_id'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-permcheck.authdb.sqlite'
         )
     )
@@ -310,7 +320,9 @@ def test_role_limits():
     # make a non-verified user
     user_payload2 = {'full_name': 'Test User',
                      'email':'testuser-permcheck2@test.org',
-                     'password':'aROwQin9L8nNtPTEMLXd'}
+                     'password':'aROwQin9L8nNtPTEMLXd',
+                     'pii_salt':'super-secret-salt',
+                     'reqid':1}
     user_created2 = actions.create_new_user(
         user_payload2,
         override_authdb_path='sqlite:///test-permcheck.authdb.sqlite'
