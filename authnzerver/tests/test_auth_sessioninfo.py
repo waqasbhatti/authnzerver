@@ -21,7 +21,6 @@ def get_test_authdb():
     authdb.initial_authdb_inserts('sqlite:///test-sessioninfo.authdb.sqlite')
 
 
-
 def test_sessioninfo():
     '''
     This tests if we can add session info to a session dict.
@@ -30,15 +29,15 @@ def test_sessioninfo():
 
     try:
         os.remove('test-sessioninfo.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-sessioninfo.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-sessioninfo.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
 
     get_test_authdb()
@@ -46,7 +45,9 @@ def test_sessioninfo():
     # create the user
     user_payload = {'full_name':'Test User',
                     'email':'testuser-sessioninfo@test.org',
-                    'password':'aROwQin9L8nNtPTEMLXd'}
+                    'password':'aROwQin9L8nNtPTEMLXd',
+                    'pii_salt':'super-secret-salt',
+                    'reqid':1}
     user_created = actions.create_new_user(
         user_payload,
         override_authdb_path='sqlite:///test-sessioninfo.authdb.sqlite'
@@ -62,7 +63,9 @@ def test_sessioninfo():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -77,7 +80,9 @@ def test_sessioninfo():
     emailverify = (
         actions.verify_user_email_address(
             {'email':user_payload['email'],
-             'user_id': user_created['user_id']},
+             'user_id': user_created['user_id'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-sessioninfo.authdb.sqlite'
         )
     )
@@ -93,7 +98,9 @@ def test_sessioninfo():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -110,7 +117,9 @@ def test_sessioninfo():
 
     session_info_added = actions.auth_session_set_extrainfo(
         {'session_token':session_token2['session_token'],
-         'extra_info':{'this':'is','a':'test'}},
+         'extra_info':{'this':'is','a':'test'},
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-sessioninfo.authdb.sqlite',
         raiseonfail=True
     )
@@ -125,7 +134,9 @@ def test_sessioninfo():
 
     # get back the new session info
     info_check = actions.auth_session_exists(
-        {'session_token':session_token2['session_token']},
+        {'session_token':session_token2['session_token'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-sessioninfo.authdb.sqlite'
     )
 
@@ -151,13 +162,13 @@ def test_sessioninfo():
 
     try:
         os.remove('test-sessioninfo.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-sessioninfo.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-sessioninfo.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass

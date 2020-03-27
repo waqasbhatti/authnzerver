@@ -337,6 +337,7 @@ def auth_session_set_extrainfo(payload,
         result = currproc.authdb_conn.execute(upd)
 
         s = select([
+            sessions.c.user_id,
             sessions.c.session_token,
             sessions.c.ip_address,
             sessions.c.user_agent,
