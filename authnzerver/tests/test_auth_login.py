@@ -11,7 +11,6 @@ import os
 from datetime import datetime, timedelta
 
 
-
 def get_test_authdb():
     '''This just makes a new test auth DB for each test function.
 
@@ -19,7 +18,6 @@ def get_test_authdb():
 
     authdb.create_sqlite_authdb('test-login.authdb.sqlite')
     authdb.initial_authdb_inserts('sqlite:///test-login.authdb.sqlite')
-
 
 
 def test_login():
@@ -30,15 +28,15 @@ def test_login():
 
     try:
         os.remove('test-login.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-login.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-login.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
 
     get_test_authdb()
@@ -46,7 +44,9 @@ def test_login():
     # create the user
     user_payload = {'full_name':'Test User',
                     'email':'testuser2@test.org',
-                    'password':'aROwQin9L8nNtPTEMLXd'}
+                    'password':'aROwQin9L8nNtPTEMLXd',
+                    'pii_salt':'super-secret-salt',
+                    'reqid':1}
     user_created = actions.create_new_user(
         user_payload,
         override_authdb_path='sqlite:///test-login.authdb.sqlite'
@@ -62,7 +62,9 @@ def test_login():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -77,7 +79,9 @@ def test_login():
     login = actions.auth_user_login(
         {'session_token':session_token1['session_token'],
          'email': user_payload['email'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-login.authdb.sqlite'
     )
 
@@ -88,7 +92,9 @@ def test_login():
     emailverify = (
         actions.verify_user_email_address(
             {'email':user_payload['email'],
-             'user_id': user_created['user_id']},
+             'user_id': user_created['user_id'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-login.authdb.sqlite'
         )
     )
@@ -104,7 +110,9 @@ def test_login():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -119,7 +127,9 @@ def test_login():
     login = actions.auth_user_login(
         {'session_token':session_token2['session_token'],
          'email': user_payload['email'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-login.authdb.sqlite'
     )
 
@@ -129,30 +139,33 @@ def test_login():
     login = actions.auth_user_login(
         {'session_token':session_token2['session_token'],
          'email': user_payload['email'],
-         'password':'helloworld'},
+         'password':'helloworld',
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-login.authdb.sqlite'
     )
     assert login['success'] is False
-
 
     # tests for no session token provided
     login = actions.auth_user_login(
         {'session_token':'correcthorsebatterystaple',
          'email': user_payload['email'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-login.authdb.sqlite'
     )
     assert login['success'] is False
 
     try:
         os.remove('test-login.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-login.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-login.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
