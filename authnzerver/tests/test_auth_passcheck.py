@@ -21,7 +21,6 @@ def get_test_authdb():
     authdb.initial_authdb_inserts('sqlite:///test-passcheck.authdb.sqlite')
 
 
-
 def test_passcheck():
     '''
     This tests if we can check the password for a logged-in user.
@@ -30,15 +29,15 @@ def test_passcheck():
 
     try:
         os.remove('test-passcheck.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-passcheck.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-passcheck.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
 
     get_test_authdb()
@@ -46,7 +45,9 @@ def test_passcheck():
     # create the user
     user_payload = {'full_name': 'Test User',
                     'email':'testuser-passcheck@test.org',
-                    'password':'aROwQin9L8nNtPTEMLXd'}
+                    'password':'aROwQin9L8nNtPTEMLXd',
+                    'pii_salt':'super-secret-salt',
+                    'reqid':1}
     user_created = actions.create_new_user(
         user_payload,
         override_authdb_path='sqlite:///test-passcheck.authdb.sqlite'
@@ -62,7 +63,9 @@ def test_passcheck():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -77,7 +80,9 @@ def test_passcheck():
     emailverify = (
         actions.verify_user_email_address(
             {'email':user_payload['email'],
-             'user_id': user_created['user_id']},
+             'user_id': user_created['user_id'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
             override_authdb_path='sqlite:///test-passcheck.authdb.sqlite'
         )
     )
@@ -93,7 +98,9 @@ def test_passcheck():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True}
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
     }
 
     # check creation of session
@@ -111,7 +118,9 @@ def test_passcheck():
     # correct password
     pass_check = actions.auth_password_check(
         {'session_token':session_token2['session_token'],
-         'password':user_payload['password']},
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-passcheck.authdb.sqlite',
         raiseonfail=True
     )
@@ -121,7 +130,9 @@ def test_passcheck():
     # incorrect password
     pass_check = actions.auth_password_check(
         {'session_token':session_token2['session_token'],
-         'password':'incorrectponylithiumfastener'},
+         'password':'incorrectponylithiumfastener',
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
         override_authdb_path='sqlite:///test-passcheck.authdb.sqlite',
         raiseonfail=True
     )
@@ -140,16 +151,15 @@ def test_passcheck():
         currproc.authdb_engine.dispose()
         del currproc.authdb_engine
 
-
     try:
         os.remove('test-passcheck.authdb.sqlite')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-passcheck.authdb.sqlite-shm')
-    except Exception as e:
+    except Exception:
         pass
     try:
         os.remove('test-passcheck.authdb.sqlite-wal')
-    except Exception as e:
+    except Exception:
         pass
