@@ -278,7 +278,7 @@ class AuthHandler(tornado.web.RequestHandler):
 
         self.config = config
         self.authdb = self.config.authdb
-        self.fernet_secret = self.config.fernet_secret
+        self.fernet_secret = self.config.secret
         self.pii_salt = self.config.piisalt
 
         self.emailsender = self.config.emailsender
