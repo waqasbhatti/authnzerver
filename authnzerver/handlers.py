@@ -179,8 +179,8 @@ request_functions = {
     'apikey-new':actions.issue_new_apikey,
     'apikey-verify':actions.verify_apikey,
     # access and limit check actions
-    'check-user-access': actions.check_user_access,
-    'check-user-limit': actions.check_user_limit,
+    'user-check-access': actions.check_user_access,
+    'user-check-limit': actions.check_user_limit,
 }
 
 

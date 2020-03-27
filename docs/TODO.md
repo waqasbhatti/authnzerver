@@ -11,9 +11,9 @@
 
 ### Request tracking and logging
 
-- [ ] Log all the auth events. Make sure PII (session tokens, passwords, user
+- [x] Log all the auth events. Make sure PII (session tokens, passwords, user
       names, emails) never makes it into the logs.
-- [ ] Add request IDs received from the POST into all of the logging messages
+- [x] Add request IDs received from the POST into all of the logging messages
   produced by the backend functions.
 - [x] Put the request ID received from the POST into a cache and see if it is
   received again. If it is, drop the message.
@@ -36,7 +36,7 @@
       payload API.
 - [x] Try to at least conform to OWASP ASVS Level 2.
 - [x] Look at NIST 800-162 (ABAC) to see if we can improve the permissions model.
-- [ ] Remove numpy from requirements (change frontendbase and `test_auth_timing`)
+- [x] Remove numpy from requirements (change frontendbase and `test_auth_timing`)
 
 
 ## TODO for v0.2

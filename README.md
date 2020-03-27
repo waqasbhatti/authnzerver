@@ -13,18 +13,19 @@ I wrote it to help with the login/logout/signup flows for the
 the code from there. It builds on the auth bits there and is eventually meant to
 replace them. It can do the following things:
 
-- handle user sign-ups, logins, and logouts
-- handle user email verification, password changes, and editing user properties
-- handle API key issuance, verification, and rate-limits
-
-TODO items include:
-
-- handling access and rate-limit checks for arbitrary schemes of user roles,
-  permissions, and target objects. There is a [built-in
-  scheme](https://github.com/waqasbhatti/authnzerver/blob/29d382099e8d9d5645bc3faec256d6a6f802247b/authnzerver/permissions.py#L17)
+- Handle user sign-ups, logins, logouts, and locks/unlocks.
+- Handle user email verification, password changes, forgotten password
+  processes, and editing user properties.
+- Handle API key issuance and verification.
+- Handle access and rate-limit checks for arbitrary schemes of user roles,
+  permissions, and target items. There is a [default
+  scheme](https://github.com/waqasbhatti/authnzerver/blob/master/authnzerver/default-permissions-model.json)
   of permissions and user roles, originally from the LCC-Server where this code
-  was extracted from, but it may not be useful for general purposes.
-- handling social logins using Twitter, Github, and Google.
+  was extracted from. Another permissions policy can be specified as JSON.
+
+See the
+[TODO](https://github.com/waqasbhatti/authnzerver/blob/master/docs/TODO.md) for
+features that are planned for the future.
 
 Authnzerver talks to a frontend server over HTTP. Communications are secured
 with symmetric encryption using the [cryptography](https://cryptography.io)
@@ -55,34 +56,54 @@ virtualenv activated and the package installed: `authnzrv`.
 `authnzrv --help` will list all the options available:
 
 ```
---authdb            An SQLAlchemy database URL to indicate where
-                    the local authentication DB is. This should
-                    be in the form discussed at: https://docs.sq
-                    lalchemy.org/en/latest/core/engines.html#dat
-                    abase-urls
---autosetup         If this is True, will automatically generate
-                    an SQLite authentication database in the
-                    basedir if there isn't one present and the
-                    value of the authdb option is also None.
-                    (default True)
---backgroundworkers number of background workers to use
-                    (default 4)
---basedir           The base directory containing secret files
-                    and the auth DB if --autosetup was used.
---cachedir          Path to the cache directory used by the
-                    authnzerver.
---debugmode         start up in debug mode if set to 1. (default
-                    0)
---envfile           Path to a file containing environ variables
-                    for testing/development.
---port              Run on the given port. (default 13431)
---secret            Path to the file containing the secret key.
-                    This is relative to the path given in the
-                    basedir option.
---serve             Bind to given address and serve content.
-                    (default 127.0.0.1)
---sessionexpiry     This sets the session-expiry time in days.
-                    (default 30)
+--authdb         An SQLAlchemy database URL to indicate where
+                 the local authentication DB is. This should
+                 be in the form discussed at: https://docs.sq
+                 lalchemy.org/en/latest/core/engines.html#dat
+                 abase-urls
+--autosetup      If this is True, will automatically generate
+                 an SQLite authentication database in the
+                 basedir if there isn't one present and the
+                 value of the authdb option is also None.
+                 (default False)
+--basedir        The base directory containing secret files
+                 and the auth DB. (default os.getcwd())
+--cachedir       Path to the cache directory to be used.
+                 (default /tmp/authnzerver-cache)
+--debugmode      If 1, will enable an /echo endpoint for
+                 debugging purposes. (default False)
+--emailpass      The password to use for login to the email
+                 server.
+--emailport      The SMTP port of the email server to use.
+                 (default 25)
+--emailsender    The account name and email address that the
+                 authnzerver will send from. (default
+                 Authnzerver <authnzerver@localhost>)
+--emailserver    The address of the email server to use.
+                 (default localhost)
+--emailuser      The username to use for login to the email
+                 server. (default getpass.getuser())
+--envfile        Path to a file containing environ variables
+                 for testing/development.
+--listen         Bind to this address and serve content.
+                 (default 127.0.0.1)
+--permissions    The JSON file containing the permissions
+                 model the server will enforce. (default
+                 install-dir/authnzerver/authnzerver/
+                 default-permissions-model.json)
+--piisalt        A random value used as a salt when SHA256
+                 hashing personally identifiable information
+                 (PII), such as user IDs and session tokens,
+                 etc. for authnzerver logs.
+--port           Run the server on this TCP port. (default
+                 13431)
+--secret         The shared secret key used to secure
+                 communications between authnzerver and any
+                 frontend servers.
+--sessionexpiry  This sets the session-expiry time in days.
+                 (default 30)
+--workers        The number of background workers to use when
+                 processing requests. (default 4)
 ```
 
 There's an example systemd `.service` file available in the `deploy` directory
@@ -91,30 +112,36 @@ to run this server automatically on startup.
 
 ## Configuring the server
 
-Use the following environmental variables to configure the server.
+Use the following environmental variables to configure the server. Defaults are
+noted below where appropriate
 
 ```
-# listen address and port settings
-AUTHNZERVER_PORT={{ authnzerver_listenport }}
-AUTHNZERVER_LISTEN={{ authnzerver_listenaddr }}
+# listen address, port settings, and workers
+AUTHNZERVER_PORT=13141
+AUTHNZERVER_LISTEN=127.0.0.1
+AUTHNZERVER_WORKERS=4
 
 # cache and base directory locations
-AUTHNZERVER_CACHEDIR={{ authnzerver_cachedir }}
-AUTHNZERVER_BASEDIR={{ authnzerver_basedir }}
+AUTHNZERVER_CACHEDIR=/tmp/authnzerver-cache
+AUTHNZERVER_BASEDIR=directory where the server is started
 
-# secret token and authentication DB URL
-AUTHNZERVER_SECRET={{ authnzerver_secretkey }}
-AUTHNZERVER_AUTHDB={{ authnzerver_authdb }}
+# secret token, PII salt, and authentication DB URL
+AUTHNZERVER_SECRET=None
+AUTHNZERVER_PIISALT=None
+AUTHNZERVER_AUTHDB=None
 
 # session expiry time in days
-AUTHNZERVER_SESSIONEXPIRY={{ authnzerver_sessionexpiry }}
+AUTHNZERVER_SESSIONEXPIRY=30
+
+# permissions model JSON
+AUTHNZERVER_PERMISSIONS=path/to/default-permissions-model.json
 
 # email settings for sending emails to users
-AUTHNZERVER_EMAILSENDER={{ authnzerver_emailsender }}
-AUTHNZERVER_EMAILSERVER={{ authnzerver_emailserver }}
-AUTHNZERVER_EMAILPORT={{ authnzerver_emailport }}
-AUTHNZERVER_EMAILUSER={{ authnzerver_emailuser }}
-AUTHNZERVER_EMAILPASS={{ authnzerver_emailpass }}
+AUTHNZERVER_EMAILSENDER=Authnzerver <authnzerver@localhost>
+AUTHNZERVER_EMAILSERVER=localhost
+AUTHNZERVER_EMAILPORT=25
+AUTHNZERVER_EMAILUSER=user running the authnzrv executable
+AUTHNZERVER_EMAILPASS=''
 ```
 
 You can also provide all of these at once using an environment file. This is not

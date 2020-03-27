@@ -199,6 +199,48 @@ Returns a `response` with the following items if successful:
 
 This request can only be initiated by users with the `superuser` role.
 
+
+# Authorization actions
+
+These actions depend on a permissions policy that can be specified when the
+authnzerver starts up. This is a JSON file describing the roles, items, actions,
+item visibilities, and finally, the appropriate access rules and limits for each
+role. An example is the
+[default-permissions-model.json](https://github.com/waqasbhatti/authnzerver/blob/master/authnzerver/default-permissions-model.json)
+shipped with the authnzerver package. If you don't specify a policy JSON as an
+environment variable or as a command line option, this default policy will be
+used.
+
+## `user-check-access`: Check if the specified user can access a specified item
+
+Requires the following `body` items in a request:
+- `user_id` (int): the user ID of the user attempting access.
+- `user_role` (str): the role of the user attempting access.
+- `action` (str): the action being checked.
+- `target_name` (str): the item that the action is going to be applied to.
+- `target_owner` (int): the user ID of the item's owner.
+- `target_visibility` (str): the visibility of the item being accessed.
+- `target_sharedwith` (str): a CSV list of user IDs that the item is shared
+  with.
+
+Returns a `response` with the following items if successful:
+- None, check the value of `success`. `True` indicates the access was
+  successfully granted, `False` indicates otherwise.
+
+## `user-check-limit`: Check if the specified user is over a specified limit
+
+Requires the following `body` items in a request:
+- `user_id` (int): the user ID of the user being checked for limit overage.
+- `user_role` (str): the role of the user being checked.
+- `limit_name` (str): the name of the limit to be checked.
+- `value_to_check` (float, int): the amount to be checked against the limit
+  value.
+
+Returns a `response` with the following items if successful:
+- None, check the value of `success`. `True` indicates the user is under the
+  specified limit, `False` indicates otherwise.
+
+
 # Email actions
 
 ## `user-signup-sendemail`: Send a verification email to a new user
@@ -257,8 +299,8 @@ Returns a `response` with the following items if successful:
 ## `apikey-new`: Create a new API key tied to a user ID, role, and IP address
 
 Requires the following `body` items in a request:
-- `audience` (str): the service this API key is being issued for (usually the host
-  name of the frontend server)
+- `audience` (str): the service this API key is being issued for (usually the
+  host name of the frontend server)
 - `subject` (list of str): the specific API endpoint(s) this API key is being
   issued for (usually a list of URIs for specific service endpoints)
 - `apiversion` (int): the version of the API this key is valid for
