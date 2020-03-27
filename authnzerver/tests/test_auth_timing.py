@@ -25,7 +25,10 @@ def get_test_authdb():
     authdb.initial_authdb_inserts('sqlite:///test-timing.authdb.sqlite')
 
 
-# @mark.skip(reason="timing is unreliable at the moment")
+@mark.xfail(
+    reason=("Timing is unreliable at the moment and "
+            "depends on server load variability.")
+)
 def test_login_timing():
     '''This tests obfuscating the presence/absence of users based on password
     checks.
