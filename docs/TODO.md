@@ -5,7 +5,7 @@
 - [x] Add list of [10k most common
   passwords](https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10-million-password-list-top-10000.txt),
   load into memory as a set and check against this for all user creation events.
-- [ ] [ASVS] "Verify that the application terminates all other active sessions
+- [x] [ASVS] "Verify that the application terminates all other active sessions
       after a successful password change, and that this is effective across the
       application, federated login (if present), and any relying parties."
 

@@ -54,7 +54,7 @@ from sqlalchemy import select
 from fuzzywuzzy.fuzz import UQRatio
 
 from .. import authdb
-from .session import auth_session_exists
+from .session import auth_session_exists, auth_delete_sessions_userid
 from ..permissions import pii_hash
 
 from argon2 import PasswordHasher
@@ -231,6 +231,7 @@ def change_user_password(payload,
         This is a dict with the following required keys:
 
         - user_id: int
+        - session_token: str
         - full_name: str
         - email: str
         - current_password: str
@@ -262,6 +263,11 @@ def change_user_password(payload,
     dict
         Returns a dict with the user's user_id and email as keys if successful.
 
+    Notes
+    -----
+
+    This logs out the user from all of their other sessions.
+
     '''
 
     for key in ('reqid','pii_salt'):
@@ -277,6 +283,7 @@ def change_user_password(payload,
             }
 
     for key in ('user_id',
+                'session_token',
                 'full_name',
                 'email',
                 'current_password',
@@ -465,11 +472,24 @@ def change_user_password(payload,
                           payload['pii_salt']))
             )
 
+            # delete all of this user's other sessions
+            auth_delete_sessions_userid(
+                {'session_token':payload['session_token'],
+                 'user_id':payload['user_id'],
+                 'keep_current_session':True,
+                 'reqid':payload['reqid'],
+                 'pii_salt':payload['pii_salt']},
+                override_authdb_path=override_authdb_path,
+                raiseonfail=raiseonfail
+            )
+
             return {
                 'success':True,
                 'user_id':payload['user_id'],
                 'email':payload['email'],
-                'messages':messages
+                'messages':(messages +
+                            ['For security purposes, you have been '
+                             'logged out of all other sessions.'])
             }
 
         else:

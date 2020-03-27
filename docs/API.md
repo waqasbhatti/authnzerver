@@ -127,6 +127,7 @@ Returns a `response` with the following items if successful:
 
 Requires the following `body` items in a request:
 - `user_id` (int): the integer user ID of the user
+- `session_token` (str): the current session token of the user
 - `full_name` (str): the full name of the user
 - `email` (str): the email address of the user
 - `current_password` (str): the current password that will be changed
