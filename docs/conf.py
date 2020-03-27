@@ -28,6 +28,9 @@ author = 'Waqas Bhatti'
 # The full version, including alpha/beta/rc tags
 release = __version__
 
+# The master doc should be the index file
+# https://github.com/readthedocs/readthedocs.org/issues/2569
+master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
 
