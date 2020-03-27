@@ -25,7 +25,9 @@ replace them. It can do the following things:
 
 See
 [TODO.md](https://github.com/waqasbhatti/authnzerver/blob/master/docs/TODO.md) for
-features that are planned for the future.
+features that are planned for the future. See
+[CHANGELOG.md](https://github.com/waqasbhatti/authnzerver/blob/master/CHANGELOG.md)
+for a version history.
 
 Authnzerver talks to a frontend server over HTTP. Communications are secured
 with symmetric encryption using the [cryptography](https://cryptography.io)
@@ -38,8 +40,8 @@ details on the HTTP API.
 ## Installation
 
 Authnzerver is [available at PyPI](https://pypi.org/project/authnzerver/), but
-is very much a work in progress at the moment. Don't install it (or trust it)
-until it has reached v0.1.
+is very much a work in progress at the moment. Maybe hold off on installing it
+until we've reached v0.2 (beta).
 
 With that said, it can be installed (preferably in a virtualenv) using `pip`:
 
