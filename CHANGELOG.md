@@ -1,3 +1,11 @@
+# authnzerver v0.1.2 - 2020-03-27
+
+## New stuff
+
+- Added Sphinx generated autodocs for modules:
+  https://authnzerver.readthedocs.io/en/latest/.
+
+
 # authnzerver v0.1.1 - 2020-03-27
 
 ## Fixes
