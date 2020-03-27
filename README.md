@@ -1,4 +1,5 @@
-[![Build Status](https://ci.wbhatti.org/buildStatus/icon?job=authnzerver)](https://ci.wbhatti.org/job/authnzerver)
+[![Build
+Status](https://ci.wbhatti.org/buildStatus/icon?job=authnzerver)](https://ci.wbhatti.org/job/authnzerver) [![Documentation Status](https://readthedocs.org/projects/authnzerver/badge/?version=latest)](https://authnzerver.readthedocs.io/en/latest/?badge=latest)
 
 This is a small server meant to help add authentication (authn) and
 authorization (authz) to other HTTP servers. It's built using
@@ -34,8 +35,9 @@ with symmetric encryption using the [cryptography](https://cryptography.io)
 package's [Fernet scheme](https://cryptography.io/en/latest/fernet/), so you'll
 need a pre-shared key that both Authnzerver and your frontend server know.
 
-See [API.md](https://github.com/waqasbhatti/authnzerver/blob/master/docs/API.md) for
-details on the HTTP API.
+See [API.md](https://github.com/waqasbhatti/authnzerver/blob/master/docs/API.md)
+for details on the HTTP API. Also see the (in-progress) [Python module
+documentation](https://authnzerver.readthedocs.io/en/latest/).
 
 ## Installation
 
