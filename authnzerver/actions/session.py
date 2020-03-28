@@ -1584,8 +1584,6 @@ def auth_user_login(payload,
                     ).where(
                         users.c.user_id == user_info['user_id']
                     ).where(
-                        users.c.is_active.is_(True)
-                    ).where(
                         users.c.email == payload['email']
                     ).values({
                         'password': rehashed_password
