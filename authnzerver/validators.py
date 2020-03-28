@@ -226,12 +226,24 @@ DEFAULT_RESERVED_NAMES = set(
 )
 
 MOD_DIR = os.path.dirname(__file__)
+
+# https://github.com/danielmiessler/SecLists/blob/master/
+# Passwords/Common-Credentials/10-million-password-list-top-10000.txt
 TENK_PASSWORDS_FILE = os.path.abspath(
     os.path.join(MOD_DIR,
                  'top-10k-passwords.txt')
 )
 with open(TENK_PASSWORDS_FILE,'r') as infd:
     TOP_10K_PASSWORDS = {x.strip('\n') for x in infd.readlines()}
+
+# https://github.com/martenson/disposable-email-domains/blob/master/
+# disposable_email_blocklist.conf
+DISPOSABLE_EMAIL_DOMAINS_FILE = os.path.abspath(
+    os.path.join(MOD_DIR,
+                 'disposable_email_blocklist.conf')
+)
+with open(DISPOSABLE_EMAIL_DOMAINS_FILE,'r') as infd:
+    DISPOSABLE_EMAIL_DOMAINS = {x.strip('\n') for x in infd.readlines()}
 
 
 ###############

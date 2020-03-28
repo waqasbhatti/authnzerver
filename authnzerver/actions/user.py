@@ -649,12 +649,33 @@ def create_new_user(
                 'messages':["Invalid user creation request."]
             }
 
+    #
     # validate the email provided
+    #
+
+    # check for Unicode confusables and dangerous usernames
     email_confusables_ok = (
         validators.validate_confusables_email(payload['email'])
     )
+
+    # check if the email is a valid one according to HTML5 specs
     email_regex_ok = validators.validate_email_address(payload['email'])
-    email_ok = email_regex_ok and email_confusables_ok
+
+    # check if the email domain is not a disposable email address
+    if email_confusables_ok and email_regex_ok:
+        email_domain = payload['email'].split('@')[1].casefold()
+        email_domain_not_disposable = (
+            email_domain not in validators.DISPOSABLE_EMAIL_DOMAINS
+        )
+    else:
+        email_domain_not_disposable = False
+
+    # if all of the tests above pass, the email is OK
+    email_ok = (
+        email_regex_ok and
+        email_confusables_ok and
+        email_domain_not_disposable
+    )
 
     if not email_ok:
 
