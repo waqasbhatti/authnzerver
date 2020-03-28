@@ -1559,6 +1559,55 @@ def auth_user_login(payload,
             # inactive)
             else:
 
+                # we now check if the plain-text password provided to us needs
+                # to be rehashed with newer parameters. this is useful when the
+                # argon library updates its defaults. this is also needed when
+                # we update our own values for the work factor, etc. parameters
+                # when someone invents a better GPU password cracker machine.
+
+                # check the stored hashed password's parameters
+                pass_needs_rehash = pass_hasher.check_needs_rehash(
+                    user_info['password']
+                )
+
+                # if they need to be updated, rehash the plain-text password
+                # provided to us with the newer parameters and store it
+                if pass_needs_rehash:
+
+                    # rehash and store the new password
+                    rehashed_password = pass_hasher.hash(
+                        payload['password'][:1024]
+                    )
+
+                    # update the table for this user
+                    upd = users.update(
+                    ).where(
+                        users.c.user_id == user_info['user_id']
+                    ).where(
+                        users.c.is_active.is_(True)
+                    ).where(
+                        users.c.email == payload['email']
+                    ).values({
+                        'password': rehashed_password
+                    })
+                    result = currproc.authdb_conn.execute(upd)
+                    result.close()
+
+                    LOGGER.warning(
+                        '[%s] Password rehashed for user '
+                        'because Argon2 parameters '
+                        'changed for session_token: %s and '
+                        'email address: %s. '
+                        'Matched user with user_id: %s. ' %
+                        (payload['reqid'],
+                         pii_hash(payload['session_token'],
+                                  payload['pii_salt']),
+                         pii_hash(payload['email'],
+                                  payload['pii_salt']),
+                         pii_hash(user_info['user_id'],
+                                  payload['pii_salt']))
+                    )
+
                 # if the user account is active and unlocked, proceed.
                 # the frontend will take this user_id and ask for a new session
                 # token with it.
