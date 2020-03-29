@@ -28,6 +28,321 @@ from configparser import ConfigParser
 from itertools import chain
 import json
 from types import SimpleNamespace
+from functools import reduce, partial
+from operator import getitem
+import re
+
+import requests
+
+
+#####################################
+## FILE AND URL HANDLING FUNCTIONS ##
+#####################################
+
+ENV_REGEX = re.compile(r'\[\[(\w+)\]\]')
+
+
+def _dict_get(datadict, keylist):
+    '''This gets a requested dict key by walking the dict.
+
+    Parameters
+    ----------
+
+    datadict : dict
+        The dict to get the specified key from.
+
+    keylist : list of str
+        This is a list of keys to use to walk the dict and get to the key that
+        is provided as the last element in `keylist`. For example::
+
+            keylist = ['key1','key2','key3']
+
+        will walk `datadict` recursively to get to `datadict[key1][key2][key3]`.
+
+    Returns
+    -------
+
+    object
+        The dict value of the specified key address.
+
+    '''
+    return reduce(getitem, keylist, datadict)
+
+
+def item_from_file(file_path,
+                   file_spec,
+                   basedir=None):
+    '''
+    Reads a conf item from a file.
+
+    Parameters
+    ----------
+
+    file_path : str
+        The file to open. Here you can use the following substitutions as
+        necessary:
+
+        - ``[[homedir]]``: points to the home directory of the user running the
+          server.
+
+        - ``[[basedir]]`: points to the base directory of the server.
+
+    file_spec : str or tuple
+        This specifies how to read the conf item from the file:
+
+        - ``'string'``: read a file and use the resulting string as the value of
+          the config item. The trailing ``\\n`` character will be stripped. This
+          is useful for simple text secret keys stored in a file on disk, etc.
+
+        - ``'json'``: read the entire file as JSON and return the loaded dict as
+          the value of the config item.
+
+        - ``('json','path.to.item.or.array.idx')``: read the entire file as
+          JSON, resolve the JSON object path pointed to by the second tuple
+          element, get the value there and return it as the value of the config
+          item.
+
+    basedir : str or None
+        The base directory of the server. If None, the current working directory
+        is used.
+
+    Returns
+    -------
+
+    conf_value : Any
+        Returns the value of the conf item. The calling function is
+        responsible for casting to the correct type.
+
+    '''
+
+    if not os.path.exists(file_path):
+        LOGGER.error("Requested conf item cannot be loaded because "
+                     "the file path doesn't exist.")
+        return None
+
+    # handle special substitutions
+    if '[[basedir]]' in file_path:
+        file_to_load = file_path.replace('[[basedir]]',basedir)
+    elif '[[homedir]]' in file_path:
+        file_to_load = file_path.replace(
+            '[[homedir]]',
+            os.path.abspath(os.path.expanduser('~'))
+        )
+
+    file_to_load = os.path.abspath(file_to_load)
+
+    #
+    # now deal with the spec
+    #
+
+    # string load
+    if isinstance(file_spec, str) and file_spec == 'string':
+
+        with open(file_to_load,'r') as infd:
+            conf_item = infd.read().strip('\n')
+
+        return conf_item
+
+    # JSON load entire file
+    elif isinstance(file_spec, str) and file_spec == 'json':
+
+        with open(file_to_load,'r') as infd:
+            conf_item = json.load(infd)
+
+        return conf_item
+
+    elif isinstance(file_spec, tuple) and file_spec[0] == 'json':
+
+        item_path = file_spec[-1]
+        item_path = item_path.split('.')
+
+        with open(file_to_load,'r') as infd:
+            conf_dict = json.load(infd)
+            conf_item = _dict_get(conf_dict, item_path)
+
+        return conf_item
+
+    else:
+
+        LOGGER.error("Unknown file_spec provided, can't handle it.")
+        return None
+
+
+def item_from_url(url,
+                  url_spec,
+                  environment,
+                  timeout=5.0):
+    '''Reads a conf item from a URL.
+
+    url : str
+        The URL to fetch.
+
+    url_spec : tuple
+        This specifies how to get the conf item from the URL:
+
+        - ``('http',{method dict},'string')``: HTTP GET the URL pointed to by
+          the config item key, assume the value returned is plain-text and
+          return it as the value of the config item. This can be useful for
+          things stored in AWS/GCP metadata servers.
+
+        - ``('http',{method dict},'json')``: HTTP GET the URL pointed to by the
+          config item key, load it as JSON, and return the loaded dict as the
+          value of the config item.
+
+        - ``('http',{method dict},'json','path.to.item.or.array[idx]')``: HTTP
+          GET the URL pointed to by the config key, load it as JSON, resolve the
+          JSON object path pointed to by the fourth element of the tuple, get
+          the value there and return it as the value of the config item.
+
+        The ``{method dict}`` is a dict of the following form::
+
+            {'method':'post' or 'get',
+             'headers':dict of header keys and values to send or None,
+             'data':data dict to attach to the POST request or param dict to
+                    attach to the GET request or None,
+             'timeout': time in seconds to wait for a response}
+
+        Using the method dict allows you to add in authentication headers and
+        data needed to gain access to the URL indicated by the config item key.
+
+        If an item in the 'headers' or 'data' dicts requires something from an
+        environment variable or .env file, indicate this by using ``'[[NAME OF
+        ENV VAR]]'`` in the value of that key. For example, to get a bearer
+        token to use in the 'Authorization' header::
+
+            method_dict['headers'] = {'Authorization': 'Bearer [[API_KEY]]'}
+
+        This will look up the environment variable 'API_KEY' and substitute
+        that value in.
+
+    environment : environment object or ConfigParser object
+        This is an object similar to that obtained from ``os.environ`` or a
+        similar ConfigParser object.
+
+    timeout : int or float
+        The default timeout in seconds to use for the HTTP request if one is not
+        provided in the method dict in ``url_spec``.
+
+    Returns
+    -------
+
+    conf_value : Any
+        Returns the value of the conf item. The calling function is
+        responsible for casting to the correct type.
+
+    '''
+
+    if not isinstance(url_spec, tuple):
+        LOGGER.error("Invalid URL spec provided for conf item.")
+        return None
+
+    if url_spec[0] != 'http':
+        LOGGER.error("Invalid URL spec provided for conf item.")
+        return None
+
+    if not isinstance(url_spec[1], dict):
+        LOGGER.error("No HTTP request parameters provided for conf item.")
+        return None
+
+    request_options = url_spec[1]
+    item_type = url_spec[2]
+    if item_type == 'json' and len(url_spec) == 4:
+        item_path = url_spec[3]
+    else:
+        item_path = None
+
+    for key in ('method', 'headers', 'data'):
+        if key not in request_options:
+            LOGGER.error("Missing '%s' key in HTTP request parameters.")
+            return None
+
+    #
+    # handle environment var substitutions in request_options 'headers' or
+    # 'data'
+    #
+    for key in request_options['headers']:
+
+        val = request_options['headers'][key]
+        env_items = ENV_REGEX.findall(val)
+
+        for item in env_items:
+            if item in environment:
+                val = val.replace('[[%s]]',environment.get(item))
+
+        request_options['headers'][key] = val
+
+    for key in request_options['data']:
+
+        val = request_options['data'][key]
+        env_items = ENV_REGEX.findall(val)
+
+        for item in env_items:
+            if item in environment:
+                val = val.replace('[[%s]]',environment.get(item))
+
+        request_options['data'][key] = val
+
+    #
+    # now process the request
+    #
+
+    req_timeout = request_options.get('timeout', timeout)
+
+    if request_options['method'] == 'post':
+
+        req = requests.post
+
+        # add in the headers and data
+        req_func = partial(
+            req,
+            headers=request_options['headers'],
+            data=request_options['data'],
+            timeout=req_timeout
+        )
+
+    else:
+
+        req = requests.get
+
+        # add in the headers and data
+        req_func = partial(
+            req,
+            headers=request_options['headers'],
+            params=request_options['data'],
+            timeout=req_timeout,
+        )
+
+    #
+    # fire the request and deal with the response
+    #
+
+    try:
+
+        resp = req_func(url)
+        resp.raise_for_status()
+
+        if item_type == 'string':
+            conf_item = resp.text.rstrip('\n')
+
+        elif item_type == 'json' and item_path is None:
+            conf_item = resp.json()
+
+        elif item_type == json and item_path is not None:
+
+            conf_dict = resp.json()
+            conf_item = _dict_get(conf_dict, item_path.split('.'))
+
+    except Exception:
+
+        LOGGER.exception("Failed to retrieve config "
+                         "item value from URL: %s" % url)
+        conf_item = None
+
+    finally:
+
+        resp.close()
+
+    return conf_item
 
 
 ###############################
@@ -116,11 +431,22 @@ def get_conf_item(env_key,
 
             {'method':'post' or 'get',
              'headers':dict of header keys and values to send or None,
-             'data':data dict to attach to the POST request or None,
+             'data':data dict to attach to the POST request or param dict to
+                    attach to the GET request or None,
              'timeout': time in seconds to wait for a response}
 
         Using the method dict allows you to add in authentication headers and
         data needed to gain access to the URL indicated by the config item key.
+
+        If an item in the 'headers' or 'data' dicts requires something from an
+        environment variable or .env file, indicate this by using ``'[[NAME OF
+        ENV VAR]]'`` in the value of that key. For example, to get a bearer
+        token to use in the 'Authorization' header::
+
+            method_dict['headers'] = {'Authorization': 'Bearer [[API_KEY]]'}
+
+        This will look up the environment variable 'API_KEY' and substitute
+        that value in.
 
     raiseonfail : bool
         If this is set to True, the function will raise a ValueError for any
@@ -132,7 +458,7 @@ def get_conf_item(env_key,
 
     basedir : str
         The directory where the server will do its work. This is used to fill in
-        '{{basedir}}' template values in any conf item. By default, this is the
+        '[[basedir]]' template values in any conf item. By default, this is the
         current working directory.
 
     Returns
@@ -186,8 +512,13 @@ def get_conf_item(env_key,
         confitem = default
 
         # handle special substitutions
-        if isinstance(confitem, str) and '{{basedir}}' in confitem:
-            confitem = confitem.replace('{{basedir}}',basedir)
+        if isinstance(confitem, str) and '[[basedir]]' in confitem:
+            confitem = confitem.replace('[[basedir]]',basedir)
+        if isinstance(confitem, str) and '[[homedir]]' in confitem:
+            confitem = confitem.replace(
+                '[[homedir]]',
+                os.path.abspath(os.path.expanduser('~'))
+            )
 
         # if this is a file to read in as a string
         if (isinstance(confitem, str) and
@@ -213,8 +544,13 @@ def get_conf_item(env_key,
     # otherwise, if the conf item exists, return its appropriate value
     #
     # handle special substitutions
-    if isinstance(confitem, str) and '{{basedir}}' in confitem:
-        confitem = confitem.replace('{{basedir}}',basedir)
+    if isinstance(confitem, str) and '[[basedir]]' in confitem:
+        confitem = confitem.replace('[[basedir]]',basedir)
+        if isinstance(confitem, str) and '[[homedir]]' in confitem:
+            confitem = confitem.replace(
+                '[[homedir]]',
+                os.path.abspath(os.path.expanduser('~'))
+            )
 
     # if this is a file to read in as a string
     if (isinstance(confitem, str) and
