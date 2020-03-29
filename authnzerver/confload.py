@@ -64,7 +64,7 @@ def _dict_get(datadict, keylist):
             keylist = 'key1.key2.key3'
 
         To retrieve a item in the key path with a numeric index, e.g. a
-        list item inside a dict, you xmust specify its address as
+        list item inside a dict, you must specify its address as
         ``'_arr_indexnum'``. For example, to get back "no" from this dict::
 
             get_response = {
@@ -521,9 +521,6 @@ def get_conf_item(env_key,
     # override with the environment value
     if env_key in environment:
         confitem = environment.get(env_key)
-
-    print("confkey: %s, confitem: %s, readable_from_file: %s" %
-          (env_key, confitem, readable_from_file))
 
     #
     # if we got a confitem or a default sub, process it
