@@ -51,13 +51,32 @@ def _dict_get(datadict, keylist):
     datadict : dict
         The dict to get the specified key from.
 
-    keylist : list of str
+    keylist : list of str or str
         This is a list of keys to use to walk the dict and get to the key that
         is provided as the last element in `keylist`. For example::
 
             keylist = ['key1','key2','key3']
 
-        will walk `datadict` recursively to get to `datadict[key1][key2][key3]`.
+        will walk `datadict` recursively to get to
+        `datadict[key1][key2][key3]`. If this is provided as a string, you must
+        separate the keys in the path with '.' character, e.g.::
+
+            keylist = 'key1.key2.key3'
+
+        To retrieve a item in the key path with a numeric index, e.g. a
+        list item inside a dict, you xmust specify its address as
+        ``'_arr_indexnum'``. For example, to get back "no" from this dict::
+
+            get_response = {
+                "secret":"very-yes",
+                "testbit":{
+                    "available":["maybe","yes","no"]
+                }
+            }
+
+        Use the following call::
+
+            _dict_get(get_response, "testbit.available._arr_2")
 
     Returns
     -------
@@ -66,14 +85,26 @@ def _dict_get(datadict, keylist):
         The dict value of the specified key address.
 
     '''
-    return reduce(getitem, keylist, datadict)
+
+    # convert the key list items to a list and handle str -> int conversions
+    if isinstance(keylist,str):
+        keylist = keylist.split('.')
+
+    use_keylist = keylist[::]
+
+    for ind, item in enumerate(keylist):
+        if '_arr_' in item:
+            arrind = item.replace('_arr_','')
+            arrind = int(arrind)
+            use_keylist[ind] = arrind
+
+    return reduce(getitem, use_keylist, datadict)
 
 
 def item_from_file(file_path,
                    file_spec,
                    basedir=None):
-    '''
-    Reads a conf item from a file.
+    '''Reads a conf item from a file.
 
     Parameters
     ----------
@@ -97,8 +128,8 @@ def item_from_file(file_path,
         - ``'json'``: read the entire file as JSON and return the loaded dict as
           the value of the config item.
 
-        - ``('json','path.to.item.or.array.idx')``: read the entire file as
-          JSON, resolve the JSON object path pointed to by the second tuple
+        - ``('json','path.to.item.or.listitem._arr_0')``: read the entire file
+          as JSON, resolve the JSON object path pointed to by the second tuple
           element, get the value there and return it as the value of the config
           item.
 
@@ -115,11 +146,6 @@ def item_from_file(file_path,
 
     '''
 
-    if not os.path.exists(file_path):
-        LOGGER.error("Requested conf item cannot be loaded because "
-                     "the file path doesn't exist.")
-        return None
-
     # handle special substitutions
     if '[[basedir]]' in file_path:
         file_to_load = file_path.replace('[[basedir]]',basedir)
@@ -128,8 +154,16 @@ def item_from_file(file_path,
             '[[homedir]]',
             os.path.abspath(os.path.expanduser('~'))
         )
+    else:
+        file_to_load = file_path
 
     file_to_load = os.path.abspath(file_to_load)
+
+    if not os.path.exists(file_to_load):
+
+        LOGGER.error("Requested conf item cannot be loaded because "
+                     "the file path doesn't exist.")
+        return None
 
     #
     # now deal with the spec
@@ -180,19 +214,20 @@ def item_from_url(url,
     url_spec : tuple
         This specifies how to get the conf item from the URL:
 
-        - ``('http',{method dict},'string')``: HTTP GET the URL pointed to by
-          the config item key, assume the value returned is plain-text and
+        - ``('http',{method dict},'string')``: HTTP GET/POST the URL pointed to
+          by the config item key, assume the value returned is plain-text and
           return it as the value of the config item. This can be useful for
           things stored in AWS/GCP metadata servers.
 
-        - ``('http',{method dict},'json')``: HTTP GET the URL pointed to by the
-          config item key, load it as JSON, and return the loaded dict as the
-          value of the config item.
+        - ``('http',{method dict},'json')``: HTTP GET/POST the URL pointed to by
+          the config item key, load it as JSON, and return the loaded dict as
+          the value of the config item.
 
-        - ``('http',{method dict},'json','path.to.item.or.array[idx]')``: HTTP
-          GET the URL pointed to by the config key, load it as JSON, resolve the
-          JSON object path pointed to by the fourth element of the tuple, get
-          the value there and return it as the value of the config item.
+        - ``('http',{method dict},'json','path.to.item.or.listitem._arr_0')``:
+          HTTP GET the URL pointed to by the config key, load it as JSON,
+          resolve the JSON object path pointed to by the fourth element of the
+          tuple, get the value there and return it as the value of the config
+          item.
 
         The ``{method dict}`` is a dict of the following form::
 
@@ -260,27 +295,27 @@ def item_from_url(url,
     # handle environment var substitutions in request_options 'headers' or
     # 'data'
     #
-    for key in request_options['headers']:
+    if isinstance(request_options['headers'], dict):
+        for key in request_options['headers']:
 
-        val = request_options['headers'][key]
-        env_items = ENV_REGEX.findall(val)
+            val = request_options['headers'][key]
+            env_items = ENV_REGEX.findall(val)
 
-        for item in env_items:
-            if item in environment:
-                val = val.replace('[[%s]]',environment.get(item))
+            for item in env_items:
+                val = val.replace('[[%s]]' % item, environment.get(item, ''))
 
-        request_options['headers'][key] = val
+            request_options['headers'][key] = val
 
-    for key in request_options['data']:
+    if isinstance(request_options['data'], dict):
+        for key in request_options['data']:
 
-        val = request_options['data'][key]
-        env_items = ENV_REGEX.findall(val)
+            val = request_options['data'][key]
+            env_items = ENV_REGEX.findall(val)
 
-        for item in env_items:
-            if item in environment:
-                val = val.replace('[[%s]]',environment.get(item))
+            for item in env_items:
+                val = val.replace('[[%s]]' % item, environment.get(item, ''))
 
-        request_options['data'][key] = val
+            request_options['data'][key] = val
 
     #
     # now process the request
@@ -327,20 +362,27 @@ def item_from_url(url,
         elif item_type == 'json' and item_path is None:
             conf_item = resp.json()
 
-        elif item_type == json and item_path is not None:
+        elif item_type == 'json' and item_path is not None:
 
             conf_dict = resp.json()
             conf_item = _dict_get(conf_dict, item_path.split('.'))
 
+        else:
+            LOGGER.error("Unknown item type provided.")
+            conf_item = None
+
     except Exception:
 
-        LOGGER.exception("Failed to retrieve config "
-                         "item value from URL: %s" % url)
+        LOGGER.error("Failed to retrieve config "
+                     "item value from URL: %s" % url)
         conf_item = None
 
     finally:
 
-        resp.close()
+        try:
+            resp.close()
+        except UnboundLocalError:
+            pass
 
     return conf_item
 
@@ -408,24 +450,25 @@ def get_conf_item(env_key,
         - ``'json'``: read the entire file as JSON and return the loaded dict as
           the value of the config item.
 
-        - ``('json','path.to.item.or.array[idx]')``: read the entire file as
-          JSON, resolve the JSON object path pointed to by the second tuple
+        - ``('json','path.to.item.or.listitem._arr_0')``: read the entire file
+          as JSON, resolve the JSON object path pointed to by the second tuple
           element, get the value there and return it as the value of the config
           item.
 
-        - ``('http',{method dict},'string')``: HTTP GET the URL pointed to by
-          the config item key, assume the value returned is plain-text and
+        - ``('http',{method dict},'string')``: HTTP GET/POST the URL pointed to
+          by the config item key, assume the value returned is plain-text and
           return it as the value of the config item. This can be useful for
           things stored in AWS/GCP metadata servers.
 
-        - ``('http',{method dict},'json')``: HTTP GET the URL pointed to by the
-          config item key, load it as JSON, and return the loaded dict as the
-          value of the config item.
+        - ``('http',{method dict},'json')``: HTTP GET/POST the URL pointed to by
+          the config item key, load it as JSON, and return the loaded dict as
+          the value of the config item.
 
-        - ``('http',{method dict},'json','path.to.item.or.array[idx]')``: HTTP
-          GET the URL pointed to by the config key, load it as JSON, resolve the
-          JSON object path pointed to by the fourth element of the tuple, get
-          the value there and return it as the value of the config item.
+        - ``('http',{method dict},'json','path.to.item.or.listitem._arr_0')``:
+          HTTP GET the URL pointed to by the config key, load it as JSON,
+          resolve the JSON object path pointed to by the fourth element of the
+          tuple, get the value there and return it as the value of the config
+          item.
 
         The ``{method dict}`` is a dict of the following form::
 
@@ -479,6 +522,9 @@ def get_conf_item(env_key,
     if env_key in environment:
         confitem = environment.get(env_key)
 
+    print("confkey: %s, confitem: %s, readable_from_file: %s" %
+          (env_key, confitem, readable_from_file))
+
     #
     # if we got a confitem or a default sub, process it
     #
@@ -511,29 +557,61 @@ def get_conf_item(env_key,
 
         confitem = default
 
-        # handle special substitutions
-        if isinstance(confitem, str) and '[[basedir]]' in confitem:
-            confitem = confitem.replace('[[basedir]]',basedir)
-        if isinstance(confitem, str) and '[[homedir]]' in confitem:
-            confitem = confitem.replace(
-                '[[homedir]]',
-                os.path.abspath(os.path.expanduser('~'))
-            )
+        #
+        # check if the confitem points to a file that exists
+        #
+        if isinstance(confitem, str):
 
-        # if this is a file to read in as a string
-        if (isinstance(confitem, str) and
-            os.path.exists(confitem) and
+            if '[[basedir]]' in confitem:
+                file_check = confitem.replace('[[basedir]]',basedir)
+            elif '[[homedir]]' in confitem:
+                file_check = confitem.replace(
+                    '[[homedir]]',
+                    os.path.abspath(os.path.expanduser('~'))
+                )
+            else:
+                file_check = confitem
+
+            file_check = os.path.exists(os.path.abspath(file_check))
+
+        else:
+
+            file_check = False
+
+        #
+        # handle all the cases
+        #
+        if (file_check and isinstance(readable_from_file, str) and
             readable_from_file == 'string'):
-            with open(confitem,'r') as infd:
-                confitem = infd.read().strip('\n')
-                confitem = vartype(confitem)
 
-        # if this is a file to read in as JSON
-        elif (isinstance(confitem, str) and
-              os.path.exists(confitem) and
+            confitem = item_from_file(confitem,
+                                      readable_from_file,
+                                      basedir=basedir)
+            confitem = vartype(confitem)
+
+        elif (file_check and isinstance(readable_from_file, str) and
               readable_from_file == 'json'):
-            with open(confitem,'r') as infd:
-                confitem = json.load(infd)
+
+            confitem = item_from_file(confitem,
+                                      readable_from_file,
+                                      basedir=basedir)
+
+        elif (file_check and isinstance(readable_from_file, tuple) and
+              readable_from_file[0] == 'json'):
+
+            confitem = item_from_file(confitem,
+                                      readable_from_file,
+                                      basedir=basedir)
+
+        elif (isinstance(confitem, str) and
+              confitem.startswith('http') and
+              isinstance(readable_from_file, tuple) and
+              readable_from_file[0] == 'http'):
+
+            confitem = item_from_url(confitem,
+                                     readable_from_file,
+                                     environment)
+            confitem = vartype(confitem)
 
         # otherwise, it's not a file or it doesn't exist, return it as is
         # NOTE: no casting done here to preserve whatever type default was
@@ -543,29 +621,60 @@ def get_conf_item(env_key,
     #
     # otherwise, if the conf item exists, return its appropriate value
     #
-    # handle special substitutions
-    if isinstance(confitem, str) and '[[basedir]]' in confitem:
-        confitem = confitem.replace('[[basedir]]',basedir)
-        if isinstance(confitem, str) and '[[homedir]]' in confitem:
-            confitem = confitem.replace(
+
+    #
+    # check if the confitem points to a file that exists
+    #
+    if isinstance(confitem, str):
+
+        if '[[basedir]]' in confitem:
+            file_check = confitem.replace('[[basedir]]',basedir)
+        elif '[[homedir]]' in confitem:
+            file_check = confitem.replace(
                 '[[homedir]]',
                 os.path.abspath(os.path.expanduser('~'))
             )
+        else:
+            file_check = confitem
 
-    # if this is a file to read in as a string
-    if (isinstance(confitem, str) and
-        os.path.exists(confitem) and
+        file_check = os.path.exists(os.path.abspath(file_check))
+
+    else:
+
+        file_check = False
+
+    #
+    # handle all the cases
+    #
+    if (file_check and isinstance(readable_from_file, str) and
         readable_from_file == 'string'):
-        with open(confitem,'r') as infd:
-            confitem = infd.read().strip('\n')
-            confitem = vartype(confitem)
 
-    # if this is a file to read in as JSON
-    elif (isinstance(confitem, str) and
-          os.path.exists(confitem) and
+        confitem = item_from_file(confitem,
+                                  readable_from_file,
+                                  basedir=basedir)
+
+    elif (file_check and isinstance(readable_from_file, str) and
           readable_from_file == 'json'):
-        with open(confitem,'r') as infd:
-            confitem = json.load(infd)
+
+        confitem = item_from_file(confitem,
+                                  readable_from_file,
+                                  basedir=basedir)
+
+    elif (file_check and isinstance(readable_from_file, tuple) and
+          readable_from_file[0] == 'json'):
+
+        confitem = item_from_file(confitem,
+                                  readable_from_file,
+                                  basedir=basedir)
+
+    elif (isinstance(confitem, str) and
+          confitem.startswith('http') and
+          isinstance(readable_from_file, tuple) and
+          readable_from_file[0] == 'http'):
+
+        confitem = item_from_url(confitem,
+                                 readable_from_file,
+                                 environment)
 
     # otherwise, it's not a file or it doesn't exist, return it and cast to the
     # appropriate type

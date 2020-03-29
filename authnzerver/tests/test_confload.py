@@ -8,9 +8,11 @@ import os
 import os.path
 import getpass
 
-from tornado.options import OptionParser
-from authnzerver import confvars, confload
+import requests
 
+from tornado.options import OptionParser
+
+from authnzerver import confvars, confload
 from authnzerver.permissions import load_permissions_json
 
 
@@ -577,3 +579,153 @@ def test_load_config_options_and_defaults(monkeypatch, tmpdir):
     assert loaded_config.emailport == 25
     assert loaded_config.emailuser == getpass.getuser()
     assert loaded_config.emailpass == ''
+
+
+def test_item_from_file(tmpdir):
+    '''
+    This tests if the config can be loaded from env + a file.
+
+    '''
+
+    # generate the secret files
+    secret_file = generate_secret_file(tmpdir)
+
+    # generate the permissions JSON
+    permissions_json = generate_permissions_json(tmpdir)
+
+    #
+    # 1. test we can load the secret file
+    #
+    loaded_item = confload.item_from_file(
+        secret_file,
+        'string'
+    )
+    assert loaded_item == 'super-secret-secret'
+
+    #
+    # 2. test we can load an entire JSON
+    #
+    loaded_item = confload.item_from_file(
+        permissions_json,
+        'json'
+    )
+    assert isinstance(loaded_item, dict)
+    assert loaded_item['roles'] == ['superuser','staff',
+                                    'authenticated','anonymous',
+                                    'locked']
+
+    #
+    # 3. test we can load a specific item inside a JSON
+    #
+    loaded_item = confload.item_from_file(
+        permissions_json,
+        ('json','role_policy.staff.allowed_actions_for_other.unlisted._arr_2')
+    )
+    assert loaded_item == 'delete'
+
+
+def test_item_from_url(monkeypatch, requests_mock):
+    '''
+    This tests if the config can be loaded from env + remote URLs.
+
+    '''
+
+    # set the env
+    monkeypatch.setenv("GCP_APIKEY", "super-secret-token")
+    monkeypatch.setenv("GCP_PROJECTID", "abcproj")
+
+    #
+    # 0. mock the URL bits
+    #
+
+    # GET URL
+    get_url = ("https://secretmanager.googleapis.com/v1/"
+               "projects/abcproj/secrets/abc/versions/z:access")
+    get_expect_headers = {'Authorization':'Bearer super-secret-token',
+                          'Content-Type':'application/json',
+                          'x-goog-user-project': 'abcproj'}
+    get_response = "this-should-be-base64-but-whatever"
+
+    requests_mock.get(
+        get_url,
+        request_headers=get_expect_headers,
+        text=get_response
+    )
+
+    #
+    # 1. test requests itself works fine with the mocked bits
+    #
+
+    resp = requests.get(
+        get_url,
+        headers=get_expect_headers,
+    )
+    assert resp.text == get_response
+    resp.close()
+
+    #
+    # 2. now test if the item_from_url function works fine with a string
+    #
+    send_headers = {'Authorization':'Bearer [[GCP_APIKEY]]',
+                    'Content-Type':'application/json',
+                    'x-goog-user-project': '[[GCP_PROJECTID]]'}
+
+    url_spec = (
+        'http',
+        {'method':'get',
+         'headers':send_headers,
+         'data':None,
+         'timeout':5.0},
+        'string'
+    )
+
+    loaded_item = confload.item_from_url(
+        get_url,
+        url_spec,
+        os.environ,
+    )
+
+    assert loaded_item == get_response
+
+    #
+    # 3. now test if the item_from_url function works fine with a JSON item
+    #
+
+    get_url = ("https://secretmanager.googleapis.com/v1/"
+               "projects/abcproj/secrets/abc/versions/z:access")
+    get_expect_headers = {'Authorization':'Bearer super-secret-token',
+                          'Content-Type':'application/json',
+                          'x-goog-user-project': 'abcproj'}
+    get_response = {
+        "secret":"very-yes",
+        "testbit":{
+            "available":["maybe","yes","no"]
+        }
+    }
+
+    requests_mock.get(
+        get_url,
+        request_headers=get_expect_headers,
+        json=get_response
+    )
+    send_headers = {'Authorization':'Bearer [[GCP_APIKEY]]',
+                    'Content-Type':'application/json',
+                    'x-goog-user-project': '[[GCP_PROJECTID]]'}
+
+    url_spec = (
+        'http',
+        {'method':'get',
+         'headers':send_headers,
+         'data':None,
+         'timeout':5.0},
+        'json',
+        'testbit.available._arr_2'
+    )
+
+    loaded_item = confload.item_from_url(
+        get_url,
+        url_spec,
+        os.environ,
+    )
+
+    assert loaded_item == "no"
