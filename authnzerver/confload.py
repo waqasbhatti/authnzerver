@@ -76,10 +76,51 @@ def get_conf_item(env_key,
         This is the attribute to look up in the options object for the value of
         the conf item.
 
-    readable_from_file : {'json','string'} or False
-        If this is specified, and the conf item is a valid filename, will open
-        it and read it in, cast to the specified variable type, and return the
-        item.
+    readable_from_file : {'json','string', others, see below} or False
+        If this is specified, and the conf item key (env_key or options_key
+        above) is a valid filename or URL, will open it and read it in, cast to
+        the specified variable type, and return the item. If this is set to
+        False, will treat the config item pointed to by the key as a plaintext
+        item and return it directly.
+
+        There are several readable_from_file options. The first two below are
+        strings, the rest are tuples.
+
+        - ``'string'``: read a file and use the resulting string as the value of
+          the config item. The trailing '\n' character will be stripped. This is
+          useful for simple text secret keys stored in a file on disk, etc.
+
+        - ``'json'``: read the entire file as JSON and return the loaded dict as
+          the value of the config item.
+
+        - ``('json','path.to.item.or.array[idx]')``: read the entire file as
+          JSON, resolve the JSON object path pointed to by the second tuple
+          element, get the value there and return it as the value of the config
+          item.
+
+        - ``('http',{method dict},'string')``: HTTP GET the URL pointed to by
+          the config item key, assume the value returned is plain-text and
+          return it as the value of the config item. This can be useful for
+          things stored in AWS/GCP metadata servers.
+
+        - ``('http',{method dict},'json')``: HTTP GET the URL pointed to by the
+          config item key, load it as JSON, and return the loaded dict as the
+          value of the config item.
+
+        - ``('http',{method dict},'json','path.to.item.or.array[idx]')``: HTTP
+          GET the URL pointed to by the config key, load it as JSON, resolve the
+          JSON object path pointed to by the fourth element of the tuple, get
+          the value there and return it as the value of the config item.
+
+        The ``{method dict}`` is a dict of the following form::
+
+            {'method':'post' or 'get',
+             'headers':dict of header keys and values to send or None,
+             'data':data dict to attach to the POST request or None,
+             'timeout': time in seconds to wait for a response}
+
+        Using the method dict allows you to add in authentication headers and
+        data needed to gain access to the URL indicated by the config item key.
 
     raiseonfail : bool
         If this is set to True, the function will raise a ValueError for any
