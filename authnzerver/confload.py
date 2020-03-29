@@ -87,8 +87,8 @@ def get_conf_item(env_key,
         strings, the rest are tuples.
 
         - ``'string'``: read a file and use the resulting string as the value of
-          the config item. The trailing '\n' character will be stripped. This is
-          useful for simple text secret keys stored in a file on disk, etc.
+          the config item. The trailing ``\\n`` character will be stripped. This
+          is useful for simple text secret keys stored in a file on disk, etc.
 
         - ``'json'``: read the entire file as JSON and return the loaded dict as
           the value of the config item.
