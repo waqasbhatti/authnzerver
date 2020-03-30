@@ -376,7 +376,7 @@ def item_from_url(url,
     except Exception:
 
         LOGGER.error("Failed to retrieve config "
-                     "item value from URL: %s" % url)
+                     "item value from URL.")
         conf_item = None
 
     finally:
@@ -600,6 +600,14 @@ def get_conf_item(env_key,
             confitem = item_from_file(confitem,
                                       readable_from_file,
                                       basedir=basedir)
+
+            # check if the confitem isn't None because of a failure
+            if confitem is None and raiseonfail:
+                raise ValueError(
+                    'Config item: "%s" is invalid/missing, '
+                    'could not retrieve from default file.' % env_key
+                )
+
             confitem = vartype(confitem)
 
         elif (file_check and isinstance(readable_from_file, str) and
@@ -609,12 +617,26 @@ def get_conf_item(env_key,
                                       readable_from_file,
                                       basedir=basedir)
 
+            # check if the confitem isn't None because of a failure
+            if confitem is None and raiseonfail:
+                raise ValueError(
+                    'Config item: "%s" is invalid/missing, '
+                    'could not retrieve from default file.' % env_key
+                )
+
         elif (file_check and isinstance(readable_from_file, tuple) and
               readable_from_file[0] == 'json'):
 
             confitem = item_from_file(confitem,
                                       readable_from_file,
                                       basedir=basedir)
+
+            # check if the confitem isn't None because of a failure
+            if confitem is None and raiseonfail:
+                raise ValueError(
+                    'Config item: "%s" is invalid/missing, '
+                    'could not retrieve from default file.' % env_key
+                )
 
         elif (isinstance(confitem, str) and
               confitem.startswith('http') and
@@ -624,7 +646,13 @@ def get_conf_item(env_key,
             confitem = item_from_url(confitem,
                                      readable_from_file,
                                      environment)
-            confitem = vartype(confitem)
+
+            # check if the confitem isn't None because of a failure
+            if confitem is None and raiseonfail:
+                raise ValueError(
+                    'Config item: "%s" is invalid/missing, '
+                    'could not retrieve from default URL.' % env_key
+                )
 
         # otherwise, it's not a file or it doesn't exist, return it as is
         # NOTE: no casting done here to preserve whatever type default was
@@ -673,6 +701,13 @@ def get_conf_item(env_key,
                                   readable_from_file,
                                   basedir=basedir)
 
+        # check if the confitem isn't None because of a failure
+        if confitem is None and raiseonfail:
+            raise ValueError(
+                'Config item: "%s" is invalid/missing, '
+                'could not retrieve from provided file.' % env_key
+            )
+
     elif (file_check and isinstance(readable_from_file, str) and
           readable_from_file == 'json'):
 
@@ -680,12 +715,26 @@ def get_conf_item(env_key,
                                   readable_from_file,
                                   basedir=basedir)
 
+        # check if the confitem isn't None because of a failure
+        if confitem is None and raiseonfail:
+            raise ValueError(
+                'Config item: "%s" is invalid/missing, '
+                'could not retrieve from provided file.' % env_key
+            )
+
     elif (file_check and isinstance(readable_from_file, tuple) and
           readable_from_file[0] == 'json'):
 
         confitem = item_from_file(confitem,
                                   readable_from_file,
                                   basedir=basedir)
+
+        # check if the confitem isn't None because of a failure
+        if confitem is None and raiseonfail:
+            raise ValueError(
+                'Config item: "%s" is invalid/missing, '
+                'could not retrieve from provided file.' % env_key
+            )
 
     elif (isinstance(confitem, str) and
           confitem.startswith('http') and
@@ -695,6 +744,13 @@ def get_conf_item(env_key,
         confitem = item_from_url(confitem,
                                  readable_from_file,
                                  environment)
+
+        # check if the confitem isn't None because of a failure
+        if confitem is None and raiseonfail:
+            raise ValueError(
+                'Config item: "%s" is invalid/missing, '
+                'could not retrieve from provided URL.' % env_key
+            )
 
     # otherwise, it's not a file or it doesn't exist, return it and cast to the
     # appropriate type
