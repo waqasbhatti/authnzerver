@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # test_permissions_staff.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug
 # 2018

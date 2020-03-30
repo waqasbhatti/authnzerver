@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # frontendbase.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Sep 2018
 
