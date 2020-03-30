@@ -7,6 +7,7 @@ from textwrap import dedent
 import os
 import os.path
 import getpass
+import base64
 
 import requests
 
@@ -729,3 +730,96 @@ def test_item_from_url(monkeypatch, requests_mock):
     )
 
     assert loaded_item == "no"
+
+
+def test_get_conf_item_postprocess(monkeypatch, requests_mock, tmpdir):
+    '''Tests if the item can be loaded and post-processed by a custom function.
+
+    '''
+
+    #
+    # 0. mock the URL bits
+    #
+
+    # GET URL
+    get_url = ("https://secretmanager.googleapis.com/v1/"
+               "projects/abcproj/secrets/abc/versions/z:access")
+    get_expect_headers = {'Authorization':'Bearer super-secret-token',
+                          'Content-Type':'application/json',
+                          'x-goog-user-project': 'abcproj'}
+    get_response = {
+        "payload":{
+            "data":(
+                base64.b64encode(b"hello-world-im-secret")
+            ).decode('utf-8')
+        }
+    }
+
+    requests_mock.get(
+        get_url,
+        request_headers=get_expect_headers,
+        json=get_response
+    )
+
+    #
+    # 1. write the postproc function to the file
+    #
+    function_file = os.path.abspath(str(tmpdir.join('proc_module.py')))
+
+    with open(function_file,'w') as outfd:
+        outfd.write("""
+import base64
+
+def custom_decode(input):
+    return base64.b64decode(input.encode('utf-8')).decode('utf-8')
+""")
+
+    #
+    # 2. set up the env and config dict
+    #
+
+    monkeypatch.setenv("GCP_SECMAN_URL", get_url)
+    monkeypatch.setenv("GCP_AUTH_TOKEN", "super-secret-token")
+
+    readable_from_file = (
+        "http",
+        {"method":"get",
+         "headers":{"Authorization":"Bearer [[GCP_AUTH_TOKEN]]",
+                    "Content-Type":"application/json",
+                    "x-goog-user-project": "abcproj"},
+         "data":None,
+         "timeout":5.0},
+        'json',
+        "payload.data"
+    )
+
+    # set up the config_dict
+    conf_dict = {
+        'secret':{
+            'env':'GCP_SECMAN_URL',
+            'cmdline':'secret',
+            'type':str,
+            'default':None,
+            'help':('The shared secret key used to secure '
+                    'communications between authnzerver and '
+                    'any frontend servers.'),
+            'readable_from_file':readable_from_file,
+            'postprocess_value':'%s::custom_decode' % function_file,
+        }
+    }
+
+    #
+    # 4. try the process
+    #
+    conf_item = confload.get_conf_item(
+        conf_dict['secret']['env'],
+        os.environ,
+        None,
+        options_key=None,
+        vartype=conf_dict['secret']['type'],
+        default=conf_dict['secret']['default'],
+        readable_from_file=conf_dict['secret']['readable_from_file'],
+        postprocess_value=conf_dict['secret']['postprocess_value'],
+    )
+
+    assert conf_item == "hello-world-im-secret"

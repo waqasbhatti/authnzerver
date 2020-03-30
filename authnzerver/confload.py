@@ -34,6 +34,8 @@ import re
 
 import requests
 
+from .modtools import object_from_string
+
 
 #####################################
 ## FILE AND URL HANDLING FUNCTIONS ##
@@ -116,7 +118,7 @@ def item_from_file(file_path,
         - ``[[homedir]]``: points to the home directory of the user running the
           server.
 
-        - ``[[basedir]]`: points to the base directory of the server.
+        - ``[[basedir]]``: points to the base directory of the server.
 
     file_spec : str or tuple
         This specifies how to read the conf item from the file:
@@ -398,6 +400,7 @@ def get_conf_item(env_key,
                   vartype=str,
                   default=None,
                   readable_from_file=False,
+                  postprocess_value=None,
                   raiseonfail=True,
                   basedir=None):
     """This loads a config item from the environment or command-line options.
@@ -491,6 +494,19 @@ def get_conf_item(env_key,
         This will look up the environment variable 'API_KEY' and substitute
         that value in.
 
+    postprocess_value : str
+        This is a string pointing to a Python function to apply to the config
+        item that was retrieved. The function must take one argument and return
+        one item. The function is specified as either a fully qualified Python
+        module name and function name, e.g.::
+
+            'base64.b64decode'
+
+        or a path to a Python module on disk and the object name separated by
+        '::' ::
+
+            '~/some/directory/mymodule.py::custom_b64decode'
+
     raiseonfail : bool
         If this is set to True, the function will raise a ValueError for any
         missing config items that can't be set from the environment, the envfile
@@ -501,8 +517,8 @@ def get_conf_item(env_key,
 
     basedir : str
         The directory where the server will do its work. This is used to fill in
-        '[[basedir]]' template values in any conf item. By default, this is the
-        current working directory.
+        ``'[[basedir]]'`` template values in any conf item. By default, this is
+        the current working directory.
 
     Returns
     -------
@@ -613,6 +629,13 @@ def get_conf_item(env_key,
         # otherwise, it's not a file or it doesn't exist, return it as is
         # NOTE: no casting done here to preserve whatever type default was
         # NOTE: e.g., this allows us to use a a dict as a default
+
+        # handle any postprocessing
+        if isinstance(postprocess_value,str):
+            postproc_func = object_from_string(postprocess_value)
+            if postproc_func is not None:
+                confitem = postproc_func(confitem)
+
         return confitem
 
     #
@@ -678,6 +701,12 @@ def get_conf_item(env_key,
     else:
         confitem = vartype(confitem)
 
+    # handle any postprocessing
+    if isinstance(postprocess_value,str):
+        postproc_func = object_from_string(postprocess_value)
+        if postproc_func is not None:
+            confitem = postproc_func(confitem)
+
     return confitem
 
 
@@ -732,6 +761,7 @@ def load_config(conf_dict,
             vartype=conf_dict[key]['type'],
             default=conf_dict[key]['default'],
             readable_from_file=conf_dict[key]['readable_from_file'],
+            postprocess_value=conf_dict[key]['postprocess_value'],
             basedir=basedir
         )
         setattr(loaded_options, key, conf_item_value)
