@@ -3,8 +3,97 @@
 # main.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''
-This contains the configuration variables that define how the server operates.
+'''Contains the configuration variables that define how the server operates.
+
+It defines how to load them from the environment or command-line options. You
+can change this file as needed.
+
+For example, look at the ``secret`` dict entry below in CONF::
+
+    'secret':{
+        'env':'%s_SECRET' % ENVPREFIX,
+        'cmdline':'secret',
+        'type':str,
+        'default':None,
+        'help':('The shared secret key used to secure '
+                'communications between authnzerver and any frontend servers.'),
+        'readable_from_file':'string',
+        'postprocess_value':None,
+    }
+
+This means the server will look at an environmental variable called
+``AUTHNZERVER_SECRET``, falling back to the value provided in the ``--secret``
+command line option. The ``readable_from_file`` key tells the server how to
+handle the value it retrieved from either of these two sources.
+
+To indicate that the retrieved value is to be used directly, set
+``"readable_from_file" = False``.
+
+To indicate that the retrieved value can either be: (i) used directly or, (ii)
+may be a path to a file and the actual value of the ``secret`` item is a string
+to be read from that file, set ``"readable_from_file" = "string"``.
+
+To indicate that the retrieved value is a URL and the authnzerver must fetch the
+actual secret from this URL, set::
+
+    "readable_from_file" = ("http",
+                            {'method':'get',
+                             'headers':{header dict},
+                             'data':{param dict},
+                             'timeout':5.0},
+                             'string')
+
+Finally, you can also tell the server to fetch a JSON and pick out a key in the
+JSON. See the docstring for :py:func:`authnzerver.confload.get_conf_item` for
+more details on the various ways to retrieve the actual item pointed to by the
+config variable key.
+
+To make this example more concrete, if the authnzerver secret was stored as a
+`GCP Secrets Manager
+<https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#access_a_secret_version>`_
+item, you'd set some environmental variables like so::
+
+    GCP_SECMAN_URL=https://secretmanager.googleapis.com/v1/projects/abcproj/secrets/abc/versions/z:access
+    GCP_AUTH_TOKEN=some-secret-token
+
+Then change the ``secret`` dict item in CONF dict below to::
+
+    'secret':{
+        'env':'GCP_SECMAN_URL',
+        'cmdline':'secret',
+        'type':str,
+        'default':None,
+        'help':('The shared secret key used to secure '
+                'communications between authnzerver and any frontend servers.'),
+        'readable_from_file':see below,
+        'postprocess_value':'custom_decode.py::custom_b64decode',
+    }
+
+The ``readable_from_file`` key would be set to something like::
+
+    "readable_from_file" = ("http",
+                            {"method":"get",
+                             "headers":{"Authorization":"Bearer [[GCP_AUTH_TOKEN]]",
+                                        "Content-Type":"application/json",
+                                        "x-goog-user-project": "abcproj"},
+                             "data":None,
+                             "timeout":5.0},
+                            'json',
+                            "payload.data")
+
+This would then load the authnzerver ``secret`` directly from the Secrets
+Manager.
+
+Notice that we used a path to a Python module and function for the
+``postprocess_value`` key. This module looks like::
+
+    import base64
+
+    def custom_decode(input):
+        return base64.b64decode(input.encode('utf-8')).decode('utf-8')
+
+The function above will base64 decode the value returned from the Secrets
+Manager and finally give us the ``secret`` value we need.
 
 '''
 
@@ -42,6 +131,7 @@ CONF = {
                 'https://docs.sqlalchemy.org/en/latest'
                 '/core/engines.html#database-urls'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'basedir':{
         'env':'%s_BASEDIR' % ENVPREFIX,
@@ -50,6 +140,7 @@ CONF = {
         'default':os.getcwd(),
         'help':('The base directory containing secret files and the auth DB.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'cachedir':{
         'env':'%s_CACHEDIR' % ENVPREFIX,
@@ -58,6 +149,7 @@ CONF = {
         'default':'/tmp/authnzerver-cache',
         'help':('Path to the cache directory to be used.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'debugmode':{
         'env':'%s_DEBUGMODE' % ENVPREFIX,
@@ -67,6 +159,7 @@ CONF = {
         'help':('If 1, will enable an '
                 '/echo endpoint for debugging purposes.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'listen':{
         'env':'%s_LISTEN' % ENVPREFIX,
@@ -75,6 +168,7 @@ CONF = {
         'default':'127.0.0.1',
         'help':('Bind to this address and serve content.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'permissions':{
         'env':'%s_PERMISSIONS' % ENVPREFIX,
@@ -84,6 +178,7 @@ CONF = {
         'help':('The JSON file containing the permissions '
                 'model the server will enforce.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'port':{
         'env':'%s_PORT' % ENVPREFIX,
@@ -92,6 +187,7 @@ CONF = {
         'default':13431,
         'help':('Run the server on this TCP port.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'secret':{
         'env':'%s_SECRET' % ENVPREFIX,
@@ -101,6 +197,7 @@ CONF = {
         'help':('The shared secret key used to secure '
                 'communications between authnzerver and any frontend servers.'),
         'readable_from_file':'string',
+        'postprocess_value':None,
     },
     'piisalt':{
         'env':'%s_PIISALT' % ENVPREFIX,
@@ -111,6 +208,7 @@ CONF = {
                 'identifiable information (PII), such as user IDs and '
                 'session tokens, etc. for authnzerver logs.'),
         'readable_from_file':'string',
+        'postprocess_value':None,
     },
     'sessionexpiry':{
         'env':'%s_SESSIONEXPIRY' % ENVPREFIX,
@@ -119,6 +217,7 @@ CONF = {
         'default':30,
         'help':('This sets the session-expiry time in days.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'workers':{
         'env':'%s_WORKERS' % ENVPREFIX,
@@ -128,6 +227,7 @@ CONF = {
         'help':('The number of background workers '
                 'to use when processing requests.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'emailserver':{
         'env':'%s_EMAILSERVER' % ENVPREFIX,
@@ -136,6 +236,7 @@ CONF = {
         'default':'localhost',
         'help':('The address of the email server to use.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'emailport':{
         'env':'%s_EMAILPORT' % ENVPREFIX,
@@ -144,6 +245,7 @@ CONF = {
         'default':25,
         'help':('The SMTP port of the email server to use.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'emailuser':{
         'env':'%s_EMAILUSER' % ENVPREFIX,
@@ -152,6 +254,7 @@ CONF = {
         'default':currentuser,
         'help':('The username to use for login to the email server.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'emailpass':{
         'env':'%s_EMAILPASS' % ENVPREFIX,
@@ -160,6 +263,7 @@ CONF = {
         'default':'',
         'help':('The password to use for login to the email server.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
     'emailsender':{
         'env':'%s_EMAILSENDER' % ENVPREFIX,
@@ -169,5 +273,6 @@ CONF = {
         'help':('The account name and email address that the '
                 'authnzerver will send from.'),
         'readable_from_file':False,
+        'postprocess_value':None,
     },
 }
