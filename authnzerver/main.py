@@ -29,8 +29,8 @@ import socket
 import sys
 import signal
 import time
-from datetime import datetime
 from functools import partial
+import shutil
 
 
 # setup signal trapping on SIGINT
@@ -112,6 +112,8 @@ def _close_authentication_database():
 ## CONFIG FROM ENVIRON, COMMAND LINE, AND SUBSTITUTES ##
 ########################################################
 
+from .modtools import object_from_string
+
 from .confvars import CONF
 
 # this is the module path
@@ -135,12 +137,21 @@ define('envfile',
              'for testing/development.'),
        type=str)
 
+# the path to the confvar file
+define('confvars',
+       default=os.path.join(modpath,'confvars.py'),
+       help=('Path to the file containing the configuration '
+             'variables needed by the server and how to load them.'),
+       type=str)
+
 # whether to make a new authdb if none exists
 define('autosetup',
        default=False,
        help=("If this is True, will automatically generate an SQLite "
-             "authentication database in the basedir if there isn't one "
-             "present and the value of the authdb option is also None."),
+             "authentication database in the basedir, "
+             "copy over default-permissions-model.json and "
+             "confvars.py to the basedir for easy customization, and finally, "
+             "generate the communications secret file and the PII salt file."),
        type=bool)
 
 
@@ -197,11 +208,23 @@ def main():
             options.basedir,
             interactive=True
         )
+
+        # copy over the permission model and confvars
+        LOGGER.warning("Copying default-permissions-model.json to basedir: %s" %
+                       options.basedir)
+        shutil.copy(os.path.join(modpath, 'default-permissions-model.json'),
+                    options.basedir)
+        LOGGER.warning("Copying confvars.py to basedir: %s" %
+                       options.basedir)
+        shutil.copy(os.path.join(modpath, 'confvars.py'),
+                    options.basedir)
+
         LOGGER.warning("Auto-setup complete, exiting...")
         LOGGER.warning("To start the authnzerver with these parameters, call "
                        "authnzrv again with the appropriate values set "
-                       "for the auth DB and the secret key in either the "
-                       "command line options or as environment variables.")
+                       "for the auth DB, the secret key, and the PII salt in "
+                       "either the command line options or "
+                       "as environment variables.")
         sys.exit(0)
 
     # otherwise, we'll assume that all is well, and we'll proceed to load the
@@ -209,11 +232,17 @@ def main():
 
     try:
 
+        # update the conf dict with that loaded from confvars.py
+        LOCAL_CONF = object_from_string(
+            "%s::CONF" % options.confvars
+        )
+        CONF.update(LOCAL_CONF)
+
         loaded_config = load_config(CONF,
                                     options,
                                     envfile=options.envfile)
 
-    except ValueError:
+    except Exception:
 
         LOGGER.error("One or more config variables could not be set "
                      "from the environment, an envfile, or the command "

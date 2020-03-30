@@ -5,8 +5,15 @@
 
 '''Contains the configuration variables that define how the server operates.
 
-It defines how to load them from the environment or command-line options. You
-can change this file as needed.
+The CONF dict in this file describes how to load these variables from the
+environment or command-line options.
+
+You can change this file as needed. It will be copied over to the authnzerver's
+base directory when ``authnzrv --autosetup`` is run and you can tell authnzerver
+to use it like so: ``authnzrv --confvars /path/to/basedir/confvars.py``.
+
+You MUST NOT store any actual secrets in this file; just define how to get to
+them.
 
 For example, look at the ``secret`` dict entry below in CONF::
 
@@ -48,8 +55,8 @@ JSON. See the docstring for :py:func:`authnzerver.confload.get_conf_item` for
 more details on the various ways to retrieve the actual item pointed to by the
 config variable key.
 
-To make this example more concrete, if the authnzerver secret was stored as a
-`GCP Secrets Manager
+To make this example more concrete, if the authnzerver ``secret`` was stored as
+a `GCP Secrets Manager
 <https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#access_a_secret_version>`_
 item, you'd set some environmental variables like so::
 
@@ -85,14 +92,16 @@ This would then load the authnzerver ``secret`` directly from the Secrets
 Manager.
 
 Notice that we used a path to a Python module and function for the
-``postprocess_value`` key. This module looks like::
+``postprocess_value`` key. This is because GCP's Secrets Manager base-64 encodes
+the data you put into it and we need to post-process the value we get back from
+the stored item's URL. This module looks like::
 
     import base64
 
     def custom_b64decode(input):
         return base64.b64decode(input.encode('utf-8')).decode('utf-8')
 
-The function above will base64 decode the value returned from the Secrets
+The function above will base-64 decode the value returned from the Secrets
 Manager and finally give us the ``secret`` value we need.
 
 '''
