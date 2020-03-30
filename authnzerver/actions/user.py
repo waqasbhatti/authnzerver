@@ -51,7 +51,7 @@ import uuid
 
 from tornado.escape import squeeze
 from sqlalchemy import select
-from fuzzywuzzy.fuzz import UQRatio
+from difflib import SequenceMatcher
 
 from .. import authdb
 from .session import auth_session_exists, auth_delete_sessions_userid
@@ -77,6 +77,7 @@ def validate_input_password(
         email,
         password,
         pii_salt,
+        reqid,
         min_length=12,
         max_match_threshold=20
 ):
@@ -113,11 +114,15 @@ def validate_input_password(
         personally identifying information in the logs emitted from this
         function.
 
+    reqid : int or str
+        The request ID associated with this password validation request. Used to
+        track and correlate these requests in logs.
+
     min_length : int
         The minimum required character length of the password.
 
     max_match_threshold : int
-        The maximum UQRatio required to fuzzy-match the input password against
+        The maximum ratio required to fuzzy-match the input password against
         the server's domain name, the user's email, or their name.
 
     Returns
@@ -156,14 +161,27 @@ def validate_input_password(
     else:
         tenk_ok = True
 
-    # FIXME: also add fuzzy matching to top 10k passwords list to avoid stuff
+    # FIXME: also add matching to top 10k passwords list to avoid stuff
     # like 'passwordpasswordpassword'
 
-    # check the fuzzy match against the FQDN and email address
+    # check the match against the FQDN, user name, and email address
     fqdn = socket.getfqdn()
-    fqdn_match = UQRatio(password.casefold(), fqdn.casefold())
-    email_match = UQRatio(password.casefold(), email.casefold())
-    name_match = UQRatio(password.casefold(), full_name.casefold())
+
+    password_to_match = squeeze(password.casefold().strip())
+
+    fqdn_matcher = SequenceMatcher(
+        None, password_to_match, fqdn.casefold()
+    )
+    email_matcher = SequenceMatcher(
+        None, password_to_match, email.casefold()
+    )
+    name_matcher = SequenceMatcher(
+        None, password_to_match, full_name.casefold()
+    )
+
+    fqdn_match = fqdn_matcher.ratio()*100.0
+    email_match = email_matcher.ratio()*100.0
+    name_match = name_matcher.ratio()*100.0
 
     fqdn_ok = fqdn_match < max_match_threshold
     email_ok = email_match < max_match_threshold
@@ -172,9 +190,9 @@ def validate_input_password(
     if not fqdn_ok or not email_ok or not name_ok:
         LOGGER.warning('Password for new account '
                        'with email: %s matches FQDN '
-                       '(similarity: %s), their name (similarity: %s), '
+                       '(similarity: %.1f), their name (similarity: %.1f), '
                        ' or their email address '
-                       '(similarity: %s).' %
+                       '(similarity: %.1f).' %
                        (pii_hash(email, pii_salt),
                         fqdn_match, name_match, email_match))
         messages.append('Your password is too similar to either '
@@ -259,7 +277,7 @@ def change_user_password(payload,
         The minimum required character length of the password.
 
     max_similarity : int
-        The maximum UQRatio required to fuzzy-match the input password against
+        The maximum ratio required to fuzzy-match the input password against
         the server's domain name, the user's email, or their name.
 
     Returns
@@ -436,6 +454,7 @@ def change_user_password(payload,
         payload['email'],
         new_password,
         payload['pii_salt'],
+        payload['reqid'],
         min_length=min_pass_length,
         max_match_threshold=max_similarity
     )
@@ -583,7 +602,7 @@ def create_new_user(
         The minimum required character length of the password.
 
     max_similarity : int
-        The maximum UQRatio required to fuzzy-match the input password against
+        The maximum ratio required to fuzzy-match the input password against
         the server's domain name, the user's email, or their name.
 
     Returns
@@ -731,6 +750,7 @@ def create_new_user(
         email,
         input_password,
         payload['pii_salt'],
+        payload['reqid'],
         min_length=min_pass_length,
         max_match_threshold=max_similarity
     )
@@ -1172,7 +1192,7 @@ def verify_password_reset(payload,
         The minimum required character length of the password.
 
     max_similarity : int
-        The maximum UQRatio required to fuzzy-match the input password against
+        The maximum ratio required to fuzzy-match the input password against
         the server's domain name, the user's email, or their name.
 
     Returns
@@ -1332,6 +1352,7 @@ def verify_password_reset(payload,
         payload['email_address'],
         new_password,
         payload['pii_salt'],
+        payload['reqid'],
         min_length=min_pass_length,
         max_match_threshold=max_similarity
     )

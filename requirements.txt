@@ -2,7 +2,6 @@ tornado>=5.1
 cryptography>=2.3
 SQLAlchemy>=1.2.11
 argon2-cffi>=18.3.0
-fuzzywuzzy>=0.17.0
 diskcache>=3.0.6
 uvloop>=0.11.0
 confusable_homoglyphs>=3.2.0
