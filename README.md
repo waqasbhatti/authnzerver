@@ -22,7 +22,7 @@ replace them. It can do the following things:
   permissions, and target items. There is a [default
   scheme](https://github.com/waqasbhatti/authnzerver/blob/master/authnzerver/default-permissions-model.json)
   of permissions and user roles, originally from the LCC-Server where this code
-  was extracted from. Another permissions policy can be specified as JSON.
+  was extracted from. A custom permissions policy can be specified as JSON.
 
 See
 [TODO.md](https://github.com/waqasbhatti/authnzerver/blob/master/docs/TODO.md) for
@@ -76,6 +76,10 @@ virtualenv activated and the package installed: `authnzrv`.
                  and the auth DB. (default os.getcwd())
 --cachedir       Path to the cache directory to be used.
                  (default /tmp/authnzerver-cache)
+--confvars       Path to the file containing the configuration
+                 variables needed by the server and how to load
+                 them. (default /path/to/authnzerver/
+                 authnzerver/confvars.py)
 --debugmode      If 1, will enable an /echo endpoint for
                  debugging purposes. (default False)
 --emailpass      The password to use for login to the email
