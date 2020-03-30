@@ -210,6 +210,9 @@ def item_from_url(url,
                   timeout=5.0):
     '''Reads a conf item from a URL.
 
+    Parameters
+    ----------
+
     url : str
         The URL to fetch.
 
@@ -502,7 +505,7 @@ def get_conf_item(env_key,
 
             'base64.b64decode'
 
-        or a path to a Python module on disk and the object name separated by
+        or a path to a Python module on disk and the function name separated by
         '::' ::
 
             '~/some/directory/mymodule.py::custom_b64decode'
@@ -524,7 +527,7 @@ def get_conf_item(env_key,
     -------
 
     Any
-        The value of the secret.
+        The value of the configuration item.
 
     """
 
@@ -769,8 +772,109 @@ def get_conf_item(env_key,
 def load_config(conf_dict,
                 options_object,
                 envfile=None):
-    '''
-    This loads all the config items in config_dict.
+    '''Loads all the config items in config_dict.
+
+    Parameters
+    ----------
+
+    conf_dict : dict
+        This is a dict containing information on each config item to load and
+        return. Each key in this dict serves as the name of the config item and
+        the value for each key is a dict of the following form::
+
+            'conf_item_name':{
+                'env':'The environmental variable to check',
+                'cmdline':'The command-line option to check',
+                'type':the Python type of the config item,
+                'default':a default value for the config item or None,
+                'help':'The help string to use for the command-line option',
+                'readable_from_file':how to retrieve the item (see below),
+                'postprocess_value': 'func to postprocess the item (see below)',
+            },
+
+        The ``'readable_from_file'`` key in each config item's dict indicates
+        how the value present in either the environment variable or the
+        command-line option will be used to retrieve the config item. This is
+        one of the following:
+
+        - ``'string'``: read a file and use the resulting string as the value of
+          the config item. The trailing ``\\n`` character will be stripped. This
+          is useful for simple text secret keys stored in a file on disk, etc.
+
+        - ``'json'``: read the entire file as JSON and return the loaded dict as
+          the value of the config item.
+
+        - ``('json','path.to.item.or.listitem._arr_0')``: read the entire file
+          as JSON, resolve the JSON object path pointed to by the second tuple
+          element, get the value there and return it as the value of the config
+          item.
+
+        - ``('http',{method dict},'string')``: HTTP GET/POST the URL pointed to
+          by the config item key, assume the value returned is plain-text and
+          return it as the value of the config item. This can be useful for
+          things stored in AWS/GCP metadata servers.
+
+        - ``('http',{method dict},'json')``: HTTP GET/POST the URL pointed to by
+          the config item key, load it as JSON, and return the loaded dict as
+          the value of the config item.
+
+        - ``('http',{method dict},'json','path.to.item.or.listitem._arr_0')``:
+          HTTP GET the URL pointed to by the config key, load it as JSON,
+          resolve the JSON object path pointed to by the fourth element of the
+          tuple, get the value there and return it as the value of the config
+          item.
+
+        The ``{method dict}`` is a dict of the following form::
+
+            {'method':'post' or 'get',
+             'headers':dict of header keys and values to send or None,
+             'data':data dict to attach to the POST request or param dict to
+                    attach to the GET request or None,
+             'timeout': time in seconds to wait for a response}
+
+        Using the method dict allows you to add in authentication headers and
+        data needed to gain access to the URL indicated by the config item key.
+
+        If an item in the 'headers' or 'data' dicts requires something from an
+        environment variable or .env file, indicate this by using ``'[[NAME OF
+        ENV VAR]]'`` in the value of that key. For example, to get a bearer
+        token to use in the 'Authorization' header::
+
+            method_dict['headers'] = {'Authorization': 'Bearer [[API_KEY]]'}
+
+        This will look up the environment variable 'API_KEY' and substitute
+        that value in.
+
+        The ``'postprocess_value'`` key in each config item's dict is used to
+        point to a Python function to post-process the config item after it has
+        been retrieved. The function must take one argument and return
+        one item. The function is specified as either a fully qualified Python
+        module name and function name, e.g.::
+
+            'base64.b64decode'
+
+        or a path to a Python module on disk and the function name separated by
+        '::' ::
+
+            '~/some/directory/mymodule.py::custom_b64decode'
+
+    options_object : Tornado options object
+        If the environment variable isn't defined for a config item, the next
+        place this function will try to get the item value from a passed-in
+        `Tornado options <http://www.tornadoweb.org/en/stable/options.html>`_
+        object, which parses command-line options.
+
+    envfile : str or None
+        The path to a file containing key=value pairs in the same manner as
+        environment variables. This serves as an override to any environment
+        variables that this function looks up to find config items.
+
+    Returns
+    -------
+
+    loaded_config : SimpleNamespace object
+        This returns an object with the parsed final values of each of the
+        config items as object attributes.
 
     '''
 
