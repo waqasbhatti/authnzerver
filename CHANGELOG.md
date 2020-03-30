@@ -1,4 +1,4 @@
-# authnzerver v0.1.3 - unreleased
+# authnzerver v0.1.3 - 2020-03-30
 
 ## New stuff
 
