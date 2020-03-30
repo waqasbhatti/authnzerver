@@ -770,7 +770,7 @@ def test_get_conf_item_postprocess(monkeypatch, requests_mock, tmpdir):
         outfd.write("""
 import base64
 
-def custom_decode(input):
+def custom_b64decode(input):
     return base64.b64decode(input.encode('utf-8')).decode('utf-8')
 """)
 
@@ -804,7 +804,7 @@ def custom_decode(input):
                     'communications between authnzerver and '
                     'any frontend servers.'),
             'readable_from_file':readable_from_file,
-            'postprocess_value':'%s::custom_decode' % function_file,
+            'postprocess_value':'%s::custom_b64decode' % function_file,
         }
     }
 

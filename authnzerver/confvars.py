@@ -89,7 +89,7 @@ Notice that we used a path to a Python module and function for the
 
     import base64
 
-    def custom_decode(input):
+    def custom_b64decode(input):
         return base64.b64decode(input.encode('utf-8')).decode('utf-8')
 
 The function above will base64 decode the value returned from the Secrets
