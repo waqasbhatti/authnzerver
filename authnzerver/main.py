@@ -32,6 +32,8 @@ import time
 from functools import partial
 import shutil
 
+from sqlalchemy.exc import IntegrityError
+
 
 # setup signal trapping on SIGINT
 def _recv_sigint(signum, stack):
@@ -113,7 +115,6 @@ def _close_authentication_database():
 ########################################################
 
 from .modtools import object_from_string
-
 from .confvars import CONF
 
 # this is the module path
@@ -183,6 +184,7 @@ def main():
     from .external.futures37.process import ProcessPoolExecutor
     from .autosetup import autogen_secrets_authdb
     from .confload import load_config
+    from . import authdb as authdb_module
 
     ##############
     ## HANDLERS ##
@@ -265,7 +267,7 @@ def main():
     #
     # set up the authdb, secret, and permissions model
     #
-    authdb = loaded_config.authdb
+    auth_database_url = loaded_config.authdb
     secret = loaded_config.secret
     permissions = loaded_config.permissions
 
@@ -275,7 +277,7 @@ def main():
     executor = ProcessPoolExecutor(
         max_workers=maxworkers,
         initializer=_setup_auth_worker,
-        initargs=(authdb, secret, permissions),
+        initargs=(auth_database_url, secret, permissions),
         finalizer=_close_authentication_database
     )
 
@@ -296,7 +298,7 @@ def main():
         # put in the echo handler for debugging
         handlers.append(
             (r'/echo', EchoHandler,
-             {'authdb':authdb,
+             {'authdb':auth_database_url,
               'fernet_secret':secret,
               'executor':executor})
         )
@@ -318,21 +320,56 @@ def main():
     # start up the HTTP server and our application
     http_server = tornado.httpserver.HTTPServer(app)
 
-    ######################################################
-    ## CLEAR THE CACHE AND REAP OLD SESSIONS ON STARTUP ##
-    ######################################################
+    #####################################################################
+    ## CLEAR THE CACHE, CHECK THE DB, AND REAP OLD SESSIONS ON STARTUP ##
+    #####################################################################
 
+    # clear cache
     removed_items = cache.cache_flush(
         cache_dirname=cachedir
     )
     LOGGER.info('Removed %s stale items from authnzerver cache.' %
                 removed_items)
 
+    # check the authdb is set up with the correct tables
+    # running these after the DB is already set up doesn't do anything
+    if 'sqlite:///' in auth_database_url:
+        authdb_module.create_sqlite_authdb(
+            auth_database_url.replace('sqlite:///','')
+        )
+    else:
+        authdb_module.create_authdb(
+            auth_database_url
+        )
+
+    # do the initial inserts again, just to be sure
+    # running these again won't do anything if they're set up already
+    try:
+
+        authdb_module.initial_authdb_inserts(
+            auth_database_url,
+            permissions_json=permissions
+        )
+        LOGGER.warning("Auth DB at the provided URL was not previously "
+                       "set up for use with authnzerver and has "
+                       "been (re)initialized.")
+
+    except IntegrityError:
+
+        LOGGER.info(
+            "Auth DB is already set up "
+            "at the provided database URL."
+        )
+
+    except Exception:
+        LOGGER.error("Could not open the authentication "
+                     "database at the provided URL.")
+        raise
+
+    # set up periodic session-killer function and kill old sessions
     session_killer = partial(actions.auth_kill_old_sessions,
                              session_expiry_days=sessionexpiry,
-                             override_authdb_path=authdb)
-
-    # run once at start up
+                             override_authdb_path=auth_database_url)
     session_killer()
 
     ######################

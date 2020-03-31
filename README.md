@@ -35,9 +35,12 @@ with symmetric encryption using the [cryptography](https://cryptography.io)
 package's [Fernet scheme](https://cryptography.io/en/latest/fernet/), so you'll
 need a pre-shared key that both Authnzerver and your frontend server know.
 
-See [API.md](https://github.com/waqasbhatti/authnzerver/blob/master/docs/API.md)
-for details on the HTTP API. Also see the (in-progress) [Python module
-documentation](https://authnzerver.readthedocs.io/en/latest/).
+See [the HTTP API docs](https://authnzerver.readthedocs.io/en/latest/api.html)
+for details on how to call Authnzerver from a frontend service.
+
+More docs will be available at Authnzerver's (in-progress) [Read The
+Docs](https://authnzerver.readthedocs.io/en/latest/) site.
+
 
 ## Installation
 
