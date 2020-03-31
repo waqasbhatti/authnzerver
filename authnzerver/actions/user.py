@@ -139,9 +139,12 @@ def validate_input_password(
     # is all white space
     if len(squeeze(password.strip())) < min_length:
 
-        LOGGER.warning('Password for new account '
+        LOGGER.warning('[%s] Password for new account '
                        'with email: %s is too short (%s chars < required %s).' %
-                       (pii_hash(email, pii_salt), len(password), min_length))
+                       (reqid,
+                        pii_hash(email, pii_salt),
+                        len(password),
+                        min_length))
         messages.append('Your password is too short. '
                         'It must have at least %s characters.' % min_length)
         passlen_ok = False
@@ -150,10 +153,10 @@ def validate_input_password(
 
     # check if the password is straight-up dumb
     if password.casefold() in validators.TOP_10K_PASSWORDS:
-        LOGGER.warning('Password for new account '
+        LOGGER.warning('[%s] Password for new account '
                        'with email: %s was found in the '
                        'top 10k passwords list.' %
-                       (pii_hash(email, pii_salt),))
+                       (reqid, pii_hash(email, pii_salt)))
         messages.append('Your password is on the list of the '
                         'most common passwords and is vulnerable to guessing.')
         tenk_ok = False
@@ -187,13 +190,16 @@ def validate_input_password(
     name_ok = name_match < max_match_threshold
 
     if not fqdn_ok or not email_ok or not name_ok:
-        LOGGER.warning('Password for new account '
+        LOGGER.warning('[%s] Password for new account '
                        'with email: %s matches FQDN '
                        '(similarity: %.1f), their name (similarity: %.1f), '
                        ' or their email address '
                        '(similarity: %.1f).' %
-                       (pii_hash(email, pii_salt),
-                        fqdn_match, name_match, email_match))
+                       (reqid,
+                        pii_hash(email, pii_salt),
+                        fqdn_match,
+                        name_match,
+                        email_match))
         messages.append('Your password is too similar to either '
                         'the domain name of this server or your '
                         'own name or email address.')
@@ -211,11 +217,11 @@ def validate_input_password(
     for h in histogram:
         if (histogram[h]/len(password)) > 0.2:
             hist_ok = False
-            LOGGER.warning('Password for new account '
+            LOGGER.warning('[%s] Password for new account '
                            'with email: %s does not have enough entropy. '
                            'One character is more than '
                            '0.2 x length of the password.' %
-                           pii_hash(email, pii_salt))
+                           (reqid, pii_hash(email, pii_salt)))
             messages.append(
                 'Your password is not complex enough. '
                 'One or more characters appear appear too frequently.'
@@ -225,9 +231,9 @@ def validate_input_password(
     # check if the password is all numeric
     if password.isdigit():
         numeric_ok = False
-        LOGGER.warning('Password for new account '
+        LOGGER.warning('[%s] Password for new account '
                        'with email: %s is all numbers.' %
-                       pii_hash(email, pii_salt))
+                       (reqid, pii_hash(email, pii_salt)))
         messages.append('Your password cannot be all numbers.')
     else:
         numeric_ok = True
