@@ -12,13 +12,15 @@ A request is of the form::
 
   {'request': one of the request names below,
    'body': a dict containing the arguments for the request,
-   'reqid': any integer used to keep track of the request flow}
+   'reqid': any integer or string (preferably a UUID) used to keep track
+            of the request flow}
 
 A response, when decrypted and deserialized to a dict, is of the form::
 
   {'success': True or False,
    'response': dict containing the response items based on the request,
-   'messages': a list of str containing informative/warning/error messages}
+   'messages': a list of str containing informative/warning/error messages,
+   'reqid': returns the same request ID provided to the authnzerver}
 
 The sections below describe the various available request types, how to
 construct the ``body`` dict, and what to expect in the ``response`` dict.
