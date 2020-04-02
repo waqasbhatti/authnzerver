@@ -154,6 +154,10 @@ class BaseHandler(tornado.web.RequestHandler):
             - cache_dir: The directory where the rate-limiting cache will be set
               up
 
+            - api_key_expiry: The number of days after which a previously
+              issued API key (presented in the Authorization: Bearer
+              [token] header) expires.
+
         executor : Executor instance
             A concurrent.futures.ProcessPoolExecutor or
             concurrent.futures.ThreadPoolExecutor instance that will run
@@ -180,7 +184,11 @@ class BaseHandler(tornado.web.RequestHandler):
         self.session_expiry = conf.session_expiry_days
         self.session_cookie_name = conf.session_cookie_name
         self.session_cookie_secure = conf.session_cookie_secure
-        self.cachedir = conf.cache_dir
+        self.cache_dir = conf.cache_dir
+        self.api_key_expiry = conf.api_key_expiry
+
+        # we'll only accept issuers that correspond to the authnzerver we know
+        self.api_key_issuer = self.authnzerver_url
 
         # localhost secure cookies over HTTP don't work anymore.
         # override the session_cookie_secure attribute if we're listening to
@@ -192,9 +200,9 @@ class BaseHandler(tornado.web.RequestHandler):
         # we'll set this later in self.prepare()
         self.current_user = None
 
-        # apikey verification info
-        self.apikey_verified = False
-        self.apikey_dict = None
+        # api_key verification info
+        self.api_key_verified = False
+        self.api_key_dict = None
 
     def set_cookie(self,
                    name,
@@ -416,7 +424,7 @@ class BaseHandler(tornado.web.RequestHandler):
                          'Will fail this request.' % self.reqid)
             raise tornado.web.HTTPError(statuscode=401)
 
-    async def check_auth_header_apikey(self):
+    async def check_auth_header_api_key(self):
         '''
         This checks the API key provided in the header of the HTTP request.
 
@@ -432,53 +440,57 @@ class BaseHandler(tornado.web.RequestHandler):
                 # backend
                 key = authorization.split()[1].strip()
 
-                # do the Fernet decrypt using TTL = self.apikey_expiry
-                decrypted_bytes = self.ferneter.decrypt(
+                ferneter = Fernet()
+
+                # do the Fernet decrypt using TTL = self.api_key_expiry
+                decrypted_bytes = ferneter.decrypt(
                     key.encode(),
-                    ttl=self.apikey_expiry*86400.0
+                    ttl=self.api_key_expiry*86400.0
                 )
 
-                # if decrypt OK, JSON load the apikey dict
-                apikey_dict = json.loads(decrypted_bytes)
+                # if decrypt OK, JSON load the api_key dict
+                api_key_dict = json.loads(decrypted_bytes)
 
                 # check if the current ip_address matches the the value stored
                 # in the dict. if not, fail this request immediately. if it
                 # does, send the dict on to the backend for additional
                 # verification.
 
-                # check the apikey IP address against the current one
+                # check the api_key IP address against the current one
                 ipaddr_ok = (
-                    self.request.remote_ip == apikey_dict['ipa']
+                    self.request.remote_ip == api_key_dict['ipa']
                 )
 
-                # check the apikey version against the current one
-                apiversion_ok = self.apikey_apiversion == apikey_dict['ver']
+                # check the api_key version against the current one
+                apiversion_ok = (
+                    self.api_key_apiversion == api_key_dict['ver']
+                )
 
-                # check the apikey audience against the host of our server
-                audience_ok = self.request.host == apikey_dict['aud']
+                # check the api_key audience against the host of our server
+                audience_ok = self.request.host == api_key_dict['aud']
 
-                # check the apikey subject against the current URL or if it's
-                # 'all', allow it in
-                if isinstance(apikey_dict['sub'], (tuple, list)):
+                # check the api_key subject against the current URL or if
+                # it's 'all', allow it in
+                if isinstance(api_key_dict['sub'], (tuple, list)):
                     subject_ok = (
-                        self.request.uri in apikey_dict['sub']
+                        self.request.uri in api_key_dict['sub']
                     )
-                elif (isinstance(apikey_dict['sub'], str) and
-                      apikey_dict['sub'] == 'all'):
+                elif (isinstance(api_key_dict['sub'], str) and
+                      api_key_dict['sub'] == 'all'):
                     subject_ok = True
                 else:
                     subject_ok = False
 
                 # check the issuer (this is usually the authnzerver's name or
                 # actual address)
-                issuer_ok = self.apikey_issuer == apikey_dict['iss']
+                issuer_ok = self.api_key_issuer == api_key_dict['iss']
 
-                # pass apikey dict to the backend to check for:
+                # pass api_key dict to the backend to check for:
                 # 1. not-before,
                 # 2. expiry again,
                 # 3. match to the user ID
                 # 4. match to the user role,
-                # 5. match to the actual apikey token
+                # 5. match to the actual api_key token
                 if (ipaddr_ok and
                     apiversion_ok and
                     audience_ok and
@@ -487,8 +499,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
                     verify_ok, resp, msgs = (
                         await self.authnzerver_request(
-                            'apikey-verify',
-                            {'apikey_dict':apikey_dict}
+                            'api_key-verify',
+                            {'api_key_dict':api_key_dict}
                         )
                     )
 
@@ -498,11 +510,11 @@ class BaseHandler(tornado.web.RequestHandler):
                         retdict = {
                             'status':'ok',
                             'message':msgs,
-                            'result': apikey_dict
+                            'result': api_key_dict
                         }
 
-                        self.apikey_verified = True
-                        self.apikey_dict = apikey_dict
+                        self.api_key_verified = True
+                        self.api_key_dict = api_key_dict
                         return retdict
 
                     else:
@@ -513,8 +525,8 @@ class BaseHandler(tornado.web.RequestHandler):
                             'message':msgs,
                             'result': None
                         }
-                        self.apikey_verified = False
-                        self.apikey_dict = None
+                        self.api_key_verified = False
+                        self.api_key_dict = None
                         return retdict
 
                 # if the key doesn't pass initial verification, fail this
@@ -530,12 +542,12 @@ class BaseHandler(tornado.web.RequestHandler):
                         'current request subject = %s, '
                         'current request audience = %s' %
                         (self.reqid,
-                         apikey_dict['ipa'],
-                         apikey_dict['ver'],
-                         apikey_dict['sub'],
-                         apikey_dict['aud'],
-                         self.request.remote_ip,
-                         self.apikey_apiversion,
+                         pii_hash(api_key_dict['ipa'], self.pii_salt),
+                         api_key_dict['ver'],
+                         api_key_dict['sub'],
+                         api_key_dict['aud'],
+                         pii_hash(self.request.remote_ip, self.pii_salt),
+                         self.api_key_apiversion,
                          self.request.host,
                          self.request.uri)
                     )
@@ -547,8 +559,8 @@ class BaseHandler(tornado.web.RequestHandler):
                         'message':message,
                         'result':None
                     }
-                    self.apikey_verified = False
-                    self.apikey_dict = None
+                    self.api_key_verified = False
+                    self.api_key_dict = None
                     return retdict
 
             else:
@@ -564,8 +576,8 @@ class BaseHandler(tornado.web.RequestHandler):
                     'result':None
                 }
 
-                self.apikey_verified = False
-                self.apikey_dict = None
+                self.api_key_verified = False
+                self.api_key_dict = None
                 self.set_status(401)
                 return retdict
 
@@ -578,8 +590,8 @@ class BaseHandler(tornado.web.RequestHandler):
                 'result':None
             }
 
-            self.apikey_verified = False
-            self.apikey_dict = None
+            self.api_key_verified = False
+            self.api_key_dict = None
             self.set_status(401)
             return retdict
 
@@ -709,7 +721,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 '[%s] Using API Authorization header auth for this POST. '
                 'Passing through to the prepare function...' % self.reqid
             )
-            self.xsrf_type = 'apikey'
+            self.xsrf_type = 'api_key'
 
         else:
 
@@ -893,7 +905,7 @@ class BaseHandler(tornado.web.RequestHandler):
                     incrementfn = partial(
                         cache.cache_increment,
                         session_token,
-                        cache_dirname=self.cachedir
+                        cache_dirname=self.cache_dir
                     )
 
                     # increment the rate counter for this session token
@@ -908,7 +920,7 @@ class BaseHandler(tornado.web.RequestHandler):
                         getratefn = partial(
                             cache.cache_getrate,
                             session_token,
-                            cache_dirname=self.cachedir
+                            cache_dirname=self.cache_dir
                         )
 
                         # check the rate for this session token
@@ -1000,7 +1012,7 @@ class BaseHandler(tornado.web.RequestHandler):
                     incrementfn = partial(
                         cache.cache_increment,
                         session_token,
-                        cache_dirname=self.cachedir
+                        cache_dirname=self.cache_dir
                     )
 
                     await self.loop.run_in_executor(self.executor,
@@ -1028,11 +1040,11 @@ class BaseHandler(tornado.web.RequestHandler):
         else:
 
             # check if the API key is valid
-            apikey_check = await self.check_auth_header_apikey()
+            api_key_check = await self.check_auth_header_api_key()
 
-            if not apikey_check['status'] == 'ok':
+            if not api_key_check['status'] == 'ok':
 
-                message = apikey_check['message']
+                message = api_key_check['message']
 
                 self.post_check = {
                     'status':'failed',
@@ -1051,11 +1063,11 @@ class BaseHandler(tornado.web.RequestHandler):
             # from there
             else:
 
-                message = apikey_check['message']
+                message = api_key_check['message']
                 self.post_check = {
                     'status':'ok',
                     'message': message,
-                    'result':apikey_check['result']
+                    'result':api_key_check['result']
                 }
 
                 #
@@ -1077,15 +1089,15 @@ class BaseHandler(tornado.web.RequestHandler):
                 # - created <- set this to the API key created time
                 # - expires <- set this to the API key expiry time
                 self.current_user = {
-                    'user_id':self.apikey_dict['uid'],
+                    'user_id':self.api_key_dict['uid'],
                     'email':None,
                     'is_active':True,
-                    'user_role':self.apikey_dict['rol'],
+                    'user_role':self.api_key_dict['rol'],
                     'ip_address':self.request.remote_ip,
                     'user_agent':user_agent,
-                    'session_token':self.apikey_dict['tkn'],
-                    'created':self.apikey_dict['iat'],
-                    'expires':self.apikey_dict['exp'],
+                    'session_token':self.api_key_dict['tkn'],
+                    'created':self.api_key_dict['iat'],
+                    'expires':self.api_key_dict['exp'],
                 }
                 self.user_id = self.current_user['user_id']
                 self.user_role = self.current_user['user_role']
@@ -1096,8 +1108,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
                 incrementfn = partial(
                     cache.cache_increment,
-                    self.apikey_dict['tkn'],
-                    cache_dirname=self.cachedir
+                    self.api_key_dict['tkn'],
+                    cache_dirname=self.cache_dir
                 )
 
                 # increment the rate counter for this session token
@@ -1109,8 +1121,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
                     getratefn = partial(
                         cache.cache_getrate,
-                        self.apikey_dict['tkn'],
-                        cache_dirname=self.cachedir
+                        self.api_key_dict['tkn'],
+                        cache_dirname=self.cache_dir
                     )
 
                     # check the rate for this session token
@@ -1134,7 +1146,8 @@ class BaseHandler(tornado.web.RequestHandler):
                             'their allowed rate for their role = %s. '
                             'total reqs = %s, time_zero = %s'
                             % (self.reqid,
-                               pii_hash(self.apikey_dict['tkn'], self.pii_salt),
+                               pii_hash(self.api_key_dict['tkn'],
+                                        self.pii_salt),
                                request_rate,
                                self.user_role,
                                keycount, time_zero)
