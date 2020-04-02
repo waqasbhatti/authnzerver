@@ -1,38 +1,33 @@
 # -*- coding: utf-8 -*-
-# frontendbase.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Sep 2018
 
-'''This is an example Tornado BaseHandler that knows how to authenticate users
-and verify API keys using HTTP and the pre-shared secret key to talk to the
-authnzerver.
-
-It runs the authentication/authorization workflow in a background
-ProcessPoolExecutor or ThreadPoolExecutor.
+'''This is the base handler all other request handlers inherit from.
 
 '''
+
+#############
+## LOGGING ##
+#############
+
+import logging
+LOGGER = logging.getLogger(__name__)
+
 
 ####################
 ## SYSTEM IMPORTS ##
 ####################
 
-import logging
 from datetime import datetime, timedelta
-import random
-from base64 import b64encode, b64decode
 import re
 from hmac import compare_digest
-
-from cryptography.fernet import Fernet, InvalidToken
-
-
-######################################
-## CUSTOM JSON ENCODER FOR FRONTEND ##
-######################################
-
-# we need this to send objects with the following types to the frontend:
-# - bytes
-# - datetime
 import json
+from functools import partial
+from base64 import b64encode, b64decode
+from secrets import token_urlsafe
 
+
+###########################
+## SETUP JSON SERIALIZER ##
+###########################
 
 class FrontendEncoder(json.JSONEncoder):
 
@@ -54,75 +49,71 @@ class FrontendEncoder(json.JSONEncoder):
 json._default_encoder = FrontendEncoder()
 
 
-#############
-## LOGGING ##
-#############
-
-# get a logger
-LOGGER = logging.getLogger(__name__)
-
-
 #####################
 ## TORNADO IMPORTS ##
 #####################
 
 import tornado.web
 from tornado.escape import utf8, native_str
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado import gen
 from tornado import httputil
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
+####################################
+## AUTHNZERVER IMPORTS AND CONFIG ##
+####################################
 
-###################
-## LOCAL IMPORTS ##
-###################
+from cryptography.fernet import Fernet, InvalidToken
 
 from authnzerver.external.cookies import cookies
-from authnzerver.actions import authnzerver_send_email
-from authnzerver.authdb import check_role_limits
 from authnzerver import cache
+from authnzerver.permissions import pii_hash
 
 
-#######################
-## UTILITY FUNCTIONS ##
-#######################
+######################
+## MESSAGE HANDLING ##
+######################
 
-def decrypt_response(response_base64, fernetkey):
+def encrypt_message(message_dict, key):
     '''
-    This decrypts the incoming response from authnzerver.
+    This encrypts the message using the Fernet scheme.
 
     '''
 
-    frn = Fernet(fernetkey)
+    frn = Fernet(key)
+    json_bytes = json.dumps(message_dict).encode()
+    json_encrypted_bytes = frn.encrypt(json_bytes)
+    request_base64 = b64encode(json_encrypted_bytes)
+    return request_base64
+
+
+def decrypt_message(message, key, reqid):
+    '''
+    This decrypts the message using the Fernet scheme.
+
+    '''
+    frn = Fernet(key)
 
     try:
 
-        response_bytes = b64decode(response_base64)
+        response_bytes = b64decode(message)
         decrypted = frn.decrypt(response_bytes)
         return json.loads(decrypted)
 
     except InvalidToken:
 
-        LOGGER.error('invalid response could not be decrypted')
+        LOGGER.error(
+            '[%s] Invalid response from authnzerver could not be decrypted.' %
+            reqid
+        )
         return None
 
-    except Exception:
+    except Exception as e:
 
-        LOGGER.exception('could not understand incoming response')
+        LOGGER.error(
+            '[%s] Could not understand incoming response from authnzerver, '
+            ' exception was: %r' % (reqid, e)
+        )
         return None
-
-
-def encrypt_request(request_dict, fernetkey):
-    '''
-    This encrypts the outgoing request to authnzerver.
-
-    '''
-
-    frn = Fernet(fernetkey)
-    json_bytes = json.dumps(request_dict).encode()
-    json_encrypted_bytes = frn.encrypt(json_bytes)
-    request_base64 = b64encode(json_encrypted_bytes)
-    return request_base64
 
 
 ########################
@@ -133,13 +124,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def initialize(
             self,
-            authnzerver,
-            fernetkey,
+            conf,
             executor,
-            session_settings,
-            api_settings,
-            email_settings,
-            cachedir,
     ):
         '''
         This just sets up some stuff.
@@ -147,63 +133,47 @@ class BaseHandler(tornado.web.RequestHandler):
         Parameters
         ----------
 
-        authnzerver : str
-            The address of the backend authnzerver to talk to.
-
-        fernetkey : str
-            The key to use to encrypt communication between this frontend and
-            the backend authnzerver.
+        conf : object
+            The server config loaded as an object. This should have attributes
+            defining several things we need.
 
         executor : Executor instance
             A concurrent.futures.ProcessPoolExecutor or
             concurrent.futures.ThreadPoolExecutor instance that will run
             background queries to the authnzerver.
 
-        session_settings : dict
-            This is a dict containing various session settings::
-
-                {'expiry_days': number of days after which user sessions expire,
-                 'cookie_name': the name of the cookie to use for sessions,
-                 'cookie_secure': whether the session cookie has secure=true}
-
-        api_settings : dict
-            This is a dict containing various API settings::
-
-                {'maxrate_60sec': number of requests allowed per 60 seconds,
-                 'version': the API version to match against for requests,
-                 'expiry_days': the number of days an API key is valid for,
-                 'issuer': the API key issuer to match against}
-
-        email_settings : dict
-            This is a dict containing various email server settings::
-
-                {'email_server': the address of the email server to use,
-                 'email_port': the SMTP port of the email server,
-                 'email_user': the SMTP user name to use to login,
-                 'email_pass': the SMTP password to use to login}
-
-        cachedir : str
-            The directory to be used for the cache and rate-limit data.
-
         '''
 
-        self.authnzerver = authnzerver
-        self.fernetkey = fernetkey
-        self.ferneter = Fernet(fernetkey)
+        # the IOLoop instance
+        self.loop = tornado.ioloop.IOLoop.current()
+
+        # the AsyncHTTPClient for talking to the authnzerver
+        self.httpclient = AsyncHTTPClient()
+
+        # this is the request ID for this request
+        self.reqid = token_urlsafe(8)
+
+        # this is the executor to use for this request
         self.executor = executor
-        self.httpclient = AsyncHTTPClient(force_instance=True)
 
-        self.cachedir = cachedir
-        self.email_settings = email_settings
+        #
+        # load the config as needed
+        #
+        self.basedir = conf.basedir
 
-        self.session_expiry = session_settings['expiry_days']
-        self.session_cookie_name = session_settings['cookie_name']
-        self.session_cookie_secure = session_settings['cookie_secure']
+        # auth config
+        self.pii_salt = conf.pii_salt
+        self.authnzerver_key = conf.authnzerver_key
+        self.authnzerver_url = conf.authnzerver_url
+        self.session_expiry = conf.session_settings['expiry_days']
+        self.session_cookie_name = conf.session_settings['cookie_name']
+        self.session_cookie_secure = conf.session_settings['cookie_secure']
 
-        self.apikey_apiversion = api_settings['version']
-        self.apikey_expiry = api_settings['expiry_days']
-        self.apikey_issuer = api_settings['issuer']
-        self.ratelimit = api_settings['maxrate_60sec']
+        # localhost secure cookies over HTTP don't work anymore
+        if self.request.remote_ip == '127.0.0.1':
+            self.session_cookie_secure = False
+
+        self.cachedir = conf.cache_dir
 
         # initialize this to None
         # we'll set this later in self.prepare()
@@ -213,8 +183,15 @@ class BaseHandler(tornado.web.RequestHandler):
         self.apikey_verified = False
         self.apikey_dict = None
 
-    def set_cookie(self, name, value, domain=None, expires=None, path="/",
-                   expires_days=None, **kwargs):
+    def set_cookie(self,
+                   name,
+                   value,
+                   domain=None,
+                   expires=None,
+                   path="/",
+                   expires_days=None,
+                   use_host_prefix=False,
+                   **kwargs):
         """Sets an outgoing cookie name/value with the given options.
 
         Newly-set cookies are not immediately visible via `get_cookie`;
@@ -223,6 +200,15 @@ class BaseHandler(tornado.web.RequestHandler):
         expires may be a numeric timestamp as returned by `time.time`,
         a time tuple as returned by `time.gmtime`, or a
         `datetime.datetime` object.
+
+        If ``use_host_prefix = True``, then all cookies will be prefixed with
+        the string "__Host-" to tie the cookie to a specific host, as
+        recommended by:
+
+        https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-4.1.3
+
+        If the ``use_host_prefix`` kwarg is True, then domain must be None and
+        path = '/' and the 'secure' cookie flag must be on.
 
         Additional keyword arguments are set on the cookies.Morsel
         directly.
@@ -237,21 +223,31 @@ class BaseHandler(tornado.web.RequestHandler):
         627eafb3ce21a777981c37a5867b5f1956a4dc16/tornado/web.py#L528
 
         The main reason for bundling this in here is to allow use of the
-        SameSite attribute for cookies via our vendored cookies library.
+        SameSite attribute for cookies via our vendored cookies library and
+        allow adding in the --Host- prefix.
 
         """
+
+        if (use_host_prefix and
+            domain is None and
+            path == '/' and
+            kwargs.get('secure',False)):
+            use_name = '__Host-%s' % name
+        else:
+            use_name = name
+
         # The cookie library only accepts type str, in both python 2 and 3
-        name = native_str(name)
+        use_name = native_str(use_name)
         value = native_str(value)
-        if re.search(r"[\x00-\x20]", name + value):
+        if re.search(r"[\x00-\x20]", use_name + value):
             # Don't let us accidentally inject bad stuff
-            raise ValueError("Invalid cookie %r: %r" % (name, value))
+            raise ValueError("Invalid cookie %r: %r" % (use_name, value))
         if not hasattr(self, "_new_cookie"):
             self._new_cookie = cookies.SimpleCookie()
-        if name in self._new_cookie:
-            del self._new_cookie[name]
-        self._new_cookie[name] = value
-        morsel = self._new_cookie[name]
+        if use_name in self._new_cookie:
+            del self._new_cookie[use_name]
+        self._new_cookie[use_name] = value
+        morsel = self._new_cookie[use_name]
         if domain:
             morsel["domain"] = domain
         if expires_days is not None and not expires:
@@ -272,53 +268,79 @@ class BaseHandler(tornado.web.RequestHandler):
 
             morsel[k] = v
 
-    @gen.coroutine
-    def authnzerver_request(self, request_type, request_body):
+    async def authnzerver_request(self, request_type, request_body):
         '''
-        This talks to the authnzerver.
+        This runs an authnzerver request on the IOLoop executor.
 
         '''
 
-        reqid = random.randint(0,10000)
+        message_dict = {
+            'request':request_type,
+            'body':request_body,
+            'reqid': self.reqid
+        }
 
-        req = {'request':request_type,
-               'body':request_body,
-               'reqid':reqid}
-
-        encrypted_req = yield self.executor.submit(
-            encrypt_request,
-            req,
-            self.fernetkey
+        encrypted_request = await self.loop.run_in_executor(
+            self.executor,
+            self.encrypt_message,
+            message_dict,
+            self.authnzerver_key,
         )
-        auth_req = HTTPRequest(
-            self.authnzerver,
+
+        authnzerver_reqsetup = HTTPRequest(
+            self.authnzerver_url,
             method='POST',
-            body=encrypted_req
+            body=encrypted_request,
+            connect_timeout=5.0,
+            request_timeout=5.0,
         )
-        encrypted_resp = yield self.httpclient.fetch(
-            auth_req, raise_error=False
+        authnzerver_response = await self.httpclient.fetch(
+            authnzerver_reqsetup,
+            raise_error=False,
         )
 
-        if encrypted_resp.code != 200:
-
-            return False, None, None
-
-        else:
-
-            respdict = yield self.executor.submit(
-                decrypt_response,
-                encrypted_resp.body,
-                self.fernetkey
+        if authnzerver_response.code != 200:
+            LOGGER.error(
+                "[%s] Authnzerver did not respond to the "
+                "frontend request: %s. Response code was: %s." %
+                (self.reqid, request_type, authnzerver_response.code)
             )
+            return (False,
+                    None,
+                    ["Authnzerver did not respond "
+                     "to the frontend auth request."])
 
-            success = respdict['success']
-            response = respdict['response']
-            messages = respdict['response']['messages']
+        decrypted_response = await self.loop.run_in_executor(
+            self.executor,
+            self.decrypt_message,
+            authnzerver_response.body,
+            self.authnzerver_key,
+            self.reqid,
+        )
 
-            return success, response, messages
+        returned_reqid = decrypted_response['reqid']
 
-    @gen.coroutine
-    def new_session_token(self, user_id, expires_days=None, extra_info=None):
+        if returned_reqid != self.reqid:
+            LOGGER.error(
+                "[%s] Authnzerver responded with incorrect reqid. "
+                "The frontend request reqid was: %s. Response reqid was: %s." %
+                (self.reqid, self.reqid, returned_reqid)
+            )
+            return (False,
+                    None,
+                    ["Authnzerver did not respond "
+                     "to the frontend auth request."])
+
+        ok = decrypted_response['success']
+        response = decrypted_response['response']
+        messages = decrypted_response['response']['messages']
+
+        return ok, response, messages
+
+    async def new_session_token(self,
+                                user_id=None,
+                                expires_days=None,
+                                extra_info=None):
         '''
         This is a shortcut function to request a new session token.
 
@@ -333,8 +355,7 @@ class BaseHandler(tornado.web.RequestHandler):
         if not user_agent or len(user_agent.strip()) == 0:
             user_agent = 'no-user-agent'
 
-        # ask authnzerver for a session cookie
-        ok, resp, msgs = yield self.authnzerver_request(
+        ok, resp, msgs = await self.authnzerver_request(
             'session-new',
             {'ip_address': self.request.remote_ip,
              'user_agent': user_agent,
@@ -355,8 +376,9 @@ class BaseHandler(tornado.web.RequestHandler):
             expires_days = expires_days.days
 
             LOGGER.info(
-                'new session cookie for %s expires at %s, in %s days' %
-                (resp['session_token'],
+                '[%s] New session cookie for %s expires at %s, in %s days' %
+                (self.reqid,
+                 pii_hash(resp['session_token'], self.pii_salt),
                  resp['expires'],
                  expires_days)
             )
@@ -368,6 +390,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 httponly=True,
                 secure=self.session_cookie_secure,
                 samesite='lax',
+                use_host_prefix=True,
             )
 
             return resp['session_token']
@@ -376,70 +399,11 @@ class BaseHandler(tornado.web.RequestHandler):
 
             self.current_user = None
             self.clear_all_cookies()
-            LOGGER.error('Could not talk to the backend authnzerver. '
-                         'Will fail this request.')
+            LOGGER.error('[%s] Could not talk to the backend authnzerver. '
+                         'Will fail this request.' % self.reqid)
             raise tornado.web.HTTPError(statuscode=401)
 
-    @gen.coroutine
-    def email_current_user(self,
-                           sender_name_address,
-                           email_subject,
-                           email_body):
-        '''This sends an email to the current user.
-
-        You must provide a dict called email_settings to the BaseHandler's
-        constructor for this function to work properly. This will look something
-        like::
-
-                {'email_server': the address of the email server to use,
-                 'email_port': the SMTP port of the email server,
-                 'email_user': the SMTP user name to use to login,
-                 'email_pass': the SMTP password to use to login}
-
-        Parameters
-        ----------
-
-        sender_name_address : str
-            This is the email sender string to use in the usual form::
-
-                "Sender Name <sender@email.example.org>"
-
-        email_subject : str
-            The subject of the email message.
-
-        email_body : str
-            The body of the email message.
-
-        Returns
-        -------
-
-        bool:
-            If message sending succeeded, will return True, otherwise False.
-
-        '''
-
-        if (self.email_settings['email_server'] is not None and
-            (self.current_user['user_role'] in
-             ('superuser', 'staff', 'authenticated'))):
-
-            email_sent = yield self.executor.submit(
-                authnzerver_send_email,
-                sender_name_address,
-                email_subject,
-                email_body,
-                [self.current_user['email']],
-                self.email_settings['email_server'],
-                self.email_settings['email_user'],
-                self.email_settings['email_pass'],
-                port=self.email_settings['email_port']
-            )
-            return email_sent
-
-        else:
-            return False
-
-    @gen.coroutine
-    def check_auth_header_apikey(self):
+    async def check_auth_header_apikey(self):
         '''
         This checks the API key provided in the header of the HTTP request.
 
@@ -508,9 +472,11 @@ class BaseHandler(tornado.web.RequestHandler):
                     subject_ok and
                     issuer_ok):
 
-                    verify_ok, resp, msgs = yield self.authnzerver_request(
-                        'apikey-verify',
-                        {'apikey_dict':apikey_dict}
+                    verify_ok, resp, msgs = (
+                        await self.authnzerver_request(
+                            'apikey-verify',
+                            {'apikey_dict':apikey_dict}
+                        )
                     )
 
                     # check if backend agrees it's OK
@@ -543,14 +509,15 @@ class BaseHandler(tornado.web.RequestHandler):
                 else:
 
                     message = (
-                        'One of the provided API key IP address = %s, '
+                        '[%s] One of the provided API key IP address = %s, '
                         'API version = %s, subject = %s, audience = %s '
                         'do not match the '
                         'current request IP address = %s, '
                         'current API version = %s, '
                         'current request subject = %s, '
                         'current request audience = %s' %
-                        (apikey_dict['ipa'],
+                        (self.reqid,
+                         apikey_dict['ipa'],
                          apikey_dict['ver'],
                          apikey_dict['sub'],
                          apikey_dict['aud'],
@@ -574,7 +541,8 @@ class BaseHandler(tornado.web.RequestHandler):
             else:
 
                 LOGGER.error(
-                    'no Authorization header key found for API key auth.'
+                    '[%s] No Authorization header key found for API key auth.' %
+                    self.reqid
                 )
                 retdict = {
                     'status':'failed',
@@ -590,7 +558,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
         except Exception:
 
-            LOGGER.exception('could not verify API key.')
+            LOGGER.exception('[%s] Could not verify API key.' % self.reqid)
             retdict = {
                 'status':'failed',
                 'message':'Your API key appears to be invalid or has expired.',
@@ -661,7 +629,6 @@ class BaseHandler(tornado.web.RequestHandler):
                 'message':("Successful XSRF cookie match to POST argument"),
                 'result': None
             }
-            LOGGER.warning(retdict['message'])
             return retdict
 
     def check_xsrf_cookie(self):
@@ -718,19 +685,23 @@ class BaseHandler(tornado.web.RequestHandler):
 
         if xsrf_auth:
 
-            LOGGER.info('using tornado XSRF auth...')
+            LOGGER.info('[%s] Using tornado XSRF auth for this POST...' %
+                        self.reqid)
             self.xsrf_type = 'session'
             self.keycheck = self.tornado_check_xsrf_cookie()
 
         elif self.request.headers.get("Authorization"):
 
-            LOGGER.info('using API Authorization header auth. '
-                        'passing through to the prepare function...')
+            LOGGER.info(
+                '[%s] Using API Authorization header auth for this POST. '
+                'Passing through to the prepare function...' % self.reqid
+            )
             self.xsrf_type = 'apikey'
 
         else:
 
-            LOGGER.info('No Authorization key found in request header.')
+            LOGGER.info('[%s] No Authorization key found in request header.' %
+                        self.reqid)
             self.xsrf_type = 'unknown'
             self.keycheck = {
                 'status':'failed',
@@ -740,11 +711,103 @@ class BaseHandler(tornado.web.RequestHandler):
                 'result':None
             }
 
-    @gen.coroutine
-    def prepare(self):
+    def render_blocked_message(self):
+        '''
+        This renders the template indicating that the user is blocked.
+
+        '''
+
+        self.set_status(403)
+        self.render(
+            'errorpage.html',
+            baseurl=self.conf.base_url,
+            current_user=self.current_user,
+            conf=self.conf,
+            page_title="403 - You cannot access this page",
+            flash_message_list=self.flash_message_list,
+            alert_type=self.alert_type,
+            error_message=(
+                "Sorry, it appears that you're not authorized to "
+                "view the page you were trying to get to. "
+                "If you believe this is in error, please contact "
+                "the admins of this server instance."
+            ),
+        )
+
+    def render_page_not_found(self, message=None):
+        '''
+        This renders the template indicating that the user is blocked.
+
+        '''
+
+        if not message:
+            error_message = (
+                "Sorry, we can't find a server page with that name."
+            )
+        else:
+            error_message = message
+
+        self.set_status(404)
+        self.render(
+            'errorpage.html',
+            baseurl=self.conf.base_url,
+            current_user=self.current_user,
+            conf=self.conf,
+            page_title="404 - Item not found",
+            flash_message_list=self.flash_message_list,
+            alert_type=self.alert_type,
+            error_message=error_message,
+        )
+
+    def save_flash_messages(self, messages, alert_type):
+        '''
+        This saves the flash messages to a secure cookie.
+
+        '''
+
+        if isinstance(messages, list):
+            outmsg = json.dumps({
+                'text':messages,
+                'type':alert_type
+            })
+
+        elif isinstance(messages,str):
+            outmsg = json.dumps({
+                'text':[messages],
+                'type':alert_type
+            })
+
+        else:
+            outmsg = ''
+
+        self.set_secure_cookie(
+            'server_messages',
+            outmsg,
+            httponly=True,
+            secure=self.csecure,
+            samesite='lax',
+            use_host_prefix=True,
+        )
+
+    def get_flash_messages(self):
+        '''
+        This gets the previous saved flash messages from a secure cookie.
+
+        '''
+
+        messages = self.get_secure_cookie('server_messages')
+        if messages is not None:
+            messages = json.loads(messages)
+            message_text = messages['text']
+            alert_type = messages['type']
+            return message_text, alert_type
+        else:
+            return '', None
+
+    async def prepare(self):
         '''This async talks to the authnzerver to get info on the current user.
 
-        1. check the lccserver_session cookie and see if it's not expired.
+        1. check the session cookie and see if it's not expired.
 
         2. if can get cookie, talk to authnzerver to get the session info and
            populate the self.current_user variable with the session dict.
@@ -771,11 +834,14 @@ class BaseHandler(tornado.web.RequestHandler):
 
         '''
 
+        # get the flash messages
+        self.flash_message_list, self.alert_type = self.get_flash_messages()
+
         # localhost secure cookies over HTTP don't work anymore
         if self.request.remote_ip != '127.0.0.1':
-            self.session_cookie_secure = True
+            self.csecure = True
         else:
-            self.session_cookie_secure = False
+            self.csecure = False
 
         # check if there's an authorization header in the request
         authorization = self.request.headers.get('Authorization')
@@ -794,9 +860,10 @@ class BaseHandler(tornado.web.RequestHandler):
             # belongs to
             if session_token is not None:
 
-                ok, resp, msgs = yield self.authnzerver_request(
+                # NOTE: get_secure_cookie returns bytes if successful
+                ok, resp, msgs = await self.authnzerver_request(
                     'session-exists',
-                    {'session_token': session_token}
+                    {'session_token': session_token.decode()}
                 )
 
                 # if we found the session successfully, set the current_user
@@ -807,41 +874,52 @@ class BaseHandler(tornado.web.RequestHandler):
                     self.user_id = self.current_user['user_id']
                     self.user_role = self.current_user['user_role']
 
-                    if self.ratelimit:
+                    #
+                    # check the rate now
+                    #
+                    incrementfn = partial(
+                        cache.cache_increment,
+                        session_token,
+                        cache_dirname=self.cachedir
+                    )
 
-                        # increment the rate counter for this session token
-                        reqcount = yield self.executor.submit(
-                            cache.cache_increment,
+                    # increment the rate counter for this session token
+                    reqcount = await self.loop.run_in_executor(
+                        self.executor,
+                        incrementfn
+                    )
+
+                    # rate limit only after 25 requests have been counted
+                    if reqcount > 25:
+
+                        getratefn = partial(
+                            cache.cache_getrate,
                             session_token,
                             cache_dirname=self.cachedir
-
                         )
 
-                        # rate limit only after 25 requests have been counted
-                        if reqcount > 25:
-
-                            # check the rate for this session token
-                            request_rate, keycount, time_zero = (
-                                yield self.executor.submit(
-                                    cache.cache_getrate,
-                                    session_token,
-                                    cache_dirname=self.cachedir
-                                )
-                            )
-                            rate_ok = check_role_limits(self.user_role,
-                                                        rate_60sec=request_rate)
-                            self.request_rate_60sec = request_rate
-
-                        else:
-                            rate_ok = True
-                            self.request_rate_60sec = reqcount
+                        # check the rate for this session token
+                        request_rate, keycount, time_zero = (
+                            await self.loop.run_in_executor(self.executor,
+                                                            getratefn)
+                        )
+                        rate_ok, _, _ = await self.authnzerver_request(
+                            'user-check-limit',
+                            {'user_id':self.user_id,
+                             'user_role':self.user_role,
+                             'limit_name':'max_requests_per_minute',
+                             'value_to_check':request_rate}
+                        )
+                        self.request_rate_60sec = request_rate
 
                         if not rate_ok:
 
                             LOGGER.error(
-                                'session token: %s: current rate = %s exceeds '
+                                '[%s] Session token: %s: '
+                                'current rate = %s exceeds '
                                 'their allowed rate for their role = %s'
-                                % (session_token,
+                                % (self.reqid,
+                                   pii_hash(session_token, self.pii_salt),
                                    request_rate,
                                    self.user_role)
                             )
@@ -880,8 +958,8 @@ class BaseHandler(tornado.web.RequestHandler):
             # session
             else:
 
-                session_token = yield self.new_session_token(
-                    user_id=2,
+                session_token = await self.new_session_token(
+                    user_id=None,
                     expires_days=self.session_expiry,
                     extra_info={}
                 )
@@ -889,7 +967,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 # immediately get back the session object for the current user
                 # so we don't have to redirect to get the session info from the
                 # cookie
-                ok, resp, msgs = yield self.authnzerver_request(
+                ok, resp, msgs = await self.authnzerver_request(
                     'session-exists',
                     {'session_token': session_token}
                 )
@@ -902,16 +980,18 @@ class BaseHandler(tornado.web.RequestHandler):
                     self.user_id = self.current_user['user_id']
                     self.user_role = self.current_user['user_role']
 
-                    if self.ratelimit:
+                    # increment the rate counter for this session token. we
+                    # just increase the count to 1 since this is the first
+                    # time we've seen this user.
 
-                        # increment the rate counter for this session token. we
-                        # just increase the count to 1 since this is the first
-                        # time we've seen this user.
-                        yield self.executor.submit(
-                            cache.cache_increment,
-                            session_token,
-                            cache_dirname=self.cachedir
-                        )
+                    incrementfn = partial(
+                        cache.cache_increment,
+                        session_token,
+                        cache_dirname=self.cachedir
+                    )
+
+                    await self.loop.run_in_executor(self.executor,
+                                                    incrementfn)
 
                 else:
 
@@ -935,7 +1015,7 @@ class BaseHandler(tornado.web.RequestHandler):
         else:
 
             # check if the API key is valid
-            apikey_check = yield self.check_auth_header_apikey()
+            apikey_check = await self.check_auth_header_apikey()
 
             if not apikey_check['status'] == 'ok':
 
@@ -997,43 +1077,51 @@ class BaseHandler(tornado.web.RequestHandler):
                 self.user_id = self.current_user['user_id']
                 self.user_role = self.current_user['user_role']
 
-                if self.ratelimit:
+                #
+                # check the rate now
+                #
 
-                    # increment the rate counter for this session token
-                    reqcount = yield self.executor.submit(
-                        cache.cache_increment,
+                incrementfn = partial(
+                    cache.cache_increment,
+                    self.apikey_dict['tkn'],
+                    cache_dirname=self.cachedir
+                )
+
+                # increment the rate counter for this session token
+                reqcount = await self.loop.run_in_executor(self.executor,
+                                                           incrementfn)
+
+                # rate limit only after 25 requests have been counted
+                if reqcount > 25:
+
+                    getratefn = partial(
+                        cache.cache_getrate,
                         self.apikey_dict['tkn'],
                         cache_dirname=self.cachedir
-
                     )
 
-                    # rate limit only after 25 requests have been counted
-                    if reqcount > 25:
-
-                        # check the rate for this session token
-                        request_rate, keycount, time_zero = (
-                            yield self.executor.submit(
-                                cache.cache_getrate,
-                                self.apikey_dict['tkn'],
-                                cache_dirname=self.cachedir
-                            )
-                        )
-                        rate_ok = check_role_limits(self.user_role,
-                                                    rate_60sec=request_rate)
-
-                        self.request_rate_60sec = request_rate
-
-                    else:
-                        rate_ok = True
-                        self.request_rate_60sec = reqcount
+                    # check the rate for this session token
+                    request_rate, keycount, time_zero = (
+                        await self.loop.run_in_executor(self.executor,
+                                                        getratefn)
+                    )
+                    rate_ok, _, _ = await self.authnzerver_request(
+                        'user-check-limit',
+                        {'user_id':self.user_id,
+                         'user_role':self.user_role,
+                         'limit_name':'max_requests_per_minute',
+                         'value_to_check':request_rate}
+                    )
+                    self.request_rate_60sec = request_rate
 
                     if not rate_ok:
 
                         LOGGER.error(
-                            'API key: %s: current rate = %s exceeds '
+                            '[%] API key: %s: current rate = %s exceeds '
                             'their allowed rate for their role = %s. '
                             'total reqs = %s, time_zero = %s'
-                            % (self.apikey_dict['tkn'],
+                            % (self.reqid,
+                               pii_hash(self.apikey_dict['tkn'], self.pii_salt),
                                request_rate,
                                self.user_role,
                                keycount, time_zero)
@@ -1051,10 +1139,12 @@ class BaseHandler(tornado.web.RequestHandler):
                         })
                         raise tornado.web.Finish()
 
-    def on_finish(self):
-        '''
-        This just cleans up the httpclient.
 
-        '''
+class PageNotFoundHandler(BaseHandler):
+    '''This is suitable for use in Tornado Application.settings as a default
+    handler.
 
-        self.httpclient.close()
+    '''
+
+    def get(self):
+        self.render_page_not_found()
