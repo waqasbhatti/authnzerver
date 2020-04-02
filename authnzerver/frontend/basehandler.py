@@ -148,6 +148,9 @@ class BaseHandler(tornado.web.RequestHandler):
             - session_cookie_secure: True if the session cookie should be set as
               a secure cookie
 
+            - pii_salt: A random salt value to use when hashing PII like session
+              tokens, user IDs, and API keys for logging.
+
         executor : Executor instance
             A concurrent.futures.ProcessPoolExecutor or
             concurrent.futures.ThreadPoolExecutor instance that will run
@@ -168,12 +171,12 @@ class BaseHandler(tornado.web.RequestHandler):
         self.executor = executor
 
         # config from the conf object
-        self.pii_salt = conf.piisalt
+        self.pii_salt = conf.pii_salt
         self.authnzerver_key = conf.authnzerver_key
         self.authnzerver_url = conf.authnzerver_url
-        self.session_expiry = conf.sessionexpiry
-        self.session_cookie_name = conf.sessioncookiename
-        self.session_cookie_secure = conf.sessioncookiesecure
+        self.session_expiry = conf.session_expiry_days
+        self.session_cookie_name = conf.session_cookie_name
+        self.session_cookie_secure = conf.session_cookie_secure
         self.cachedir = conf.cache_dir
 
         # localhost secure cookies over HTTP don't work anymore.
