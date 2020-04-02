@@ -151,6 +151,9 @@ class BaseHandler(tornado.web.RequestHandler):
             - pii_salt: A random salt value to use when hashing PII like session
               tokens, user IDs, and API keys for logging.
 
+            - cache_dir: The directory where the rate-limiting cache will be set
+              up
+
         executor : Executor instance
             A concurrent.futures.ProcessPoolExecutor or
             concurrent.futures.ThreadPoolExecutor instance that will run
@@ -794,7 +797,7 @@ class BaseHandler(tornado.web.RequestHandler):
             'server_messages',
             outmsg,
             httponly=True,
-            secure=self.csecure,
+            secure=self.session_cookie_secure,
             samesite='lax',
             use_host_prefix=True,
         )
@@ -849,9 +852,9 @@ class BaseHandler(tornado.web.RequestHandler):
 
         # localhost secure cookies over HTTP don't work anymore
         if self.request.remote_ip != '127.0.0.1':
-            self.csecure = True
+            self.session_cookie_secure = True
         else:
-            self.csecure = False
+            self.session_cookie_secure = False
 
         # check if there's an authorization header in the request
         authorization = self.request.headers.get('Authorization')
