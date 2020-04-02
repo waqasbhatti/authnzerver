@@ -135,7 +135,18 @@ class BaseHandler(tornado.web.RequestHandler):
 
         conf : object
             The server config loaded as an object. This should have attributes
-            defining several things we need.
+            defining several things we need:
+
+            - authnzerver_key: the pre-shared secret key for the authnzerver
+
+            - authnzerver_url: the HTTP URL and port number for authnzerver
+
+            - session_expiry_days: number of days after which sessions expire
+
+            - session_cookie_name: the name of the session cookie to set
+
+            - session_cookie_secure: True if the session cookie should be set as
+              a secure cookie
 
         executor : Executor instance
             A concurrent.futures.ProcessPoolExecutor or
@@ -156,26 +167,22 @@ class BaseHandler(tornado.web.RequestHandler):
         # this is the executor to use for this request
         self.executor = executor
 
-        #
-        # load the config as needed
-        #
-        self.basedir = conf.basedir
-
-        # auth config
-        self.pii_salt = conf.pii_salt
+        # config from the conf object
+        self.pii_salt = conf.piisalt
         self.authnzerver_key = conf.authnzerver_key
         self.authnzerver_url = conf.authnzerver_url
-        self.session_expiry = conf.session_settings['expiry_days']
-        self.session_cookie_name = conf.session_settings['cookie_name']
-        self.session_cookie_secure = conf.session_settings['cookie_secure']
+        self.session_expiry = conf.sessionexpiry
+        self.session_cookie_name = conf.sessioncookiename
+        self.session_cookie_secure = conf.sessioncookiesecure
+        self.cachedir = conf.cache_dir
 
-        # localhost secure cookies over HTTP don't work anymore
+        # localhost secure cookies over HTTP don't work anymore.
+        # override the session_cookie_secure attribute if we're listening to
+        # localhost only
         if self.request.remote_ip == '127.0.0.1':
             self.session_cookie_secure = False
 
-        self.cachedir = conf.cache_dir
-
-        # initialize this to None
+        # initialize the current user to None
         # we'll set this later in self.prepare()
         self.current_user = None
 
@@ -648,7 +655,7 @@ class BaseHandler(tornado.web.RequestHandler):
         POST request either contained an Authorization header key or had a valid
         XSRF token::
 
-            if not self.keycheck['status'] == 'ok':
+            if not self.post_check['status'] == 'ok':
 
                 self.set_status(403)
                 retdict = {
@@ -664,7 +671,7 @@ class BaseHandler(tornado.web.RequestHandler):
         can use something like the following in your POST handler that derives
         from BaseHandler::
 
-            if ((not self.keycheck['status'] == 'ok') or
+            if ((not self.post_check['status'] == 'ok') or
                 (not self.xsrf_type == 'session')):
 
                 self.set_status(403)
@@ -688,7 +695,7 @@ class BaseHandler(tornado.web.RequestHandler):
             LOGGER.info('[%s] Using tornado XSRF auth for this POST...' %
                         self.reqid)
             self.xsrf_type = 'session'
-            self.keycheck = self.tornado_check_xsrf_cookie()
+            self.post_check = self.tornado_check_xsrf_cookie()
 
         elif self.request.headers.get("Authorization"):
 
@@ -703,7 +710,7 @@ class BaseHandler(tornado.web.RequestHandler):
             LOGGER.info('[%s] No Authorization key found in request header.' %
                         self.reqid)
             self.xsrf_type = 'unknown'
-            self.keycheck = {
+            self.post_check = {
                 'status':'failed',
                 'message':(
                     'Unknown authorization type, neither API key or session.'
@@ -1021,7 +1028,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
                 message = apikey_check['message']
 
-                self.keycheck = {
+                self.post_check = {
                     'status':'failed',
                     'message': message,
                     'result':None
@@ -1039,7 +1046,7 @@ class BaseHandler(tornado.web.RequestHandler):
             else:
 
                 message = apikey_check['message']
-                self.keycheck = {
+                self.post_check = {
                     'status':'ok',
                     'message': message,
                     'result':apikey_check['result']
