@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# main.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# confvars.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Apr 2020
 # License: MIT - see the LICENSE file for the full text.
 
-'''Contains the configuration variables that define how the frontend.
+'''Contains the configuration variables that define how the frontend works.
 
 Similar to the backend's confvars.py file, The CONF dict in this file describes
 how to load config variables for the authnzerver frontend from the environment
