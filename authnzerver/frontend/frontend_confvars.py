@@ -42,6 +42,16 @@ CONF = {
         'readable_from_file':False,
         'postprocess_value':None,
     },
+    'baseurl':{
+        'env':'AUTHNZERVER_BASEURL',
+        'cmdline':'baseurl',
+        'type':str,
+        'default':'/auth',
+        'help':("The base URL that the frontend will respond to. "
+                "All other frontend URLs will be relative to this path."),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
     # NOTE: the frontend shares this environment variable with the authnzerver
     # backend instance
     'cache_dir':{
@@ -143,6 +153,15 @@ CONF = {
         'help':('This indicates if the session '
                 'cookies should be marked as "Secure".'),
         'readable_from_file':False,
+        'postprocess_value':None,
+    },
+    'session_cookie_secret':{
+        'env':'%s_SESSIONCOOKIESECRET' % ENVPREFIX,
+        'cmdline':'sessioncookiesecret',
+        'type':str,
+        'default':None,
+        'help':('This is the session cookie signing secret key.'),
+        'readable_from_file':'string',
         'postprocess_value':None,
     },
     'workers':{

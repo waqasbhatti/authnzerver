@@ -146,7 +146,9 @@ class BaseHandler(tornado.web.RequestHandler):
             - session_cookie_name: the name of the session cookie to set
 
             - session_cookie_secure: True if the session cookie should be set as
-              a secure cookie
+              a secure cookie.
+
+            - session_cookie_secret: the signing key for the secure cookies.
 
             - pii_salt: A random salt value to use when hashing PII like session
               tokens, user IDs, and API keys for logging.
