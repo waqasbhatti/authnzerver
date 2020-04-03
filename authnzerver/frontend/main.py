@@ -66,7 +66,7 @@ from tornado.options import define, options
 ## CONFIG FROM ENVIRON, COMMAND LINE, AND SUBSTITUTES ##
 ########################################################
 
-from .modtools import object_from_string
+from ..modtools import object_from_string
 from .frontend_confvars import CONF
 
 # this is the module path
@@ -133,8 +133,8 @@ def main():
     ## LOCAL IMPORTS ##
     ###################
 
-    from .external.futures37.process import ProcessPoolExecutor
-    from .confload import load_config
+    from ..external.futures37.process import ProcessPoolExecutor
+    from ..confload import load_config
 
     ##############
     ## HANDLERS ##
@@ -227,7 +227,7 @@ def main():
 
     try:
 
-        # update the conf dict with that loaded from confvars.py
+        # update the conf dict with that loaded from frontend_confvars.py
         LOCAL_CONF = object_from_string(
             "%s::CONF" % options.confvars
         )
