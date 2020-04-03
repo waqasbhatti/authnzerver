@@ -62,6 +62,20 @@ import tornado.options
 from tornado.options import define, options
 
 
+##################
+## WORKER SETUP ##
+##################
+
+def _setup_worker():
+    '''
+    This unregisters the interrupt signal handler so the main process
+    can catch it and kill the server cleanly.
+
+    '''
+
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
 ########################################################
 ## CONFIG FROM ENVIRON, COMMAND LINE, AND SUBSTITUTES ##
 ########################################################
@@ -142,6 +156,8 @@ def main():
 
     from .basehandler import PageNotFoundHandler
     from . import baseuimodules
+
+    from .indexhandler import IndexHandler
     from .sessionhandlers import (
         LoginHandler,
         LogoutHandler,
@@ -267,6 +283,7 @@ def main():
 
     executor = ProcessPoolExecutor(
         max_workers=maxworkers,
+        initializer=_setup_worker,
     )
 
     ###################
@@ -275,6 +292,8 @@ def main():
 
     # we only have one actual endpoint, the other one is for testing
     handlers = [
+        (rf'{baseurl}', IndexHandler,
+         {'conf':loaded_config, 'executor':executor}),
         (rf'{baseurl}/login', LoginHandler,
          {'conf':loaded_config, 'executor':executor}),
         (rf'{baseurl}/logout', LogoutHandler,
@@ -285,9 +304,9 @@ def main():
          {'conf':loaded_config, 'executor':executor}),
         (rf'{baseurl}/users/delete', DeleteUserHandler,
          {'conf':loaded_config, 'executor':executor}),
-        (rf'{baseurl}/password/forgot-step1', ForgotPasswordStep1Handler,
+        (rf'{baseurl}/password/reset', ForgotPasswordStep1Handler,
          {'conf':loaded_config, 'executor':executor}),
-        (rf'{baseurl}/password/forgot-step2', ForgotPasswordStep2Handler,
+        (rf'{baseurl}/password/verify', ForgotPasswordStep2Handler,
          {'conf':loaded_config, 'executor':executor}),
         (rf'{baseurl}/password/change', ChangePasswordHandler,
          {'conf':loaded_config, 'executor':executor}),

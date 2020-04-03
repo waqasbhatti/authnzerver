@@ -3,16 +3,8 @@
 {% block pagecontent %}
 
 <div class="container" >
-  <div class="row justify-content-center" >
-    <div class="col-sm-12 col-md-9" >
-      {% raw flash_messages %}
-    </div>
-  </div>
-
   <div class="row align-items-center justify-content-center" >
     <div class="col-sm-12 col-md-5" >
-
-      {% if 'logins_allowed' in loaded_config and loaded_config['logins_allowed'] is True %}
 
       <div class="card mt-4 mb-1">
         <div class="card-body">
@@ -20,7 +12,7 @@
             <h4>Sign in to your user account</h4>
           </div>
           <div class="card-text" >
-            <form action="/users/login" method="post">
+            <form action="{{ baseurl }}/users/login" method="post">
               {% module xsrf_form_html() %}
 
               <div class="form-group" >
@@ -45,24 +37,20 @@
             </form>
 
             <div class="mt-2 text-right" >
-              <a href="/users/forgot-password-step1" >Forgot your password? Reset it.</a>
+              <a href="{{ baseurl }}/password/reset" >
+                Forgot your password? Reset it.
+              </a>
             </div>
-            {% if 'signups_allowed' in loaded_config and loaded_config['signups_allowed'] is True %}
+
             <div class="text-right">
-              <a href="/users/new" >New user? Create an account.</a>
+              <a href="{{ baseurl }}/users/new" >
+                New user? Create an account.
+              </a>
             </div>
-            {% end %}
 
           </div>
         </div>
       </div>
-
-      {% else %}
-
-      <p class="mt-4" >Sorry, the admins of this server instance have disabled
-        user sign-ins or an email server is not yet configured.</p>
-
-      {% end %}
 
     </div>
   </div>

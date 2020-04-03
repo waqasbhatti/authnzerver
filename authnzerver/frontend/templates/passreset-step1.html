@@ -3,17 +3,8 @@
 {% block pagecontent %}
 
 <div class="container" >
-  <div class="row justify-content-center" >
-    <div class="col-sm-12 col-md-9" >
-      {% raw flash_messages %}
-    </div>
-  </div>
-
-
   <div class="row align-items-center justify-content-center" >
     <div class="col-sm-12 col-md-5" >
-
-      {% if 'logins_allowed' in loaded_config and loaded_config['logins_allowed'] is True %}
 
       <div class="card mt-4 mb-1">
         <div class="card-body">
@@ -21,7 +12,7 @@
             <h4>Reset your account password</h4>
           </div>
           <div class="card-text" >
-            <form action="/users/forgot-password-step1" method="post">
+            <form action="{{ baseurl }}/password/reset" method="post">
               {% module xsrf_form_html() %}
 
               <div class="form-group" >
@@ -40,14 +31,6 @@
           </div>
         </div>
       </div>
-
-      {% else %}
-
-      <p class="mt-4">Sorry, the admins of this server instance have disabled
-        user sign-ins or an email server is not yet configured, so password
-        resets are unavailable.</p>
-
-      {% end %}
 
     </div>
   </div>
