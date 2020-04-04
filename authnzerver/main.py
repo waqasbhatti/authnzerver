@@ -290,7 +290,6 @@ def main():
         (r'/', AuthHandler,
          {'config':loaded_config,
           'executor':executor,
-          'reqid_cache':set(),
           'failed_passchecks':{}}),
     ]
 

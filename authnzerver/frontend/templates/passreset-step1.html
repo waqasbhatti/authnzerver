@@ -12,7 +12,7 @@
             <h4>Reset your account password</h4>
           </div>
           <div class="card-text" >
-            <form action="{{ baseurl }}/password/reset" method="post">
+            <form action="{{ conf.baseurl }}/password/reset" method="post">
               {% module xsrf_form_html() %}
 
               <div class="form-group" >

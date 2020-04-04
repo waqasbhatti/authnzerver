@@ -22,8 +22,39 @@
 
   <body>
 
-    <!-- the top navigation bar if any -->
+    <!-- the top navigation bar -->
     {% block topnav %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+
+      <a class="navbar-brand" href="{{ conf.baseurl }}">
+        Authnzerver
+      </a>
+
+      <button class="navbar-toggler"
+              type="button"
+              data-toggle="collapse"
+              data-target="#navbarNavAltMarkup"
+              aria-controls="navbarNavAltMarkup"
+              aria-expanded="false"
+              aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+
+        <div class="navbar-nav">
+
+          <!-- the login box goes here -->
+          <form class="form-inline" action="{{ conf.baseurl }}/users/logout"
+                id="user-logout-form" method="POST" >
+            {% module xsrf_form_html() %}
+            {% module LoginBoxModule(baseurl=conf.baseurl,current_user=current_user) %}
+          </form>
+        </div>
+
+      </div>
+
+    </nav>
     {% end %}
 
     <!-- this is where all the alerts go -->

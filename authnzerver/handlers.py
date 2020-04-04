@@ -268,7 +268,6 @@ class AuthHandler(tornado.web.RequestHandler):
     def initialize(self,
                    config,
                    executor,
-                   reqid_cache,
                    failed_passchecks):
         '''
         This sets up stuff.
@@ -287,7 +286,6 @@ class AuthHandler(tornado.web.RequestHandler):
         self.emailpass = self.config.emailpass
 
         self.executor = executor
-        self.reqid_cache = reqid_cache
         self.failed_passchecks = failed_passchecks
 
     async def post(self):
@@ -319,23 +317,6 @@ class AuthHandler(tornado.web.RequestHandler):
             if reqid is None:
                 raise ValueError("No request ID provided. "
                                  "Ignoring this request.")
-
-            #
-            # put the reqid into a cache and get it back
-            #
-            reqid_cache_len = len(self.reqid_cache)
-            self.reqid_cache.add(reqid)
-            if len(self.reqid_cache) == reqid_cache_len:
-                raise ValueError(
-                    "[%s] Request ID was repeated. Ignoring this request." %
-                    reqid
-                )
-
-            #
-            # trim the reqid_cache as needed
-            #
-            if len(self.reqid_cache) > 1000:
-                self.reqid_cache.pop()
 
             #
             # dispatch the action handler function
@@ -426,5 +407,5 @@ class AuthHandler(tornado.web.RequestHandler):
 
         except Exception:
 
-            LOGGER.exception('failed to understand request')
+            LOGGER.exception('Failed to understand request.')
             raise tornado.web.HTTPError(status_code=400)

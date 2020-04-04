@@ -40,8 +40,7 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
         flash_message_list, alert_type = self.get_flash_messages()
 
         self.render(
-            'index.html',
-            baseurl=self.conf.base_url,
+            'passreset-step1.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Reset your account password.',
@@ -67,8 +66,7 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
         flash_message_list, alert_type = self.get_flash_messages()
 
         self.render(
-            'index.html',
-            baseurl=self.conf.base_url,
+            'passreset-step2.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Verify your password reset request.',
@@ -94,8 +92,7 @@ class ChangePasswordHandler(basehandler.BaseHandler):
         flash_message_list, alert_type = self.get_flash_messages()
 
         self.render(
-            'index.html',
-            baseurl=self.conf.base_url,
+            'passchange.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Change your account password.',

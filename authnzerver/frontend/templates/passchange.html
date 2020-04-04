@@ -12,7 +12,7 @@
             <h4>Change your account password</h4>
           </div>
           <div class="card-text" >
-            <form action="{{ baseurl }}/password/change" method="post">
+            <form action="{{ conf.baseurl }}/password/change" method="post">
               {% module xsrf_form_html() %}
 
               <div class="form-group" >

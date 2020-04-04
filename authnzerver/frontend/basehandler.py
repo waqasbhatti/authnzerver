@@ -167,6 +167,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
         '''
 
+        self.conf = conf
+
         # the IOLoop instance
         self.loop = tornado.ioloop.IOLoop.current()
 
@@ -305,7 +307,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
         encrypted_request = await self.loop.run_in_executor(
             self.executor,
-            self.encrypt_message,
+            encrypt_message,
             message_dict,
             self.authnzerver_key,
         )
@@ -335,7 +337,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
         decrypted_response = await self.loop.run_in_executor(
             self.executor,
-            self.decrypt_message,
+            decrypt_message,
             authnzerver_response.body,
             self.authnzerver_key,
             self.reqid,
@@ -747,7 +749,7 @@ class BaseHandler(tornado.web.RequestHandler):
         self.set_status(403)
         self.render(
             'errorpage.html',
-            baseurl=self.conf.base_url,
+            baseurl=self.conf.baseurl,
             current_user=self.current_user,
             conf=self.conf,
             page_title="403 - You cannot access this page",
@@ -777,7 +779,7 @@ class BaseHandler(tornado.web.RequestHandler):
         self.set_status(404)
         self.render(
             'errorpage.html',
-            baseurl=self.conf.base_url,
+            baseurl=self.conf.baseurl,
             current_user=self.current_user,
             conf=self.conf,
             page_title="404 - Item not found",

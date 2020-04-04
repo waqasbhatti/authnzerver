@@ -186,22 +186,22 @@ def main():
     if options.autosetup:
 
         # templates directory
-        LOGGER.warning("Copying Tornado templates shipped with "
+        LOGGER.warning("Copying Tornado templates/ shipped with "
                        "authnzerver to basedir: %s" %
-                       options.basedir)
+                       os.path.join(options.basedir, 'templates'))
         try:
             shutil.copytree(os.path.join(modpath, 'templates'),
-                            options.basedir)
+                            os.path.join(options.basedir, 'templates'))
         except Exception:
             LOGGER.warning("Not overwriting existing templates/ directory.")
 
         # static directory
         LOGGER.warning("Copying static/ directory shipped with "
                        "authnzerver to basedir: %s" %
-                       options.basedir)
+                       os.path.join(options.basedir, 'static'))
         try:
             shutil.copytree(os.path.join(modpath, 'static'),
-                            options.basedir)
+                            os.path.join(options.basedir, 'static'))
         except Exception:
             LOGGER.warning("Not overwriting existing static/ directory.")
 
@@ -274,7 +274,7 @@ def main():
     sessionexpiry = loaded_config.session_expiry_days
     LOGGER.info('Session token expiry is set to: %s days' % sessionexpiry)
 
-    baseurl = loaded_config.base_url
+    baseurl = loaded_config.baseurl
     LOGGER.info('Frontend base URL is set to: %s' % baseurl)
 
     ###################################
@@ -327,20 +327,24 @@ def main():
     else:
         templates_dir = os.path.join(modpath, 'templates')
 
+    # set up the app
     app = tornado.web.Application(
         autoreload=False,  # this sometimes breaks Executors so disable it
         ui_modules=baseuimodules,
         static_path=static_dir,
-        handlers=handlers,
         template_path=templates_dir,
         static_url_prefix=f'{baseurl}/static/',
-        compress_response=True,
         cookie_secret=loaded_config.session_cookie_secret,
         xsrf_cookies=True,
         xsrf_cookie_kwargs={'samesite':'Lax'},
         default_handler_class=PageNotFoundHandler,
         default_handler_args={'conf':loaded_config, 'executor':executor},
     )
+
+    # set up the handlers and bind them to the domain name provided in the CONF
+    # to prevent a DNS rebinding attack:
+    # https://www.tornadoweb.org/en/stable/guide/security.html#dns-rebinding
+    app.add_handlers(rf'({loaded_config.listen_domain})', handlers)
 
     # start up the HTTP server and our application
     http_server = tornado.httpserver.HTTPServer(app, xheaders=True)

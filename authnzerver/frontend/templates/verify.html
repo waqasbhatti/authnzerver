@@ -12,7 +12,7 @@
             <h4>Verify your account sign up request</h4>
           </div>
           <div class="card-text" >
-            <form action="{{ baseurl }}/users/verify" method="post">
+            <form action="{{ conf.baseurl }}/users/verify" method="post">
               {% module xsrf_form_html() %}
 
               <div class="form-group" >

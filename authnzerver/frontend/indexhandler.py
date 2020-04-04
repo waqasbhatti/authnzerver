@@ -41,7 +41,6 @@ class IndexHandler(basehandler.BaseHandler):
 
         self.render(
             'index.html',
-            baseurl=self.conf.base_url,
             current_user=self.current_user,
             conf=self.conf,
             page_title='Authnzerver',

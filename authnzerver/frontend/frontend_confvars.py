@@ -72,6 +72,17 @@ CONF = {
         'readable_from_file':False,
         'postprocess_value':None,
     },
+    'listen_domain':{
+        'env':'%s_LISTENDOMAIN' % ENVPREFIX,
+        'cmdline':'listendomain',
+        'type':str,
+        'default':'localhost',
+        'help':("Sets the domain name to which the server expects "
+                "the 'Host' HTML header to be set to for incoming requests. "
+                "This prevents DNS-rebinding attacks. "),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
     'port':{
         'env':'%s_PORT' % ENVPREFIX,
         'cmdline':'port',
@@ -106,7 +117,7 @@ CONF = {
     # NOTE: the frontend shares this environment variable with the authnzerver
     # backend instance
     'pii_salt':{
-        'env':'AUTHNSERVER_PIISALT',
+        'env':'AUTHNZERVER_PIISALT',
         'cmdline':'piisalt',
         'type':str,
         'default':None,

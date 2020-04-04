@@ -12,7 +12,7 @@
             <h4>Sign up for a user account</h4>
           </div>
           <div class="card-text" >
-            <form action="{{ baseurl }}/users/new" method="post">
+            <form action="{{ conf.baseurl }}/users/new" method="post">
               {% module xsrf_form_html() %}
 
               <div class="form-group" >
@@ -20,7 +20,7 @@
                 <input type="text" class="form-control"
                        name="username" id="username" required
                        minlength="2" maxlength="280"
-                       placeholder="Type in a user name">
+                       placeholder="Type in your name">
                 <small id="usernamehelp"
                        class="form-text text-muted">
                   Must be at least 2 characters long.
@@ -54,7 +54,7 @@
             </form>
 
             <div class="mt-2 text-right" >
-              <a href="{{ baseurl }}/users/login" >
+              <a href="{{ conf.baseurl }}/login" >
                 Already have an account? Sign in.
               </a>
             </div>

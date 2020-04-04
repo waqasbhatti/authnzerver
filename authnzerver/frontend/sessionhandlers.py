@@ -40,8 +40,7 @@ class LoginHandler(basehandler.BaseHandler):
         flash_message_list, alert_type = self.get_flash_messages()
 
         self.render(
-            'index.html',
-            baseurl=self.conf.base_url,
+            'login.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Sign in to your account.',

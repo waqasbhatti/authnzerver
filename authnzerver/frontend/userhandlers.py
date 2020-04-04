@@ -40,8 +40,7 @@ class NewUserHandler(basehandler.BaseHandler):
         flash_message_list, alert_type = self.get_flash_messages()
 
         self.render(
-            'index.html',
-            baseurl=self.conf.base_url,
+            'signup.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Sign up for an account.',
@@ -67,8 +66,7 @@ class VerifyUserHandler(basehandler.BaseHandler):
         flash_message_list, alert_type = self.get_flash_messages()
 
         self.render(
-            'index.html',
-            baseurl=self.conf.base_url,
+            'verify.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Verify your sign-up request.',
@@ -94,8 +92,7 @@ class DeleteUserHandler(basehandler.BaseHandler):
         flash_message_list, alert_type = self.get_flash_messages()
 
         self.render(
-            'index.html',
-            baseurl=self.conf.base_url,
+            'delete.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Delete your account.',

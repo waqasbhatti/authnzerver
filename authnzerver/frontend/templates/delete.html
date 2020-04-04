@@ -14,7 +14,7 @@
           </div>
 
           <div class="card-text" >
-            <form action="{{ baseurl }}/users/delete"
+            <form action="{{ conf.baseurl }}/users/delete"
                   method="post" id="user-delete-form">
               {% module xsrf_form_html() %}
 
