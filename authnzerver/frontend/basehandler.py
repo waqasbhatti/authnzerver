@@ -198,10 +198,9 @@ class BaseHandler(tornado.web.RequestHandler):
         # we'll only accept issuers that correspond to the authnzerver we know
         self.api_key_issuer = self.authnzerver_url
 
-        # localhost secure cookies over HTTP don't work anymore.
-        # override the session_cookie_secure attribute if we're listening to
-        # localhost only
-        if self.request.remote_ip == '127.0.0.1':
+        # If tls_enabled is False then we can't set secure cookies so disable
+        # that if required
+        if self.conf.tls_enabled is False:
             self.session_cookie_secure = False
 
         # initialize the current user to None
@@ -419,7 +418,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 httponly=True,
                 secure=self.session_cookie_secure,
                 samesite='lax',
-                use_host_prefix=True,
+                use_host_prefix=False,
             )
 
             return resp['session_token']
@@ -814,12 +813,12 @@ class BaseHandler(tornado.web.RequestHandler):
             outmsg = ''
 
         self.set_secure_cookie(
-            'server_messages',
+            'server-messages',
             outmsg,
             httponly=True,
             secure=self.session_cookie_secure,
             samesite='lax',
-            use_host_prefix=True,
+            use_host_prefix=False,
         )
 
     def get_flash_messages(self):
@@ -828,7 +827,11 @@ class BaseHandler(tornado.web.RequestHandler):
 
         '''
 
-        messages = self.get_secure_cookie('server_messages')
+        messages = self.get_secure_cookie(
+            'server-messages',
+            max_age_days=self.session_expiry
+        )
+
         if messages is not None:
             messages = json.loads(messages)
             message_text = messages['text']
@@ -869,12 +872,6 @@ class BaseHandler(tornado.web.RequestHandler):
 
         # get the flash messages
         self.flash_message_list, self.alert_type = self.get_flash_messages()
-
-        # localhost secure cookies over HTTP don't work anymore
-        if self.request.remote_ip != '127.0.0.1':
-            self.session_cookie_secure = True
-        else:
-            self.session_cookie_secure = False
 
         # check if there's an authorization header in the request
         authorization = self.request.headers.get('Authorization')
