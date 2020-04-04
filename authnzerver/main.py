@@ -302,6 +302,24 @@ def main():
               'executor':executor})
         )
 
+    #############################
+    ## SET UP TLS IF REQUESTED ##
+    #############################
+
+    if loaded_config.tls_cert_file and loaded_config.tls_cert_key:
+
+        import ssl
+        ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_ctx.load_cert_chain(loaded_config.tls_cert_file,
+                                keyfile=loaded_config.tls_cert_key)
+        ssl_ctx.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
+        loaded_config.tls_enabled = True
+
+    else:
+
+        ssl_ctx = None
+        loaded_config.tls_enabled = False
+
     ########################
     ## APPLICATION SET UP ##
     ########################
@@ -317,7 +335,7 @@ def main():
                      handlers)
 
     # start up the HTTP server and our application
-    http_server = tornado.httpserver.HTTPServer(app)
+    http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
 
     #####################################################################
     ## CLEAR THE CACHE, CHECK THE DB, AND REAP OLD SESSIONS ON STARTUP ##
@@ -415,6 +433,8 @@ def main():
 
         LOGGER.info('Starting authnzerver. Listening on http://%s:%s.' %
                     (listen, serverport))
+        LOGGER.info("The server is starting with TLS %s." %
+                    'enabled' if loaded_config.tls_enabled else 'disabled')
         LOGGER.info('Background worker processes: %s. IOLoop in use: %s.' %
                     (maxworkers, IOLOOP_SPEC))
 

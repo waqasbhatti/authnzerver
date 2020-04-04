@@ -175,6 +175,28 @@ CONF = {
         'readable_from_file':'string',
         'postprocess_value':None,
     },
+    'tls_cert_file':{
+        'env':'%s_TLSCERT_FILE' % ENVPREFIX,
+        'cmdline':'tlscertfile',
+        'type':str,
+        'default':'',
+        'help':('The TLS certificate to use. If this is provided along '
+                'with the certificate key in the --tlscertkey option, '
+                'the server will start in TLS-enabled mode.'),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
+    'tls_cert_key':{
+        'env':'%s_TLSCERT_KEY' % ENVPREFIX,
+        'cmdline':'tlscertkey',
+        'type':str,
+        'default':'',
+        'help':("The TLS certificate's key to use. If this is provided along "
+                "with the certificate in the --tlscertfile option, "
+                "the server will start in TLS-enabled mode."),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
     'workers':{
         'env':'%s_WORKERS' % ENVPREFIX,
         'cmdline':'workers',
