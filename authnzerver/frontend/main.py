@@ -61,6 +61,8 @@ import tornado.web
 import tornado.options
 from tornado.options import define, options
 
+from diskcache import FanoutCache
+
 
 ##################
 ## WORKER SETUP ##
@@ -147,7 +149,7 @@ def main():
     ## LOCAL IMPORTS ##
     ###################
 
-    from ..external.futures37.process import ProcessPoolExecutor
+    from concurrent.futures import ThreadPoolExecutor
     from ..confload import load_config
 
     ##############
@@ -277,14 +279,16 @@ def main():
     baseurl = loaded_config.baseurl
     LOGGER.info('Frontend base URL is set to: %s' % baseurl)
 
-    ###################################
-    ## EXECUTOR FOR BACKGROUND TASKS ##
-    ###################################
+    ########################
+    ## EXECUTOR AND CACHE ##
+    ########################
 
-    executor = ProcessPoolExecutor(
+    executor = ThreadPoolExecutor(
         max_workers=maxworkers,
-        initializer=_setup_worker,
     )
+
+    # set up the cache
+    cacheobj = FanoutCache(cachedir, timeout=0.3)
 
     ###################
     ## HANDLER SETUP ##
@@ -293,23 +297,23 @@ def main():
     # we only have one actual endpoint, the other one is for testing
     handlers = [
         (rf'{baseurl}', IndexHandler,
-         {'conf':loaded_config, 'executor':executor}),
+         {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
         (rf'{baseurl}/login', LoginHandler,
-         {'conf':loaded_config, 'executor':executor}),
+         {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
         (rf'{baseurl}/logout', LogoutHandler,
-         {'conf':loaded_config, 'executor':executor}),
+         {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
         (rf'{baseurl}/users/new', NewUserHandler,
-         {'conf':loaded_config, 'executor':executor}),
+         {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
         (rf'{baseurl}/users/verify', VerifyUserHandler,
-         {'conf':loaded_config, 'executor':executor}),
+         {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
         (rf'{baseurl}/users/delete', DeleteUserHandler,
-         {'conf':loaded_config, 'executor':executor}),
+         {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
         (rf'{baseurl}/password/reset', ForgotPasswordStep1Handler,
-         {'conf':loaded_config, 'executor':executor}),
+         {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
         (rf'{baseurl}/password/verify', ForgotPasswordStep2Handler,
-         {'conf':loaded_config, 'executor':executor}),
+         {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
         (rf'{baseurl}/password/change', ChangePasswordHandler,
-         {'conf':loaded_config, 'executor':executor}),
+         {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
     ]
 
     ########################

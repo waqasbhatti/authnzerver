@@ -45,7 +45,7 @@
         <div class="navbar-nav">
 
           <!-- the login box goes here -->
-          <form class="form-inline" action="{{ conf.baseurl }}/users/logout"
+          <form class="form-inline" action="{{ conf.baseurl }}/logout"
                 id="user-logout-form" method="POST" >
             {% module xsrf_form_html() %}
             {% module LoginBoxModule(baseurl=conf.baseurl,current_user=current_user) %}

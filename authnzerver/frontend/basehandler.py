@@ -126,6 +126,7 @@ class BaseHandler(tornado.web.RequestHandler):
             self,
             conf,
             executor,
+            cacheobj,
     ):
         '''
         This just sets up some stuff.
@@ -153,9 +154,6 @@ class BaseHandler(tornado.web.RequestHandler):
             - pii_salt: A random salt value to use when hashing PII like session
               tokens, user IDs, and API keys for logging.
 
-            - cache_dir: The directory where the rate-limiting cache will be set
-              up
-
             - api_key_expiry: The number of days after which a previously
               issued API key (presented in the Authorization: Bearer
               [token] header) expires.
@@ -165,9 +163,16 @@ class BaseHandler(tornado.web.RequestHandler):
             concurrent.futures.ThreadPoolExecutor instance that will run
             background queries to the authnzerver.
 
+        cacheobj : diskcache.Cache object instance
+            This is a handle for the cache object to use for rate-limiting.
+
         '''
 
+        # the passed config object
         self.conf = conf
+
+        # the passed in cache object for rate-limiting
+        self.cacheobj = cacheobj
 
         # the IOLoop instance
         self.loop = tornado.ioloop.IOLoop.current()
@@ -188,7 +193,6 @@ class BaseHandler(tornado.web.RequestHandler):
         self.session_expiry = conf.session_expiry_days
         self.session_cookie_name = conf.session_cookie_name
         self.session_cookie_secure = conf.session_cookie_secure
-        self.cache_dir = conf.cache_dir
         self.api_key_expiry = conf.api_key_expiry
 
         # we'll only accept issuers that correspond to the authnzerver we know
@@ -909,7 +913,7 @@ class BaseHandler(tornado.web.RequestHandler):
                     incrementfn = partial(
                         cache.cache_increment,
                         session_token,
-                        cache_dirname=self.cache_dir
+                        cacheobj=self.cacheobj
                     )
 
                     # increment the rate counter for this session token
@@ -924,7 +928,7 @@ class BaseHandler(tornado.web.RequestHandler):
                         getratefn = partial(
                             cache.cache_getrate,
                             session_token,
-                            cache_dirname=self.cache_dir
+                            cacheobj=self.cacheobj
                         )
 
                         # check the rate for this session token
@@ -1016,7 +1020,7 @@ class BaseHandler(tornado.web.RequestHandler):
                     incrementfn = partial(
                         cache.cache_increment,
                         session_token,
-                        cache_dirname=self.cache_dir
+                        cacheobj=self.cacheobj
                     )
 
                     await self.loop.run_in_executor(self.executor,
@@ -1113,7 +1117,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 incrementfn = partial(
                     cache.cache_increment,
                     self.api_key_dict['tkn'],
-                    cache_dirname=self.cache_dir
+                    cacheobj=self.cacheobj
                 )
 
                 # increment the rate counter for this session token
@@ -1126,7 +1130,7 @@ class BaseHandler(tornado.web.RequestHandler):
                     getratefn = partial(
                         cache.cache_getrate,
                         self.api_key_dict['tkn'],
-                        cache_dirname=self.cache_dir
+                        cacheobj=self.cacheobj
                     )
 
                     # check the rate for this session token
