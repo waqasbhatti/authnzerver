@@ -32,6 +32,7 @@ from diskcache import FanoutCache
 ##############################
 
 def cache_add(key, value,
+              cacheobj=None,
               timeout_seconds=0.3,
               expires_seconds=None,
               cache_dirname='/tmp/authnzerver-cache'):
@@ -40,62 +41,85 @@ def cache_add(key, value,
 
     '''
 
-    cachedir = os.path.abspath(cache_dirname)
-    cache = FanoutCache(cachedir, timeout=timeout_seconds)
-    added = cache.add(key, value, expire=expires_seconds)
-    cache.close()
+    if not cacheobj:
+        cachedir = os.path.abspath(cache_dirname)
+        cache = FanoutCache(cachedir, timeout=timeout_seconds)
+    else:
+        cache = cacheobj
 
+    added = cache.add(key, value, expire=expires_seconds)
+
+    cache.close()
     return added
 
 
 def cache_get(key,
+              cacheobj=None,
               timeout_seconds=0.3,
               cache_dirname='/tmp/authnzerver-cache'):
     '''
     This sets a key to the value specified in the cache.
 
     '''
-    cachedir = os.path.abspath(cache_dirname)
-    cache = FanoutCache(cachedir, timeout=timeout_seconds)
-    val = cache.get(key)
-    cache.close()
 
+    if not cacheobj:
+        cachedir = os.path.abspath(cache_dirname)
+        cache = FanoutCache(cachedir, timeout=timeout_seconds)
+    else:
+        cache = cacheobj
+
+    val = cache.get(key)
+
+    cache.close()
     return val
 
 
 def cache_pop(key,
+              cacheobj=None,
               timeout_seconds=0.3,
               cache_dirname='/tmp/authnzerver-cache'):
     '''
     This sets a key to the value specified in the cache.
 
     '''
-    cachedir = os.path.abspath(cache_dirname)
-    cache = FanoutCache(cachedir, timeout=timeout_seconds)
-    val = cache.pop(key)
-    cache.close()
 
+    if not cacheobj:
+        cachedir = os.path.abspath(cache_dirname)
+        cache = FanoutCache(cachedir, timeout=timeout_seconds)
+    else:
+        cache = cacheobj
+
+    val = cache.pop(key)
+
+    cache.close()
     return val
 
 
 def cache_delete(key,
+                 cacheobj=None,
                  timeout_seconds=0.3,
                  cache_dirname='/tmp/authnzerver-cache'):
     '''
     This sets a key to the value specified in the cache.
 
     '''
-    cachedir = os.path.abspath(cache_dirname)
-    cache = FanoutCache(cachedir, timeout=timeout_seconds)
-    deleted = cache.delete(key)
-    cache.close()
 
+    if not cacheobj:
+        cachedir = os.path.abspath(cache_dirname)
+        cache = FanoutCache(cachedir, timeout=timeout_seconds)
+    else:
+        cache = cacheobj
+
+    deleted = cache.delete(key)
+
+    cache.close()
     return deleted
 
 
 def cache_increment(key,
+                    cacheobj=None,
                     timeout_seconds=0.3,
-                    cache_dirname='authnzerver-cache'):
+                    cache_dirname='/tmp/authnzerver-cache'):
     '''
     This sets up a counter for the key in the cache.
 
@@ -103,8 +127,12 @@ def cache_increment(key,
     Then increments 'key-counter'.
 
     '''
-    cachedir = os.path.abspath(cache_dirname)
-    cache = FanoutCache(cachedir, timeout=timeout_seconds)
+
+    if not cacheobj:
+        cachedir = os.path.abspath(cache_dirname)
+        cache = FanoutCache(cachedir, timeout=timeout_seconds)
+    else:
+        cache = cacheobj
 
     # add the key if not already present
     key_added = cache.add(key, time.time())
@@ -120,14 +148,20 @@ def cache_increment(key,
 
 
 def cache_decrement(key,
+                    cacheobj=None,
                     timeout_seconds=0.3,
                     cache_dirname='/tmp/authnzerver-cache'):
     '''
     This decrements the counter for key.
 
     '''
-    cachedir = os.path.abspath(cache_dirname)
-    cache = FanoutCache(cachedir, timeout=timeout_seconds)
+
+    if not cacheobj:
+        cachedir = os.path.abspath(cache_dirname)
+        cache = FanoutCache(cachedir, timeout=timeout_seconds)
+    else:
+        cache = cacheobj
+
     decremented_val = cache.decr('%s-counter' % key)
 
     # if the counter hits zero, delete the key entirely from the cache
@@ -141,6 +175,7 @@ def cache_decrement(key,
 
 
 def cache_getrate(key,
+                  cacheobj=None,
                   timeout_seconds=0.3,
                   cache_dirname='/tmp/authnzerver-cache'):
     '''This gets the rate of increment for the key by looking at the time of
@@ -150,8 +185,12 @@ def cache_getrate(key,
     key-counter_val/((time_now - time_insertion)/60.0)
 
     '''
-    cachedir = os.path.abspath(cache_dirname)
-    cache = FanoutCache(cachedir, timeout=timeout_seconds)
+
+    if not cacheobj:
+        cachedir = os.path.abspath(cache_dirname)
+        cache = FanoutCache(cachedir, timeout=timeout_seconds)
+    else:
+        cache = cacheobj
 
     # get the counter value
     counter_val = cache.get('%s-counter' % key, default=0)
@@ -173,15 +212,21 @@ def cache_getrate(key,
     )
 
 
-def cache_flush(timeout_seconds=0.3,
+def cache_flush(cacheobj=None,
+                timeout_seconds=0.3,
                 cache_dirname='/tmp/authnzerver-cache'):
     '''
     This removes all keys from the cache.
 
     '''
-    cachedir = os.path.abspath(cache_dirname)
-    cache = FanoutCache(cachedir, timeout=timeout_seconds)
-    items_removed = cache.clear()
-    cache.close()
 
+    if not cacheobj:
+        cachedir = os.path.abspath(cache_dirname)
+        cache = FanoutCache(cachedir, timeout=timeout_seconds)
+    else:
+        cache = cacheobj
+
+    items_removed = cache.clear()
+
+    cache.close()
     return items_removed
