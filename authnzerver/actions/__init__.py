@@ -38,6 +38,7 @@ from .apikey import (
 from .admin import (
     list_users,
     edit_user,
+    get_user_by_email,
     toggle_user_lock,
     internal_toggle_user_lock,
 )

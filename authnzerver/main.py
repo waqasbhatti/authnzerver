@@ -190,7 +190,8 @@ def main():
     ## HANDLERS ##
     ##############
 
-    from .handlers import AuthHandler, EchoHandler
+    from .handlers import AuthHandler
+    from .debughandler import EchoHandler
     from . import cache
     from . import actions
 
