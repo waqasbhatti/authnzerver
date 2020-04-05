@@ -185,6 +185,7 @@ def authnzerver_send_email(
         user,
         password,
         pii_salt,
+        bcc=False,
         port=587
 ):
     '''
@@ -226,6 +227,15 @@ def authnzerver_send_email(
         personally identifying information in the logs emitted from this
         function.
 
+    bcc : bool or list of str
+        If True, will set the To: field in the email itself to
+        "undisclosed-recipients" and send the email to all recipients such that
+        none of them know who the message was sent to (effectively BCCs all the
+        recipients). If this is set to a list of email addresses in RFC822
+        format as strings, will only BCC those email addresses. If this is set
+        to False, the To: field in the email itself will contain the addresses
+        of all recipients.
+
     port : int
         The SMTP port to use when logging into the email server via SMTP.
 
@@ -241,6 +251,12 @@ def authnzerver_send_email(
 
     # FIXME: remove all newlines from the subject, the sender's email address,
     # and all the recipient email address to prevent injection header attacks
+
+    # FIXME: add BCC ability
+
+    # FIXME: add a "Sender: sender email address" header
+
+    # FIXME: maybe add a "Reply-To: email address" header
 
     msg = MIMEText(text)
     msg['From'] = sender
