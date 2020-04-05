@@ -434,7 +434,7 @@ def main():
         LOGGER.info('Starting authnzerver. Listening on http://%s:%s.' %
                     (listen, serverport))
         LOGGER.info("The server is starting with TLS %s." %
-                    'enabled' if loaded_config.tls_enabled else 'disabled')
+                    ('enabled' if loaded_config.tls_enabled else 'disabled'))
         LOGGER.info('Background worker processes: %s. IOLoop in use: %s.' %
                     (maxworkers, IOLOOP_SPEC))
 

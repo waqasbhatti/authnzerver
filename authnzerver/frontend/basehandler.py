@@ -21,7 +21,6 @@ import re
 from hmac import compare_digest
 import json
 from functools import partial
-from base64 import b64encode, b64decode
 from secrets import token_urlsafe
 
 
@@ -62,7 +61,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 ## AUTHNZERVER IMPORTS AND CONFIG ##
 ####################################
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 
 from authnzerver.external.cookies import cookies
 from authnzerver import cache
@@ -73,47 +72,7 @@ from authnzerver.permissions import pii_hash
 ## MESSAGE HANDLING ##
 ######################
 
-def encrypt_message(message_dict, key):
-    '''
-    This encrypts the message using the Fernet scheme.
-
-    '''
-
-    frn = Fernet(key)
-    json_bytes = json.dumps(message_dict).encode()
-    json_encrypted_bytes = frn.encrypt(json_bytes)
-    request_base64 = b64encode(json_encrypted_bytes)
-    return request_base64
-
-
-def decrypt_message(message, key, reqid):
-    '''
-    This decrypts the message using the Fernet scheme.
-
-    '''
-    frn = Fernet(key)
-
-    try:
-
-        response_bytes = b64decode(message)
-        decrypted = frn.decrypt(response_bytes)
-        return json.loads(decrypted)
-
-    except InvalidToken:
-
-        LOGGER.error(
-            '[%s] Invalid response from authnzerver could not be decrypted.' %
-            reqid
-        )
-        return None
-
-    except Exception as e:
-
-        LOGGER.error(
-            '[%s] Could not understand incoming response from authnzerver, '
-            ' exception was: %r' % (reqid, e)
-        )
-        return None
+from authnzerver.messaging import encrypt_message, decrypt_message
 
 
 ########################

@@ -314,23 +314,23 @@ def main():
 
     # we only have one actual endpoint, the other one is for testing
     handlers = [
-        (rf'{baseurl}', IndexHandler,
+        (rf'{baseurl}/*', IndexHandler,
          {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
-        (rf'{baseurl}/login', LoginHandler,
+        (rf'{baseurl}/login/*', LoginHandler,
          {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
-        (rf'{baseurl}/logout', LogoutHandler,
+        (rf'{baseurl}/logout/*', LogoutHandler,
          {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
-        (rf'{baseurl}/users/new', NewUserHandler,
+        (rf'{baseurl}/users/new/*', NewUserHandler,
          {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
-        (rf'{baseurl}/users/verify', VerifyUserHandler,
+        (rf'{baseurl}/users/verify/*', VerifyUserHandler,
          {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
-        (rf'{baseurl}/users/delete', DeleteUserHandler,
+        (rf'{baseurl}/users/delete/*', DeleteUserHandler,
          {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
-        (rf'{baseurl}/password/reset', ForgotPasswordStep1Handler,
+        (rf'{baseurl}/password/reset/*', ForgotPasswordStep1Handler,
          {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
-        (rf'{baseurl}/password/verify', ForgotPasswordStep2Handler,
+        (rf'{baseurl}/password/verify/*', ForgotPasswordStep2Handler,
          {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
-        (rf'{baseurl}/password/change', ChangePasswordHandler,
+        (rf'{baseurl}/password/change/*', ChangePasswordHandler,
          {'conf':loaded_config, 'executor':executor, 'cacheobj':cacheobj}),
     ]
 
@@ -413,7 +413,7 @@ def main():
                     'Listening on http://%s:%s.' %
                     (listen, serverport))
         LOGGER.info("The server is starting with TLS %s." %
-                    'enabled' if loaded_config.tls_enabled else 'disabled')
+                    ('enabled' if loaded_config.tls_enabled else 'disabled'))
         LOGGER.info('Background workers: %s. IOLoop in use: %s.' %
                     (maxworkers, IOLOOP_SPEC))
 

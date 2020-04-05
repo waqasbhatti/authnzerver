@@ -35,6 +35,7 @@ from . import basehandler
 
 class LoginHandler(basehandler.BaseHandler):
 
+    @tornado.web.removeslash
     def get(self):
         '''
         This handles the login page.

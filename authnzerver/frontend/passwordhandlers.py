@@ -32,6 +32,7 @@ from . import basehandler
 
 class ForgotPasswordStep1Handler(basehandler.BaseHandler):
 
+    @tornado.web.removeslash
     def get(self):
         '''
         This handles the reset password step 1.
@@ -76,6 +77,7 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
 
 class ForgotPasswordStep2Handler(basehandler.BaseHandler):
 
+    @tornado.web.removeslash
     def get(self):
         '''
         This handles the reset password step 2.
@@ -120,6 +122,7 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
 
 class ChangePasswordHandler(basehandler.BaseHandler):
 
+    @tornado.web.removeslash
     def get(self):
         '''
         This shows the change password form.

@@ -45,7 +45,6 @@ class FrontendEncoder(json.JSONEncoder):
 json._default_encoder = FrontendEncoder()
 
 import ipaddress
-import base64
 
 import multiprocessing as mp
 
@@ -53,12 +52,11 @@ import multiprocessing as mp
 import tornado.web
 import tornado.ioloop
 
-from cryptography.fernet import Fernet, InvalidToken
-
 from sqlalchemy.sql import select
 
 from . import authdb
 from . import actions
+from .messaging import encrypt_message, decrypt_message
 
 
 #########################
@@ -75,45 +73,6 @@ def check_host(remote_ip):
                 ipaddress.ip_address('127.0.0.1'))
     except ValueError:
         return False
-
-
-def decrypt_request(requestbody_base64, fernet_key):
-    '''
-    This decrypts the incoming request.
-
-    '''
-
-    frn = Fernet(fernet_key)
-
-    try:
-
-        request_bytes = base64.b64decode(requestbody_base64)
-        decrypted = frn.decrypt(request_bytes)
-        return json.loads(decrypted)
-
-    except InvalidToken:
-
-        LOGGER.error('invalid request could not be decrypted')
-        return None
-
-    except Exception:
-
-        LOGGER.exception('could not understand incoming request')
-        return None
-
-
-def encrypt_response(response_dict, fernet_key):
-    '''
-    This encrypts the outgoing response.
-
-    '''
-
-    frn = Fernet(fernet_key)
-
-    json_bytes = json.dumps(response_dict).encode()
-    json_encrypted_bytes = frn.encrypt(json_bytes)
-    response_base64 = base64.b64encode(json_encrypted_bytes)
-    return response_base64
 
 
 #####################################
@@ -137,7 +96,7 @@ def auth_echo(payload):
             )
         )
 
-    permissions = currproc.authdb_meta.tables['permissions']
+    permissions = currproc.authdb_meta.tables['roles']
     s = select([permissions])
     result = currproc.authdb_engine.execute(s)
     # add the result to the outgoing payload
@@ -220,7 +179,9 @@ class EchoHandler(tornado.web.RequestHandler):
         if not ipcheck:
             raise tornado.web.HTTPError(status_code=400)
 
-        payload = decrypt_request(self.request.body, self.fernet_secret)
+        payload = decrypt_message(self.request.body,
+                                  self.fernet_secret,
+                                  'debug-request')
         if not payload:
             raise tornado.web.HTTPError(status_code=401)
 
@@ -241,7 +202,7 @@ class EchoHandler(tornado.web.RequestHandler):
             )
 
             if response_dict is not None:
-                encrypted_base64 = encrypt_response(
+                encrypted_base64 = encrypt_message(
                     response_dict,
                     self.fernet_secret
                 )
@@ -299,7 +260,7 @@ class AuthHandler(tornado.web.RequestHandler):
         if not ipcheck:
             raise tornado.web.HTTPError(status_code=400)
 
-        payload = decrypt_request(self.request.body, self.fernet_secret)
+        payload = decrypt_message(self.request.body, self.fernet_secret)
         if not payload:
             raise tornado.web.HTTPError(status_code=401)
 
@@ -396,7 +357,7 @@ class AuthHandler(tornado.web.RequestHandler):
                              "response":response,
                              "message": response['messages']}
 
-            encrypted_base64 = encrypt_response(
+            encrypted_base64 = encrypt_message(
                 response_dict,
                 self.fernet_secret
             )

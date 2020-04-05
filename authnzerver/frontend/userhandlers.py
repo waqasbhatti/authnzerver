@@ -32,6 +32,7 @@ from . import basehandler
 
 class NewUserHandler(basehandler.BaseHandler):
 
+    @tornado.web.removeslash
     def get(self):
         '''
         This handles the new user sign-up forn.
@@ -76,6 +77,7 @@ class NewUserHandler(basehandler.BaseHandler):
 
 class VerifyUserHandler(basehandler.BaseHandler):
 
+    @tornado.web.removeslash
     def get(self):
         '''
         This handles the verify user page.
@@ -120,6 +122,7 @@ class VerifyUserHandler(basehandler.BaseHandler):
 
 class DeleteUserHandler(basehandler.BaseHandler):
 
+    @tornado.web.removeslash
     def get(self):
         '''
         This shows the delete user form.
