@@ -107,7 +107,7 @@ class FlashMessageModule(tornado.web.UIModule):
             flash_messages = '<br>'.join(flash_message_list)
 
         return self.render_string(
-            "loginbox-uimodule.html",
+            "flashmessage-uimodule.html",
             flash_messages=flash_messages,
             alert_type=alert_type,
         )

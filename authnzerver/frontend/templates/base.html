@@ -42,7 +42,7 @@
 
       <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
 
-        <div class="navbar-nav">
+        <div class="navbar-nav ml-auto">
 
           <!-- the login box goes here -->
           <form class="form-inline" action="{{ conf.baseurl }}/logout"
@@ -79,13 +79,9 @@
     <div class="container" >
       <footer class="text-muted">
 
-        <div class="row" >
-          <div class="col-12" >
-            <hr>
-          </div>
-        </div>
-
         <!-- footer content starts from here -->
+        {% block pagefooter %}
+        {% end %}
 
       </footer>
     </div>

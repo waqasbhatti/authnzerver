@@ -360,7 +360,9 @@ def main():
         xsrf_cookies=True,
         xsrf_cookie_kwargs={'samesite':'Lax'},
         default_handler_class=PageNotFoundHandler,
-        default_handler_args={'conf':loaded_config, 'executor':executor},
+        default_handler_args={'conf':loaded_config,
+                              'executor':executor,
+                              'cacheobj':cacheobj},
 
     )
 
@@ -412,7 +414,7 @@ def main():
                     (listen, serverport))
         LOGGER.info("The server is starting with TLS %s." %
                     'enabled' if loaded_config.tls_enabled else 'disabled')
-        LOGGER.info('Background worker processes: %s. IOLoop in use: %s.' %
+        LOGGER.info('Background workers: %s. IOLoop in use: %s.' %
                     (maxworkers, IOLOOP_SPEC))
 
         # start the IOLoop

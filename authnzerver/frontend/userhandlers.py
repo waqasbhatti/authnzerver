@@ -22,6 +22,7 @@ LOGEXCEPTION = LOGGER.exception
 ## IMPORTS ##
 #############
 
+import tornado.web
 from . import basehandler
 
 
@@ -54,6 +55,27 @@ class NewUserHandler(basehandler.BaseHandler):
 
         '''
 
+        if not (self.post_check['status'] == 'ok' and
+                self.xsrf_type == 'api_key'):
+
+            self.set_status(401)
+            retdict = {
+                'status':'failed',
+                'data':None,
+                'message':"Sorry, you don't have access."
+            }
+            self.write(retdict)
+            raise tornado.web.Finish()
+
+        elif not (self.post_check['status'] == 'ok' and
+                  self.xsrf_type == 'session'):
+
+            self.render_blocked_message(code=401)
+
+        #
+        # actual processing here
+        #
+
 
 class VerifyUserHandler(basehandler.BaseHandler):
 
@@ -80,6 +102,27 @@ class VerifyUserHandler(basehandler.BaseHandler):
 
         '''
 
+        if not (self.post_check['status'] == 'ok' and
+                self.xsrf_type == 'api_key'):
+
+            self.set_status(401)
+            retdict = {
+                'status':'failed',
+                'data':None,
+                'message':"Sorry, you don't have access."
+            }
+            self.write(retdict)
+            raise tornado.web.Finish()
+
+        elif not (self.post_check['status'] == 'ok' and
+                  self.xsrf_type == 'session'):
+
+            self.render_blocked_message(code=401)
+
+        #
+        # actual processing here
+        #
+
 
 class DeleteUserHandler(basehandler.BaseHandler):
 
@@ -105,3 +148,24 @@ class DeleteUserHandler(basehandler.BaseHandler):
         This handles the POST for the delete user action.
 
         '''
+
+        if not (self.post_check['status'] == 'ok' and
+                self.xsrf_type == 'api_key'):
+
+            self.set_status(401)
+            retdict = {
+                'status':'failed',
+                'data':None,
+                'message':"Sorry, you don't have access."
+            }
+            self.write(retdict)
+            raise tornado.web.Finish()
+
+        elif not (self.post_check['status'] == 'ok' and
+                  self.xsrf_type == 'session'):
+
+            self.render_blocked_message(code=401)
+
+        #
+        # actual processing here
+        #

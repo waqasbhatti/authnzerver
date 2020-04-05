@@ -22,6 +22,7 @@ LOGEXCEPTION = LOGGER.exception
 ## IMPORTS ##
 #############
 
+import tornado.web
 from . import basehandler
 
 
@@ -54,6 +55,27 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
 
         '''
 
+        if not (self.post_check['status'] == 'ok' and
+                self.xsrf_type == 'api_key'):
+
+            self.set_status(401)
+            retdict = {
+                'status':'failed',
+                'data':None,
+                'message':"Sorry, you don't have access."
+            }
+            self.write(retdict)
+            raise tornado.web.Finish()
+
+        elif not (self.post_check['status'] == 'ok' and
+                  self.xsrf_type == 'session'):
+
+            self.render_blocked_message(code=401)
+
+        #
+        # actual processing here
+        #
+
 
 class ForgotPasswordStep2Handler(basehandler.BaseHandler):
 
@@ -80,6 +102,27 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
 
         '''
 
+        if not (self.post_check['status'] == 'ok' and
+                self.xsrf_type == 'api_key'):
+
+            self.set_status(401)
+            retdict = {
+                'status':'failed',
+                'data':None,
+                'message':"Sorry, you don't have access."
+            }
+            self.write(retdict)
+            raise tornado.web.Finish()
+
+        elif not (self.post_check['status'] == 'ok' and
+                  self.xsrf_type == 'session'):
+
+            self.render_blocked_message(code=401)
+
+        #
+        # actual processing here
+        #
+
 
 class ChangePasswordHandler(basehandler.BaseHandler):
 
@@ -105,3 +148,24 @@ class ChangePasswordHandler(basehandler.BaseHandler):
         This handles the POST for the change password form.
 
         '''
+
+        if not (self.post_check['status'] == 'ok' and
+                self.xsrf_type == 'api_key'):
+
+            self.set_status(401)
+            retdict = {
+                'status':'failed',
+                'data':None,
+                'message':"Sorry, you don't have access."
+            }
+            self.write(retdict)
+            raise tornado.web.Finish()
+
+        elif not (self.post_check['status'] == 'ok' and
+                  self.xsrf_type == 'session'):
+
+            self.render_blocked_message(code=401)
+
+        #
+        # actual processing here
+        #

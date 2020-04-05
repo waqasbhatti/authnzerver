@@ -404,7 +404,8 @@ class BaseHandler(tornado.web.RequestHandler):
             expires_days = expires_days.days
 
             LOGGER.info(
-                '[%s] New session cookie for %s expires at %s, in %s days' %
+                '[%s] Setting new session cookie for session_token: %s, '
+                'expires at %s, in %s days' %
                 (self.reqid,
                  pii_hash(resp['session_token'], self.pii_salt),
                  resp['expires'],
@@ -625,8 +626,6 @@ class BaseHandler(tornado.web.RequestHandler):
                 'message':("'_xsrf' argument missing from POST'"),
                 'result':None
             }
-
-            self.set_status(401)
             return retdict
 
         _, token, _ = self._decode_xsrf_token(token)
@@ -639,8 +638,6 @@ class BaseHandler(tornado.web.RequestHandler):
                 'message':("'_xsrf' argument missing from POST"),
                 'result':None
             }
-
-            self.set_status(401)
             return retdict
 
         if not compare_digest(utf8(token), utf8(expected_token)):
@@ -650,8 +647,6 @@ class BaseHandler(tornado.web.RequestHandler):
                 'message':("XSRF cookie does not match POST argument"),
                 'result':None
             }
-
-            self.set_status(401)
             return retdict
 
         else:
@@ -743,13 +738,13 @@ class BaseHandler(tornado.web.RequestHandler):
                 'result':None
             }
 
-    def render_blocked_message(self):
+    def render_blocked_message(self, code=403):
         '''
         This renders the template indicating that the user is blocked.
 
         '''
 
-        self.set_status(403)
+        self.set_status(code)
         self.render(
             'errorpage.html',
             baseurl=self.conf.baseurl,
@@ -795,6 +790,11 @@ class BaseHandler(tornado.web.RequestHandler):
         '''
         This saves the flash messages to a secure cookie.
 
+        Alert types are::
+
+            "primary", "secondary", "success", "danger",
+            "warning", "info", "light", "dark"
+
         '''
 
         if isinstance(messages, list):
@@ -825,6 +825,8 @@ class BaseHandler(tornado.web.RequestHandler):
         '''
         This gets the previous saved flash messages from a secure cookie.
 
+        It then deletes the cookie so they don't linger around.
+
         '''
 
         messages = self.get_secure_cookie(
@@ -836,9 +838,14 @@ class BaseHandler(tornado.web.RequestHandler):
             messages = json.loads(messages)
             message_text = messages['text']
             alert_type = messages['type']
-            return message_text, alert_type
         else:
-            return '', None
+            message_text = ''
+            alert_type = None
+
+        # delete the server-messages cookie now that we're done with it
+        self.clear_cookie('server-messages')
+
+        return message_text, alert_type
 
     async def prepare(self):
         '''This async talks to the authnzerver to get info on the current user.

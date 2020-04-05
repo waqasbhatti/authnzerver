@@ -12,6 +12,20 @@
 
       <h1>Welcome to the authnzerver frontend!</h1>
 
+      {% if current_user['user_role'] in ('authenticated','superuser','staff') %}
+
+      <p>Hi <strong>{{ current_user['full_name'] }}</strong>! You're signed in
+      and your user role is: <strong>{{ current_user['user_role'] }}</strong>.</p>
+
+      {% else %}
+
+      <p>You're not signed in. Please
+        <a href="{{ conf.baseurl }}/login">sign in</a> or
+        if you don't have an account, go ahead and
+        <a href="{{ conf.baseurl }}/users/new"> make one</a>.</p>
+
+      {% end %}
+
     </div>
   </div>
 

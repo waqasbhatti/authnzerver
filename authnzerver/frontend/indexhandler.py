@@ -37,13 +37,11 @@ class IndexHandler(basehandler.BaseHandler):
 
         '''
 
-        flash_message_list, alert_type = self.get_flash_messages()
-
         self.render(
             'index.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Authnzerver',
-            flash_message_list=flash_message_list,
-            alert_type=alert_type,
+            flash_message_list=self.flash_message_list,
+            alert_type=self.alert_type,
         )
