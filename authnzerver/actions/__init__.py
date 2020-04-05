@@ -46,7 +46,7 @@ from .email import (
     send_signup_verification_email,
     verify_user_email_address,
     send_forgotpass_verification_email,
-    authnzerver_send_email,
+    send_email,
 )
 
 from .session import (

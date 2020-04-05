@@ -49,6 +49,7 @@ from email.mime.text import MIMEText
 from email.utils import formatdate, make_msgid
 import smtplib
 import time
+import re
 
 from sqlalchemy import select
 
@@ -176,7 +177,7 @@ Thanks,
 '''
 
 
-def authnzerver_send_email(
+def send_email(
         sender,
         subject,
         text,
@@ -247,23 +248,117 @@ def authnzerver_send_email(
 
     '''
 
-    # FIXME: validate the sender's and all the recipients' email addresses
+    # validate the sender's email address
+    if '<' in sender and '>' in sender:
+        sender_email = re.findall(r'<(\S+)>', sender)
+        if not sender_email:
+            LOGGER.error("Invalid sender email address. Can't send this email.")
+            return False
+        else:
+            sender_email = sender_email[0]
+    else:
+        sender_email = sender
 
-    # FIXME: remove all newlines from the subject, the sender's email address,
-    # and all the recipient email address to prevent injection header attacks
+    valid_sender_email = validate_email_address(sender_email)
+    if not valid_sender_email:
+        LOGGER.error("Invalid sender email address. Can't send this email.")
+        return False
 
-    # FIXME: add BCC ability
+    # remove all newlines from the subject, the sender's email address,
+    # and all the recipient email address to prevent header injection attacks
+    cleaned_sender = sender.replace('\n','')
+    cleaned_subject = subject.replace('\n','')
+    cleaned_recipients = [x.replace('\n','') for x in recipients]
 
-    # FIXME: add a "Sender: sender email address" header
+    # validate the recipients' email addresses
+    validated_recipients = []
 
-    # FIXME: maybe add a "Reply-To: email address" header
+    for recipient in cleaned_recipients:
+
+        if '<' in recipient and '>' in recipient:
+            recipient_email = re.findall(r'<(\S+)>', recipient)
+            if recipient_email:
+                recipient_email = recipient_email[0]
+            else:
+                LOGGER.warning(
+                    "Recipient email address: %s is not valid, skipping..." %
+                    pii_hash(recipient, pii_salt)
+                )
+                continue
+        else:
+            recipient_email = recipient
+
+        recipient_email_valid = validate_email_address(recipient_email)
+
+        if not recipient_email_valid:
+            LOGGER.warning(
+                "Recipient email address: %s not valid, skipping..." %
+                pii_hash(recipient, pii_salt)
+            )
+        else:
+            validated_recipients.append(recipient)
+
+    if not validated_recipients:
+
+        LOGGER.error("No valid recipients found for this email.")
+        return False
+
+    #
+    # construct the message
+    #
 
     msg = MIMEText(text)
-    msg['From'] = sender
+    msg['From'] = cleaned_sender
     msg['To'] = ', '.join(recipients)
     msg['Message-Id'] = make_msgid()
-    msg['Subject'] = subject
+    msg['Subject'] = cleaned_subject
     msg['Date'] = formatdate(time.time())
+    msg['Sender'] = sender_email
+
+    #
+    # handle the BCC kwarg
+    #
+
+    # if everyone is to be BCCed, remove all the recipients from the "To:" field
+    if bcc is True:
+
+        msg['To'] = "undisclosed-recipients"
+
+    # if there are specific people who need to be BCCed, clean their addresses,
+    # validate them, and then add them to the validated_recipients list
+    elif isinstance(bcc, (list, tuple)):
+
+        for bcc_recipient in bcc:
+
+            cleaned_bcc_recipient = bcc_recipient.replace('\n','')
+
+            if '<' in cleaned_bcc_recipient and '>' in cleaned_bcc_recipient:
+                bcc_recipient_email = re.findall(r'<(\S+)>',
+                                                 cleaned_bcc_recipient)
+                if bcc_recipient_email:
+                    bcc_recipient_email = bcc_recipient_email[0]
+                else:
+                    LOGGER.warning(
+                        "BCC email address: %s is not valid, skipping..." %
+                        pii_hash(bcc_recipient, pii_salt)
+                    )
+                    continue
+
+            else:
+                bcc_recipient_email = cleaned_bcc_recipient
+
+            bcc_email_valid = validate_email_address(bcc_recipient_email)
+            if not bcc_email_valid:
+                LOGGER.warning(
+                    "BCC email address: %s not valid, skipping..." %
+                    pii_hash(bcc_recipient, pii_salt)
+                )
+            else:
+                validated_recipients.append(cleaned_bcc_recipient)
+
+    #
+    # finally, send the emails
+    #
 
     # next, we'll try to login to the SMTP server
     try:
@@ -273,6 +368,7 @@ def authnzerver_send_email(
 
         if server.has_extn('STARTTLS'):
 
+            # try to send the email
             try:
 
                 server.starttls()
@@ -284,14 +380,15 @@ def authnzerver_send_email(
                 )
 
                 server.sendmail(
-                    sender,
-                    recipients,
+                    cleaned_sender,
+                    validated_recipients,
                     msg.as_string()
                 )
 
                 server.quit()
                 return True
 
+            # if it fails, bail out
             except Exception as e:
 
                 LOGGER.error(
@@ -583,7 +680,7 @@ def send_signup_verification_email(payload,
     )
 
     # send the email
-    email_sent = authnzerver_send_email(
+    email_sent = send_email(
         sender,
         subject,
         msgtext,
@@ -1064,7 +1161,7 @@ def send_forgotpass_verification_email(payload,
     )
 
     # send the email
-    email_sent = authnzerver_send_email(
+    email_sent = send_email(
         sender,
         subject,
         msgtext,
