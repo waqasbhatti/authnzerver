@@ -38,15 +38,13 @@ class NewUserHandler(basehandler.BaseHandler):
 
         '''
 
-        flash_message_list, alert_type = self.get_flash_messages()
-
         self.render(
             'signup.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Sign up for an account.',
-            flash_message_list=flash_message_list,
-            alert_type=alert_type,
+            flash_message_list=self.flash_message_list,
+            alert_type=self.alert_type,
         )
 
     def post(self):
@@ -55,8 +53,8 @@ class NewUserHandler(basehandler.BaseHandler):
 
         '''
 
-        if not (self.post_check['status'] == 'ok' and
-                self.xsrf_type == 'api_key'):
+        if (not self.post_check['status'] == 'ok' and
+            self.xsrf_type == 'api_key'):
 
             self.set_status(401)
             retdict = {
@@ -67,8 +65,7 @@ class NewUserHandler(basehandler.BaseHandler):
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not (self.post_check['status'] == 'ok' and
-                  self.xsrf_type == 'session'):
+        elif not self.post_check['status'] == 'ok':
 
             self.render_blocked_message(code=401)
 
@@ -85,15 +82,13 @@ class VerifyUserHandler(basehandler.BaseHandler):
 
         '''
 
-        flash_message_list, alert_type = self.get_flash_messages()
-
         self.render(
             'verify.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Verify your sign-up request.',
-            flash_message_list=flash_message_list,
-            alert_type=alert_type,
+            flash_message_list=self.flash_message_list,
+            alert_type=self.alert_type,
         )
 
     def post(self):
@@ -102,8 +97,8 @@ class VerifyUserHandler(basehandler.BaseHandler):
 
         '''
 
-        if not (self.post_check['status'] == 'ok' and
-                self.xsrf_type == 'api_key'):
+        if (not self.post_check['status'] == 'ok' and
+            self.xsrf_type == 'api_key'):
 
             self.set_status(401)
             retdict = {
@@ -114,8 +109,7 @@ class VerifyUserHandler(basehandler.BaseHandler):
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not (self.post_check['status'] == 'ok' and
-                  self.xsrf_type == 'session'):
+        elif not self.post_check['status'] == 'ok':
 
             self.render_blocked_message(code=401)
 
@@ -132,15 +126,13 @@ class DeleteUserHandler(basehandler.BaseHandler):
 
         '''
 
-        flash_message_list, alert_type = self.get_flash_messages()
-
         self.render(
             'delete.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Delete your account.',
-            flash_message_list=flash_message_list,
-            alert_type=alert_type,
+            flash_message_list=self.flash_message_list,
+            alert_type=self.alert_type,
         )
 
     def post(self):
@@ -149,8 +141,8 @@ class DeleteUserHandler(basehandler.BaseHandler):
 
         '''
 
-        if not (self.post_check['status'] == 'ok' and
-                self.xsrf_type == 'api_key'):
+        if (not self.post_check['status'] == 'ok' and
+            self.xsrf_type == 'api_key'):
 
             self.set_status(401)
             retdict = {
@@ -161,8 +153,7 @@ class DeleteUserHandler(basehandler.BaseHandler):
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not (self.post_check['status'] == 'ok' and
-                  self.xsrf_type == 'session'):
+        elif not self.post_check['status'] == 'ok':
 
             self.render_blocked_message(code=401)
 

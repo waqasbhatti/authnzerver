@@ -38,15 +38,13 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
 
         '''
 
-        flash_message_list, alert_type = self.get_flash_messages()
-
         self.render(
             'passreset-step1.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Reset your account password.',
-            flash_message_list=flash_message_list,
-            alert_type=alert_type,
+            flash_message_list=self.flash_message_list,
+            alert_type=self.alert_type,
         )
 
     def post(self):
@@ -55,8 +53,8 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
 
         '''
 
-        if not (self.post_check['status'] == 'ok' and
-                self.xsrf_type == 'api_key'):
+        if (not self.post_check['status'] == 'ok' and
+            self.xsrf_type == 'api_key'):
 
             self.set_status(401)
             retdict = {
@@ -67,8 +65,7 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not (self.post_check['status'] == 'ok' and
-                  self.xsrf_type == 'session'):
+        elif not self.post_check['status'] == 'ok':
 
             self.render_blocked_message(code=401)
 
@@ -85,15 +82,13 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
 
         '''
 
-        flash_message_list, alert_type = self.get_flash_messages()
-
         self.render(
             'passreset-step2.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Verify your password reset request.',
-            flash_message_list=flash_message_list,
-            alert_type=alert_type,
+            flash_message_list=self.flash_message_list,
+            alert_type=self.alert_type,
         )
 
     def post(self):
@@ -102,8 +97,8 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
 
         '''
 
-        if not (self.post_check['status'] == 'ok' and
-                self.xsrf_type == 'api_key'):
+        if (not self.post_check['status'] == 'ok' and
+            self.xsrf_type == 'api_key'):
 
             self.set_status(401)
             retdict = {
@@ -114,8 +109,7 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not (self.post_check['status'] == 'ok' and
-                  self.xsrf_type == 'session'):
+        elif not self.post_check['status'] == 'ok':
 
             self.render_blocked_message(code=401)
 
@@ -132,15 +126,13 @@ class ChangePasswordHandler(basehandler.BaseHandler):
 
         '''
 
-        flash_message_list, alert_type = self.get_flash_messages()
-
         self.render(
             'passchange.html',
             current_user=self.current_user,
             conf=self.conf,
             page_title='Change your account password.',
-            flash_message_list=flash_message_list,
-            alert_type=alert_type,
+            flash_message_list=self.flash_message_list,
+            alert_type=self.alert_type,
         )
 
     def post(self):
@@ -149,8 +141,8 @@ class ChangePasswordHandler(basehandler.BaseHandler):
 
         '''
 
-        if not (self.post_check['status'] == 'ok' and
-                self.xsrf_type == 'api_key'):
+        if (not self.post_check['status'] == 'ok' and
+            self.xsrf_type == 'api_key'):
 
             self.set_status(401)
             retdict = {
@@ -161,8 +153,7 @@ class ChangePasswordHandler(basehandler.BaseHandler):
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not (self.post_check['status'] == 'ok' and
-                  self.xsrf_type == 'session'):
+        elif not self.post_check['status'] == 'ok':
 
             self.render_blocked_message(code=401)
 
