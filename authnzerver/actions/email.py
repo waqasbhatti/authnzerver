@@ -55,6 +55,7 @@ from sqlalchemy import select
 from .. import authdb
 from .session import auth_session_exists
 from ..permissions import pii_hash
+from ..validators import validate_email_address
 
 
 ####################
@@ -235,6 +236,11 @@ def authnzerver_send_email(
         Returns True if email sending succeeded. False otherwise.
 
     '''
+
+    # FIXME: validate the sender's and all the recipients' email addresses
+
+    # FIXME: remove all newlines from the subject, the sender's email address,
+    # and all the recipient email address to prevent injection header attacks
 
     msg = MIMEText(text)
     msg['From'] = sender
