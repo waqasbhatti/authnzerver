@@ -250,7 +250,7 @@ class AuthHandler(tornado.web.RequestHandler):
             response_dict = {"success": response['success'],
                              "reqid": reqid,
                              "response":response,
-                             "message": response['messages']}
+                             "messages": response['messages']}
 
             encrypted_base64 = encrypt_message(
                 response_dict,

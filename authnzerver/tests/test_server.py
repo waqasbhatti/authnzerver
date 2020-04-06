@@ -528,7 +528,7 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
                     "after repeated login failures. "
                     "Try again in an hour or "
                     "contact the server admins."
-                ) in response_dict['message']
+                ) in response_dict['messages']
 
         # wait 30 seconds for the lock time to expire
         time.sleep(30)
