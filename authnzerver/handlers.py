@@ -213,6 +213,7 @@ class AuthHandler(tornado.web.RequestHandler):
                 if failure_status == 'locked':
                     response = await self.lockuser_repeated_login_failures(
                         payload,
+                        unlock_after_seconds=self.config.userlocktime
                     )
                 elif failure_status == 'wait':
                     LOGGER.warning(
@@ -220,8 +221,8 @@ class AuthHandler(tornado.web.RequestHandler):
                         "after %s failed login attempts. "
                         "Current wait time: %.1f seconds." %
                         (reqid,
-                         failure_count,
                          pii_hash(payload['body']['email'], self.pii_salt),
+                         failure_count,
                          failure_wait)
                     )
 
@@ -285,7 +286,7 @@ class AuthHandler(tornado.web.RequestHandler):
             payload['body']['email']
         ]
 
-        if 1 < failed_pass_count <= 10:
+        if 0 < failed_pass_count <= self.config.userlocktries:
             # asyncio.sleep for an exponentially increasing period of time
             # until 40.0 seconds ~= 10 tries
             wait_time = 1.5**(failed_pass_count - 1.0)
@@ -294,7 +295,7 @@ class AuthHandler(tornado.web.RequestHandler):
             await asyncio.sleep(wait_time)
             return ('wait', failed_pass_count, wait_time)
 
-        elif failed_pass_count > 10:
+        elif failed_pass_count > self.config.userlocktries:
             return ('locked', failed_pass_count, 0.0)
 
         else:
@@ -329,7 +330,8 @@ class AuthHandler(tornado.web.RequestHandler):
         else:
 
             # attempt to lock the user using actions.internal_toggle_user_lock
-            locked_info = await loop.run_executor(
+            locked_info = await loop.run_in_executor(
+                self.executor,
                 actions.internal_toggle_user_lock,
                 {'target_userid':user_info['user_info']['user_id'],
                  'action':'lock',
@@ -367,18 +369,8 @@ class AuthHandler(tornado.web.RequestHandler):
         # above to deny the login
         return {
             "success": False,
-            "reqid": payload['body']['reqid'],
-            "response":{
-                "success":False,
-                "user_id":None,
-                "messages":[
-                    "Your user account has been locked "
-                    "after repeated login failures. "
-                    "Try again in an hour or "
-                    "contact the server admins."
-                ]
-            },
-            "message": [
+            "user_id":None,
+            "messages":[
                 "Your user account has been locked "
                 "after repeated login failures. "
                 "Try again in an hour or "
@@ -392,8 +384,15 @@ class AuthHandler(tornado.web.RequestHandler):
 
         '''
 
+        LOGGER.warning(
+            "[%s] Unlocked the account for user ID: %s after "
+            "login-failure timeout expired." %
+            (reqid, pii_hash(user_id, pii_salt))
+        )
+
         loop = tornado.ioloop.IOLoop.current()
         locked_info = await loop.run_in_executor(
+            self.executor,
             actions.internal_toggle_user_lock,
             {'target_userid':user_id,
              'action':'unlock',
