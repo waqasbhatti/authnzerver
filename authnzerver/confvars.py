@@ -227,6 +227,26 @@ CONF = {
         'readable_from_file':False,
         'postprocess_value':None,
     },
+    'userlocktries':{
+        'env':'%s_USERLOCKTRIES' % ENVPREFIX,
+        'cmdline':'userlocktries',
+        'type':int,
+        'default':10,
+        'help':('This sets the maximum number of failed logins per user '
+                'that triggers a temporary lock on their account.'),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
+    'userlocktime':{
+        'env':'%s_USERLOCKTIME' % ENVPREFIX,
+        'cmdline':'userlocktime',
+        'type':int,
+        'default':3600,
+        'help':('This sets the lockout time in seconds for failed user logins '
+                'that exceed the maximum number of failed login tries.'),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
     'workers':{
         'env':'%s_WORKERS' % ENVPREFIX,
         'cmdline':'workers',
