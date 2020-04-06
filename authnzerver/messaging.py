@@ -19,6 +19,28 @@ LOGGER = logging.getLogger(__name__)
 
 import json
 from base64 import b64encode, b64decode
+from datetime import datetime
+
+
+class FrontendEncoder(json.JSONEncoder):
+
+    def default(self, obj):
+
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, bytes):
+            return obj.decode()
+        elif isinstance(obj, complex):
+            return (obj.real, obj.imag)
+        else:
+            return json.JSONEncoder.default(self, obj)
+
+
+# this replaces the default encoder and makes it so Tornado will do the right
+# thing when it converts dicts to JSON when a
+# tornado.web.RequestHandler.write(dict) is called.
+json._default_encoder = FrontendEncoder()
+
 
 ################################
 ## ENCRYPTION RELATED IMPORTS ##
