@@ -259,7 +259,7 @@ def get_user_by_email(payload,
 
         The user info dict will contain the following items::
 
-            {'user_id','full_name', 'email',
+            {'user_id','system_id', 'full_name', 'email',
              'is_active','created_on','user_role',
              'last_login_try','last_login_success'}
 

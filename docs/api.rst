@@ -308,7 +308,23 @@ Requires the following ``body`` items in a request:
  Returns a ``response`` with the following items if successful:
 
 - ``user_info`` (list of dicts): a list containing all user info as a dict per
-  user
+  user. Each dict has the following items of information as dict keys:
+  ``'user_id', 'system_id', 'full_name', 'email', 'is_active', 'created_on',
+  'user_role', 'last_login_try', 'last_login_success'``.
+
+``user-lookup-email``: Look up a user's info given their email address
+----------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``email`` (str): the email address of the user to look up.
+
+ Returns a ``response`` with the following items if successful:
+
+- ``user_info`` (dict): a dict with the following items of information for the
+  user as dict keys: ``'user_id', 'system_id', 'full_name', 'email',
+  'is_active', 'created_on', 'user_role', 'last_login_try',
+  'last_login_success'``.
 
 ``user-edit``: Edit a user's properties
 ---------------------------------------
@@ -323,10 +339,9 @@ Requires the following ``body`` items in a request:
 
 - ``target_userid`` (int): the user ID that will be the subject of this request
 
-- ``update_dict`` (dict): the items to update. keys allowed for all users:
-
-- ``full_name``, ``email``. keys allowed for superusers only: ``is_active``,
-  ``user_role``.
+- ``update_dict`` (dict): the items to update. Keys that can be updated by all
+  authenticated users are: ``full_name``, ``email``. Additional keys that can be
+  updated by superusers only are: ``is_active``, ``user_role``.
 
 Returns a ``response`` with the following items if successful:
 
@@ -342,7 +357,8 @@ Requires the following ``body`` items in a request:
 
 - ``new_password`` (str): the new password provided by the user
 
-- ``session_token`` (str): the session token of the session initiating the request
+- ``session_token`` (str): the session token of the session initiating the
+  request
 
 Returns a ``response`` with the following items:
 
