@@ -43,9 +43,7 @@ class LoginHandler(basehandler.BaseHandler):
         '''
 
         # redirect if the user's already logged in
-        if self.current_user['user_role'] in ('authenticated',
-                                              'staff',
-                                              'superuser'):
+        if self.current_user['user_role'] not in ('anonymous','locked'):
             self.save_flash_messages(
                 "You are already signed in.",
                 "warning"
@@ -72,21 +70,28 @@ class LoginHandler(basehandler.BaseHandler):
 
         '''
 
-        if (not self.post_check['status'] == 'ok' and
-            self.xsrf_type == 'api_key'):
-
-            self.set_status(401)
+        # disallow Authorization headers for this URL
+        if self.xsrf_type == 'api_key':
+            self.set_status(403)
             retdict = {
                 'status':'failed',
                 'data':None,
-                'message':"Sorry, you don't have access."
+                'message':"Sorry, API keys are not allowed for this endpoint."
             }
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not self.post_check['status'] == 'ok':
-
+        # disallow if the XSRF check failed
+        if self.post_check['status'] != 'ok':
             self.render_blocked_message(code=401)
+
+        # redirect if the user's already logged in
+        if self.current_user['user_role'] not in ('anonymous','locked'):
+            self.save_flash_messages(
+                "You are already signed in.",
+                "warning"
+            )
+            self.redirect(self.conf.baseurl)
 
         #
         # actual processing here
@@ -190,20 +195,17 @@ class LogoutHandler(basehandler.BaseHandler):
         if not self.current_user:
             self.redirect(self.conf.baseurl)
 
-        if (not self.post_check['status'] == 'ok' and
-            self.xsrf_type == 'api_key'):
-
-            self.set_status(401)
+        if self.xsrf_type == 'api_key':
+            self.set_status(403)
             retdict = {
                 'status':'failed',
                 'data':None,
-                'message':"Sorry, you don't have access."
+                'message':"Sorry, API keys are not allowed for this endpoint."
             }
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not self.post_check['status'] == 'ok':
-
+        if self.post_check['status'] != 'ok':
             self.render_blocked_message(code=401)
 
         #

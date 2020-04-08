@@ -54,20 +54,19 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
 
         '''
 
-        if (not self.post_check['status'] == 'ok' and
-            self.xsrf_type == 'api_key'):
-
-            self.set_status(401)
+        # disallow Authorization headers for this URL
+        if self.xsrf_type == 'api_key':
+            self.set_status(403)
             retdict = {
                 'status':'failed',
                 'data':None,
-                'message':"Sorry, you don't have access."
+                'message':"Sorry, API keys are not allowed for this endpoint."
             }
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not self.post_check['status'] == 'ok':
-
+        # disallow if the XSRF check failed
+        if self.post_check['status'] != 'ok':
             self.render_blocked_message(code=401)
 
         #
@@ -99,20 +98,19 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
 
         '''
 
-        if (not self.post_check['status'] == 'ok' and
-            self.xsrf_type == 'api_key'):
-
-            self.set_status(401)
+        # disallow Authorization headers for this URL
+        if self.xsrf_type == 'api_key':
+            self.set_status(403)
             retdict = {
                 'status':'failed',
                 'data':None,
-                'message':"Sorry, you don't have access."
+                'message':"Sorry, API keys are not allowed for this endpoint."
             }
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not self.post_check['status'] == 'ok':
-
+        # disallow if the XSRF check failed
+        if self.post_check['status'] != 'ok':
             self.render_blocked_message(code=401)
 
         #
@@ -129,6 +127,10 @@ class ChangePasswordHandler(basehandler.BaseHandler):
 
         '''
 
+        # disallow if the user isn't logged in
+        if self.current_user['user_role'] in ('anonymous', 'locked'):
+            self.render_blocked_message(code=403)
+
         self.render(
             'passchange.html',
             current_user=self.current_user,
@@ -144,21 +146,24 @@ class ChangePasswordHandler(basehandler.BaseHandler):
 
         '''
 
-        if (not self.post_check['status'] == 'ok' and
-            self.xsrf_type == 'api_key'):
-
-            self.set_status(401)
+        # disallow Authorization headers for this URL
+        if self.xsrf_type == 'api_key':
+            self.set_status(403)
             retdict = {
                 'status':'failed',
                 'data':None,
-                'message':"Sorry, you don't have access."
+                'message':"Sorry, API keys are not allowed for this endpoint."
             }
             self.write(retdict)
             raise tornado.web.Finish()
 
-        elif not self.post_check['status'] == 'ok':
-
+        # disallow if the XSRF check failed
+        if self.post_check['status'] != 'ok':
             self.render_blocked_message(code=401)
+
+        # disallow if the user isn't logged in
+        if self.current_user['user_role'] in ('anonymous', 'locked'):
+            self.render_blocked_message(code=403)
 
         #
         # actual processing here
