@@ -291,7 +291,7 @@ def chacha_decrypt_message(
         if chacha_dict['ver'] != CHACHA_VERSION:
             raise InvalidTag
 
-        return chacha_dict['message'], chacha_dict['iat']
+        return chacha_dict['message']
 
     except InvalidTag:
 
