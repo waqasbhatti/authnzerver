@@ -28,6 +28,7 @@ from tornado.escape import xhtml_escape
 from . import basehandler
 from ..validators import validate_email_address
 from ..permissions import pii_hash
+from ..tokens import generate_email_token, verify_email_token
 
 
 #########################
@@ -134,13 +135,15 @@ class NewUserHandler(basehandler.BaseHandler):
             "password": password,
         }
 
-        success, response, messages = await self.authnzerver_request(
-            request_type,
-            request_body
+        created_success, created_info, created_messages = (
+            await self.authnzerver_request(
+                request_type,
+                request_body
+            )
         )
 
         # if sign up fails, complain to the user
-        if not success:
+        if not created_success:
 
             LOGGER.error(
                 "[%s] Sign up request failed for email: %s, session_token: %s. "
@@ -149,11 +152,11 @@ class NewUserHandler(basehandler.BaseHandler):
                  pii_hash(email, self.conf.pii_salt),
                  pii_hash(self.current_user['session_token'],
                           self.conf.pii_salt),
-                 ' '.join(messages))
+                 ' '.join(created_messages))
             )
 
             self.save_flash_messages(
-                messages,
+                created_messages,
                 "danger"
             )
 
@@ -162,7 +165,70 @@ class NewUserHandler(basehandler.BaseHandler):
         # 2. otherwise, prepare to send the verification email to the new user
         else:
 
-            pass
+            # generate the token to send to the user
+            email_token = generate_email_token(
+                self.current_user['ip_address'],
+                self.current_user['user_agent'],
+                email,
+                self.current_user['session_token'],
+                self.conf.session_cookie_secret
+            )
+
+            # ask the authnzerver to send an email containing the token
+            request_type = 'user-sendemail-signup'
+            request_body = {
+                'email_address':email,
+                'session_token':self.current_user['session_token'],
+                'created_info': created_info,
+                'server_name':'Authnzerver frontend',
+                'server_baseurl':self.conf.baseurl,
+                'account_verify_url':'/users/verify',
+                'verification_token':email_token,
+                'verification_expiry':900
+            }
+
+            verifysent_success, verifysent_info, verifysent_messages = (
+                await self.authnzerver_request(
+                    request_type,
+                    request_body,
+                )
+            )
+
+        # if sending the email fails, complain to the user
+        if not verifysent_success:
+
+            LOGGER.error(
+                "[%s] Sign up request failed for email: %s, session_token: %s. "
+                "Authnzerver messages: '%s'" %
+                (self.reqid,
+                 pii_hash(email, self.conf.pii_salt),
+                 pii_hash(self.current_user['session_token'],
+                          self.conf.pii_salt),
+                 ' '.join(created_messages))
+            )
+
+            self.save_flash_messages(
+                ("Sorry, we were unable to send an email to "
+                 "your email address to verify "
+                 "your sign-up request. Please try again, or contact the "
+                 "server admins if this error persists."),
+                "danger"
+            )
+
+            self.redirect('%s/users/new' % self.conf.baseurl)
+
+        # otherwise, if it succeeds, redirect them to the verify token page.
+        else:
+
+            self.save_flash_messages(
+                ("Thanks for signing up! We've sent a verification "
+                 "code to your email address. "
+                 "Please complete user registration by "
+                 "entering the code you received."),
+                "primary"
+            )
+
+            self.redirect('%s/users/verify' % self.conf.baseurl)
 
 
 class VerifyUserHandler(basehandler.BaseHandler):
