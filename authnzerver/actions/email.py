@@ -421,7 +421,7 @@ def send_email(
 def send_signup_verification_email(payload,
                                    raiseonfail=False,
                                    override_authdb_path=None):
-    '''This actually sends the verification email.
+    '''Sends an account verification email.
 
     Parameters
     -----------
