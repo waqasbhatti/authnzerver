@@ -369,10 +369,10 @@ if NACL:
         secret_box = nacl.secret.SecretBox(key)
         current_time = time.time()
 
-        chacha_dict = {'message':message_dict,
+        xsalsa_dict = {'message':message_dict,
                        'iat':current_time,
                        'ver':XSALSA_VERSION}
-        message_json_bytes = json.dumps(chacha_dict).encode()
+        message_json_bytes = json.dumps(xsalsa_dict).encode()
 
         encrypted_base64 = secret_box.encrypt(
             message_json_bytes,
