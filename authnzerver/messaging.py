@@ -52,14 +52,25 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 from cryptography.exceptions import InvalidTag
 
+try:
+    import nacl.secret
+    import nacl.encoding
+    import nacl.exceptions
+    NACL = True
+except ImportError:
+    NACL = False
+
 
 #################################################
 ## FERNET SYMMETRIC ENCRYPTED MESSAGE HANDLING ##
 #################################################
 
-def encrypt_message(message_dict, key):
+def encrypt_message(
+        message_dict,
+        key,
+):
     '''
-    Encrypts a message dict using the Fernet from the PyCA cryptography package.
+    Encrypts a message dict using Fernet from the PyCA cryptography package.
 
     Parameters
     ----------
@@ -89,10 +100,12 @@ def encrypt_message(message_dict, key):
     return request_base64
 
 
-def decrypt_message(message,
-                    key,
-                    reqid=None,
-                    ttl=None):
+def decrypt_message(
+        message,
+        key,
+        reqid=None,
+        ttl=None
+):
     '''
     Decrypts a Fernet-encrypted message back to a message dict.
 
@@ -197,7 +210,7 @@ def chacha_encrypt_message(
 
     The encrypted message is generated in the following format::
 
-        <nonce base64><encrypted message dict + ttl AAD in base64>
+        base64(encrypt(<nonce><message dict + iat + ver>))
 
     '''
 
@@ -309,3 +322,147 @@ def chacha_decrypt_message(
             ' exception was: %r' % ('[%s] ' % (reqid if reqid else ''), e)
         )
         return None
+
+
+#####################################################
+## XSALSA20-POLY1305 SYMMETRIC ENCRYPTED MESSAGING ##
+#####################################################
+
+if NACL:
+
+    XSALSA_VERSION = 1
+
+    def xsalsa_encrypt_message(
+        message_dict,
+        key,
+    ):
+        '''
+        Encrypts a dict using the XSalsa20-Poly1305 symmetric cipher.
+
+        This function requires PyNACL.
+
+        Parameters
+        ----------
+
+        message_dict : dict
+        A dict containing items that will be encrypted.
+
+        key : bytes
+            This is a 32-byte encryption key. Generate one using::
+
+                import secrets
+                key = secrets.token_bytes(32)
+
+        Returns
+        -------
+
+        encrypted_message : bytes
+            Returns the encrypted message as base64 encoded bytes.
+
+    '''
+
+        if len(key) != 32:
+            raise ValueError(
+                "XSalsa20-Poly1305 key must be 256 bits == 32 bytes"
+            )
+
+        secret_box = nacl.secret.SecretBox(key)
+        current_time = time.time()
+
+        chacha_dict = {'message':message_dict,
+                       'iat':current_time,
+                       'ver':XSALSA_VERSION}
+        message_json_bytes = json.dumps(chacha_dict).encode()
+
+        encrypted_base64 = secret_box.encrypt(
+            message_json_bytes,
+            encoder=nacl.encoding.Base64Encoder
+        )
+        return encrypted_base64
+
+    def xsalsa_decrypt_message(
+            message,
+            key,
+            reqid=None,
+            ttl=None
+    ):
+        '''
+        Decrypts a XSalsa20-Poly1305-encrypted message back to a message dict.
+
+        This function requires PyNACL.
+
+        Parameters
+        ----------
+
+        message : bytes
+            The encrypted message to decrypt.
+
+        key : bytes
+            This is the 32-byte encryption key. Must be the same one as used for
+            encrypting the message (i.e. this is a pre-shared secret key)
+
+        reqid : str or int or None
+            A request ID used to track a decryption request. This will appear in
+            any logging messages emitted by this function to allow tracking of
+            requests and correlation.
+
+        ttl : int or None
+            The age in seconds that the encrypted message must not exceed in
+            order for it to be considered valid. This is useful for time-stamped
+            verification tokens. If None, the message will not be checked for
+            expiry.
+
+        Returns
+        -------
+
+        message_dict : dict or None
+            Returns the decrypted message dict. If the message expired or if the
+            message failed to decrypt because of an invalid key or if it was
+            tampered with, returns None instead.
+
+        '''
+
+        if len(key) != 32:
+            raise ValueError(
+                "XSalsa20-Poly1305 key must be 256 bits == 32 bytes"
+            )
+
+        secret_box = nacl.secret.SecretBox(key)
+        current_time = time.time()
+
+        try:
+
+            decrypted_bytes = secret_box.decrypt(
+                message,
+                encoder=nacl.encoding.Base64Encoder
+            )
+            xsalsa_dict = json.loads(decrypted_bytes)
+
+            # check the TTL if requested
+            current_time = time.time()
+
+            if ttl is not None and ttl > 0.0:
+                if (xsalsa_dict['iat'] + ttl) < current_time:
+                    raise nacl.exceptions.CryptoError
+
+            if xsalsa_dict['ver'] != XSALSA_VERSION:
+                raise nacl.exceptions.CryptoError
+
+            return xsalsa_dict['message']
+
+        except nacl.exceptions.CryptoError:
+
+            LOGGER.error(
+                '%sMessage could not be decrypted because '
+                'it is invalid/was tampered with, or has expired.' %
+                ('[%s] ' % reqid if reqid else '')
+            )
+            return None
+
+        except Exception as e:
+
+            LOGGER.error(
+                '%sCould not understand encrypted message, '
+                ' exception was: %r' % (('[%s] ' % reqid if reqid else ''), e)
+            )
+            return None
