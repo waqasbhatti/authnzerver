@@ -487,3 +487,40 @@ def verify_apikey(payload,
                 "API key could not be verified."
             )]
         }
+
+
+def revoke_apikey(payload,
+                  raiseonfail=False,
+                  override_authdb_path=None):
+    '''Revokes an API key.
+
+    FIXME: implement this
+
+    Parameters
+    ----------
+
+    payload : dict
+        This dict contains the following keys:
+
+        - apikey_dict: the decrypted and verified API key info dict from the
+          frontend.
+
+        - user_id: the user ID of the person revoking this key. Only superusers
+          or staff can revoke an API key that doesn't belong to them.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    Returns
+    -------
+
+    dict
+        The dict returned is of the form::
+
+            {'success': True if API key was revoked and False otherwise,
+             'messages': list of str messages if any}
+
+    '''

@@ -102,6 +102,8 @@ request_functions = {
     # apikey actions
     'apikey-new':actions.issue_new_apikey,
     'apikey-verify':actions.verify_apikey,
+    ## FIXME: implement this in actions.apikey
+    'apikey-revoke':actions.revoke_apikey,
     # access and limit check actions
     'user-check-access': actions.check_user_access,
     'user-check-limit': actions.check_user_limit,
