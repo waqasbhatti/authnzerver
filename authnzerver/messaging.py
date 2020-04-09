@@ -179,8 +179,11 @@ def chacha_encrypt_message(
         key,
         nonce=None,
 ):
-    '''
-    Encrypts a dict using the ChaCha20-Poly1305 symmetric cipher.
+    '''Encrypts a dict using the ChaCha20-Poly1305 symmetric cipher.
+
+    This depends on OpenSSL containing the cipher, so OpenSSL > 1.1.0
+    probably. The version of the cipher used is the IETF-approved one
+    (https://tools.ietf.org/html/rfc7539; with the 96-bit nonce).
 
     Parameters
     ----------
@@ -248,6 +251,10 @@ def chacha_decrypt_message(
 ):
     '''
     Decrypts a ChaCha20-Poly1305-encrypted message back to a message dict.
+
+    This depends on OpenSSL containing the cipher, so OpenSSL > 1.1.0
+    probably. The version of the cipher used is the IETF-approved one
+    (https://tools.ietf.org/html/rfc7539; with the 96-bit nonce).
 
     Parameters
     ----------
@@ -328,141 +335,147 @@ def chacha_decrypt_message(
 ## XSALSA20-POLY1305 SYMMETRIC ENCRYPTED MESSAGING ##
 #####################################################
 
-if NACL:
+XSALSA_VERSION = 1
 
-    XSALSA_VERSION = 1
 
-    def xsalsa_encrypt_message(
-        message_dict,
-        key,
-    ):
-        '''
-        Encrypts a dict using the XSalsa20-Poly1305 symmetric cipher.
+def xsalsa_encrypt_message(
+    message_dict,
+    key,
+):
+    '''
+    Encrypts a dict using the XSalsa20-Poly1305 symmetric cipher.
 
-        This function requires PyNACL.
+    This function requires PyNACL.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
 
-        message_dict : dict
-        A dict containing items that will be encrypted.
+    message_dict : dict
+    A dict containing items that will be encrypted.
 
-        key : bytes
-            This is a 32-byte encryption key. Generate one using::
+    key : bytes
+        This is a 32-byte encryption key. Generate one using::
 
-                import secrets
-                key = secrets.token_bytes(32)
+            import secrets
+            key = secrets.token_bytes(32)
 
-        Returns
-        -------
+    Returns
+    -------
 
-        encrypted_message : bytes
-            Returns the encrypted message as base64 encoded bytes.
+    encrypted_message : bytes
+        Returns the encrypted message as base64 encoded bytes.
 
     '''
 
-        if len(key) != 32:
-            raise ValueError(
-                "XSalsa20-Poly1305 key must be 256 bits == 32 bytes"
-            )
+    if not NACL:
+        raise ImportError("This function will not work without PyNACL.")
 
-        secret_box = nacl.secret.SecretBox(key)
-        current_time = time.time()
+    if len(key) != 32:
+        raise ValueError(
+            "XSalsa20-Poly1305 key must be 256 bits == 32 bytes"
+        )
 
-        xsalsa_dict = {'message':message_dict,
-                       'iat':current_time,
-                       'ver':XSALSA_VERSION}
-        message_json_bytes = json.dumps(xsalsa_dict).encode()
+    secret_box = nacl.secret.SecretBox(key)
+    current_time = time.time()
 
-        encrypted_base64 = secret_box.encrypt(
-            message_json_bytes,
+    xsalsa_dict = {'message':message_dict,
+                   'iat':current_time,
+                   'ver':XSALSA_VERSION}
+    message_json_bytes = json.dumps(xsalsa_dict).encode()
+
+    encrypted_base64 = secret_box.encrypt(
+        message_json_bytes,
+        encoder=nacl.encoding.Base64Encoder
+    )
+    return encrypted_base64
+
+
+def xsalsa_decrypt_message(
+        message,
+        key,
+        reqid=None,
+        ttl=None
+):
+    '''
+    Decrypts a XSalsa20-Poly1305-encrypted message back to a message dict.
+
+    This function requires PyNACL.
+
+    Parameters
+    ----------
+
+    message : bytes
+        The encrypted message to decrypt.
+
+    key : bytes
+        This is the 32-byte encryption key. Must be the same one as used for
+        encrypting the message (i.e. this is a pre-shared secret key)
+
+    reqid : str or int or None
+        A request ID used to track a decryption request. This will appear in
+        any logging messages emitted by this function to allow tracking of
+        requests and correlation.
+
+    ttl : int or None
+        The age in seconds that the encrypted message must not exceed in
+        order for it to be considered valid. This is useful for time-stamped
+        verification tokens. If None, the message will not be checked for
+        expiry.
+
+    Returns
+    -------
+
+    message_dict : dict or None
+        Returns the decrypted message dict. If the message expired or if the
+        message failed to decrypt because of an invalid key or if it was
+        tampered with, returns None instead.
+
+    '''
+
+    if not NACL:
+        raise ImportError("This function will not work without PyNACL.")
+
+    if len(key) != 32:
+        raise ValueError(
+            "XSalsa20-Poly1305 key must be 256 bits == 32 bytes"
+        )
+
+    secret_box = nacl.secret.SecretBox(key)
+    current_time = time.time()
+
+    try:
+
+        decrypted_bytes = secret_box.decrypt(
+            message,
             encoder=nacl.encoding.Base64Encoder
         )
-        return encrypted_base64
+        xsalsa_dict = json.loads(decrypted_bytes)
 
-    def xsalsa_decrypt_message(
-            message,
-            key,
-            reqid=None,
-            ttl=None
-    ):
-        '''
-        Decrypts a XSalsa20-Poly1305-encrypted message back to a message dict.
-
-        This function requires PyNACL.
-
-        Parameters
-        ----------
-
-        message : bytes
-            The encrypted message to decrypt.
-
-        key : bytes
-            This is the 32-byte encryption key. Must be the same one as used for
-            encrypting the message (i.e. this is a pre-shared secret key)
-
-        reqid : str or int or None
-            A request ID used to track a decryption request. This will appear in
-            any logging messages emitted by this function to allow tracking of
-            requests and correlation.
-
-        ttl : int or None
-            The age in seconds that the encrypted message must not exceed in
-            order for it to be considered valid. This is useful for time-stamped
-            verification tokens. If None, the message will not be checked for
-            expiry.
-
-        Returns
-        -------
-
-        message_dict : dict or None
-            Returns the decrypted message dict. If the message expired or if the
-            message failed to decrypt because of an invalid key or if it was
-            tampered with, returns None instead.
-
-        '''
-
-        if len(key) != 32:
-            raise ValueError(
-                "XSalsa20-Poly1305 key must be 256 bits == 32 bytes"
-            )
-
-        secret_box = nacl.secret.SecretBox(key)
+        # check the TTL if requested
         current_time = time.time()
 
-        try:
-
-            decrypted_bytes = secret_box.decrypt(
-                message,
-                encoder=nacl.encoding.Base64Encoder
-            )
-            xsalsa_dict = json.loads(decrypted_bytes)
-
-            # check the TTL if requested
-            current_time = time.time()
-
-            if ttl is not None and ttl > 0.0:
-                if (xsalsa_dict['iat'] + ttl) < current_time:
-                    raise nacl.exceptions.CryptoError
-
-            if xsalsa_dict['ver'] != XSALSA_VERSION:
+        if ttl is not None and ttl > 0.0:
+            if (xsalsa_dict['iat'] + ttl) < current_time:
                 raise nacl.exceptions.CryptoError
 
-            return xsalsa_dict['message']
+        if xsalsa_dict['ver'] != XSALSA_VERSION:
+            raise nacl.exceptions.CryptoError
 
-        except nacl.exceptions.CryptoError:
+        return xsalsa_dict['message']
 
-            LOGGER.error(
-                '%sMessage could not be decrypted because '
-                'it is invalid/was tampered with, or has expired.' %
-                ('[%s] ' % reqid if reqid else '')
-            )
-            return None
+    except nacl.exceptions.CryptoError:
 
-        except Exception as e:
+        LOGGER.error(
+            '%sMessage could not be decrypted because '
+            'it is invalid/was tampered with, or has expired.' %
+            ('[%s] ' % reqid if reqid else '')
+        )
+        return None
 
-            LOGGER.error(
-                '%sCould not understand encrypted message, '
-                ' exception was: %r' % (('[%s] ' % reqid if reqid else ''), e)
-            )
-            return None
+    except Exception as e:
+
+        LOGGER.error(
+            '%sCould not understand encrypted message, '
+            ' exception was: %r' % (('[%s] ' % reqid if reqid else ''), e)
+        )
+        return None
