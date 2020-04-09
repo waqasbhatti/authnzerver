@@ -756,9 +756,9 @@ def send_signup_verification_email(payload,
         }
 
 
-def verify_user_email_address(payload,
-                              raiseonfail=False,
-                              override_authdb_path=None):
+def set_user_emailaddr_verified(payload,
+                                raiseonfail=False,
+                                override_authdb_path=None):
     '''Sets the verification status of the email address of the user.
 
     This is called by the frontend after it verifies that the token challenge to

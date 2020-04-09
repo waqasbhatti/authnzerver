@@ -96,13 +96,12 @@ request_functions = {
     'user-resetpass':actions.verify_password_reset,
     'user-lock':actions.toggle_user_lock,
     # email actions
-    'user-signup-sendemail':actions.send_signup_verification_email,
-    'user-verify-emailaddr':actions.verify_user_email_address,
-    'user-forgotpass-sendemail':actions.send_forgotpass_verification_email,
+    'user-sendemail-signup':actions.send_signup_verification_email,
+    'user-set-emailverified':actions.set_user_emailaddr_verified,
+    'user-sendemail-forgotpass':actions.send_forgotpass_verification_email,
     # apikey actions
-    'apikey-new':actions.issue_new_apikey,
+    'apikey-new':actions.issue_apikey,
     'apikey-verify':actions.verify_apikey,
-    ## FIXME: implement this in actions.apikey
     'apikey-revoke':actions.revoke_apikey,
     # access and limit check actions
     'user-check-access': actions.check_user_access,

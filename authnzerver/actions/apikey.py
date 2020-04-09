@@ -59,9 +59,9 @@ from ..permissions import pii_hash
 ## API KEY HANDLING ##
 ######################
 
-def issue_new_apikey(payload,
-                     raiseonfail=False,
-                     override_authdb_path=None):
+def issue_apikey(payload,
+                 raiseonfail=False,
+                 override_authdb_path=None):
     '''Issues a new API key.
 
     Parameters

@@ -31,8 +31,9 @@ logging.basicConfig(
 #############
 
 from .apikey import (
-    issue_new_apikey,
-    verify_apikey
+    issue_apikey,
+    verify_apikey,
+    revoke_apikey
 )
 
 from .admin import (
@@ -45,7 +46,7 @@ from .admin import (
 
 from .email import (
     send_signup_verification_email,
-    verify_user_email_address,
+    set_user_emailaddr_verified,
     send_forgotpass_verification_email,
     send_email,
 )
