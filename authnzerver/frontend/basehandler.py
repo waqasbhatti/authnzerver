@@ -140,7 +140,7 @@ class BaseHandler(tornado.web.RequestHandler):
         self.httpclient = AsyncHTTPClient()
 
         # this is the request ID for this request
-        self.reqid = token_urlsafe(8)
+        self.reqid = token_urlsafe(16)
 
         # this is the executor to use for this request
         self.executor = executor
