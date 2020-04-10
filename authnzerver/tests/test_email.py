@@ -10,6 +10,7 @@ from mailbox import Maildir
 import ssl
 import time
 import textwrap
+import re
 
 import py.path
 
@@ -257,13 +258,15 @@ def test_create_user_with_email(tmpdir):
     assert ('User account created. Please verify your email address to log in.'
             in user_created['messages'])
 
+    token_key = Fernet.generate_key()
+
     # 2. generate a verification token and send them an email
     verify_token = tokens.generate_email_token(
         session_payload['ip_address'],
         session_payload['user_agent'],
         'testuser@test.org',
         session_token_info['session_token'],
-        Fernet.generate_key()
+        token_key
     )
 
     verification_email_info = actions.send_signup_verification_email(
@@ -304,8 +307,28 @@ def test_create_user_with_email(tmpdir):
                 '\n'.join(textwrap.wrap(verify_token.decode()))
                 in message.as_string()
             )
+            break
 
     assert email_found is True
+
+    # now verify that the token from the email contains the same info we
+    # provided
+    received_token_base64 = re.findall(
+        r'enter this code:([\S\n]+)into the account verification',
+        message.as_string(),
+    )
+    received_token_base64 = received_token_base64[0]
+    received_token_base64 = received_token_base64.replace('\n','')
+    received_token_valid = tokens.verify_email_token(
+        received_token_base64,
+        session_payload['ip_address'],
+        session_payload['user_agent'],
+        session_token_info['session_token'],
+        'testuser@test.org',
+        token_key,
+        match_returned_items=('ipa','usa','stk','ema'),
+    )
+    assert received_token_valid is True
 
     # 4. set the user's email address as verified
     email_verified_info = actions.set_user_emailaddr_verified(
@@ -345,7 +368,7 @@ def test_create_user_with_email(tmpdir):
         session_payload['user_agent'],
         'testuser@test.org',
         session_token_info['session_token'],
-        Fernet.generate_key()
+        token_key
     )
 
     forgotpass_email_info = actions.send_forgotpass_verification_email(
@@ -385,8 +408,28 @@ def test_create_user_with_email(tmpdir):
                 '\n'.join(textwrap.wrap(forgotpass_token.decode()))
                 in message.as_string()
             )
+            break
 
     assert email_found is True
+
+    # now verify that the token from the email contains the same info we
+    # provided
+    received_token_base64 = re.findall(
+        r'enter this code:([\S\n]+)into the password reset',
+        message.as_string(),
+    )
+    received_token_base64 = received_token_base64[0]
+    received_token_base64 = received_token_base64.replace('\n','')
+    received_token_valid = tokens.verify_email_token(
+        received_token_base64,
+        session_payload['ip_address'],
+        session_payload['user_agent'],
+        session_token_info['session_token'],
+        'testuser@test.org',
+        token_key,
+        match_returned_items=('ipa','usa','stk','ema'),
+    )
+    assert received_token_valid is True
 
     #
     # clean up

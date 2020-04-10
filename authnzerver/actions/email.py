@@ -123,7 +123,7 @@ Please enter this code:
 
 {verification_code}
 
-into the account verification form at: {server_baseurl}{password_forgot_url}
+into the password reset form at: {server_baseurl}{password_forgot_url}
 
 to verify that you made this request. This code will expire on
 
