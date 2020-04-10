@@ -50,6 +50,7 @@ from email.utils import formatdate, make_msgid
 import smtplib
 import time
 import re
+import textwrap
 
 from sqlalchemy import select
 
@@ -374,10 +375,11 @@ def send_email(
                 server.starttls()
                 server.ehlo()
 
-                server.login(
-                    user,
-                    password
-                )
+                if server.has_extn('AUTH'):
+                    server.login(
+                        user,
+                        password
+                    )
 
                 server.sendmail(
                     cleaned_sender,
@@ -401,8 +403,8 @@ def send_email(
                 return False
         else:
 
-            LOGGER.error('Email server: %s does not support TLS, '
-                         'will not send an insecure email.' % server)
+            LOGGER.error('Email server: %s does not support STARTTLS, '
+                         'refusing to send an insecure email.' % server)
             server.quit()
             return False
 
@@ -414,7 +416,10 @@ def send_email(
             % (', '.join([pii_hash(x, pii_salt) for x in recipients]),
                subject, e)
         )
-        server.quit()
+        try:
+            server.quit()
+        except Exception:
+            pass
         return False
 
 
@@ -662,12 +667,19 @@ def send_signup_verification_email(payload,
         datetime.utcnow() + verification_expiry_td
     ).isoformat()
 
+    # format the verification token and wrap it to 70 chars per line because now
+    # it's a bit too long for one line. we'll use a textbox on the verification
+    # page to let people to paste this in
+    formatted_verification_token = '\n'.join(
+        textwrap.wrap(payload['verification_token'].decode('utf-8'))
+    )
+
     # generate the email message
     msgtext = SIGNUP_VERIFICATION_EMAIL_TEMPLATE.format(
         server_baseurl=payload['server_baseurl'],
         server_name=payload['server_name'],
         account_verify_url=payload['account_verify_url'],
-        verification_code=payload['verification_token'],
+        verification_code=formatted_verification_token,
         verification_expiry='%s (UTC time)' % verification_expiry_dt,
         browser_identifier=browser.replace('_','.'),
         ip_address=ip_addr,
@@ -713,7 +725,7 @@ def send_signup_verification_email(payload,
 
         LOGGER.info(
             '[%s] Verify email request succeeded for '
-            'user_id: %s, email: %s, session_token: %s.'
+            'user_id: %s, email: %s, session_token: %s. '
             'Email sent on: %s UTC.' %
             (payload['reqid'],
              pii_hash(payload['created_info']['user_id'], payload['pii_salt']),
@@ -1143,12 +1155,19 @@ def send_forgotpass_verification_email(payload,
         datetime.utcnow() + verification_expiry_td
     ).isoformat()
 
+    # format the verification token and wrap it to 70 chars per line because now
+    # it's a bit too long for one line. we'll use a textbox on the verification
+    # page to let people to paste this in
+    formatted_verification_token = '\n'.join(
+        textwrap.wrap(payload['verification_token'].decode('utf-8'))
+    )
+
     # generate the email message
     msgtext = FORGOTPASS_VERIFICATION_EMAIL_TEMPLATE.format(
         server_baseurl=payload['server_baseurl'],
         password_forgot_url=payload['password_forgot_url'],
         server_name=payload['server_name'],
-        verification_code=payload['verification_token'],
+        verification_code=formatted_verification_token,
         verification_expiry='%s (UTC time)' % verification_expiry_dt,
         browser_identifier=browser.replace('_','.'),
         ip_address=ip_addr,
@@ -1192,7 +1211,7 @@ def send_forgotpass_verification_email(payload,
 
         LOGGER.info(
             '[%s] Forgot-password email request succeeded for '
-            'email: %s, session_token: %s.'
+            'email: %s, session_token: %s. '
             'Email sent on: %s UTC.' %
             (payload['reqid'],
              pii_hash(payload['email_address'], payload['pii_salt']),
