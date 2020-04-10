@@ -440,7 +440,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 # it's 'all', allow it in
                 if isinstance(api_key_dict['sub'], (tuple, list)):
                     subject_ok = (
-                        self.request.uri in api_key_dict['sub']
+                        self.request.uri == api_key_dict['sub']
                     )
                 elif (isinstance(api_key_dict['sub'], str) and
                       api_key_dict['sub'] == 'all'):
