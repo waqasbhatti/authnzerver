@@ -670,8 +670,13 @@ def send_signup_verification_email(payload,
     # format the verification token and wrap it to 70 chars per line because now
     # it's a bit too long for one line. we'll use a textbox on the verification
     # page to let people to paste this in
+    if isinstance(payload['verification_token'], bytes):
+        payload['verification_token'] = (
+            payload['verification_token'].decode('utf-8')
+        )
+
     formatted_verification_token = '\n'.join(
-        textwrap.wrap(payload['verification_token'].decode('utf-8'))
+        textwrap.wrap(payload['verification_token'])
     )
 
     # generate the email message
@@ -1078,15 +1083,15 @@ def send_forgotpass_verification_email(payload,
         ) > timedelta(hours=24)
 
         if check_elapsed:
-            send_email = True
+            send_forgotpass_email = True
         else:
-            send_email = False
+            send_forgotpass_email = False
 
     # if we've never sent a forgot-password email before, it's OK to send it
     else:
-        send_email = True
+        send_forgotpass_email = True
 
-    if not send_email:
+    if not send_forgotpass_email:
 
         LOGGER.error(
             "[%s] Forgot-password email request failed for "
@@ -1158,8 +1163,13 @@ def send_forgotpass_verification_email(payload,
     # format the verification token and wrap it to 70 chars per line because now
     # it's a bit too long for one line. we'll use a textbox on the verification
     # page to let people to paste this in
+    if isinstance(payload['verification_token'], bytes):
+        payload['verification_token'] = (
+            payload['verification_token'].decode('utf-8')
+        )
+
     formatted_verification_token = '\n'.join(
-        textwrap.wrap(payload['verification_token'].decode('utf-8'))
+        textwrap.wrap(payload['verification_token'])
     )
 
     # generate the email message

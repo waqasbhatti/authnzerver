@@ -221,6 +221,7 @@ def test_create_user_with_email(tmpdir):
     # 0. start the email server
     email_server, maildir = generate_email_server(tmpdir)
     email_server.start()
+    time.sleep(3.0)
 
     # 1a. create a new session
     session_payload = {
@@ -232,7 +233,6 @@ def test_create_user_with_email(tmpdir):
         'pii_salt':'super-secret-salt',
         'reqid':1
     }
-    # check creation of session
     session_token_info = actions.auth_session_new(
         session_payload,
         raiseonfail=True,
@@ -258,7 +258,7 @@ def test_create_user_with_email(tmpdir):
             in user_created['messages'])
 
     # 2. generate a verification token and send them an email
-    email_token = tokens.generate_email_token(
+    verify_token = tokens.generate_email_token(
         session_payload['ip_address'],
         session_payload['user_agent'],
         'testuser@test.org',
@@ -273,7 +273,7 @@ def test_create_user_with_email(tmpdir):
          'server_name':'Authnzerver',
          'server_baseurl':'https://localhost/auth',
          'account_verify_url':'/users/verify',
-         'verification_token':email_token,
+         'verification_token':verify_token,
          'verification_expiry':900,
          'smtp_user':None,
          'smtp_pass':None,
@@ -301,7 +301,88 @@ def test_create_user_with_email(tmpdir):
             assert message['From'] == 'Authnzerver <authnzerver@test.org>'
             assert message['To'] == 'testuser@test.org'
             assert (
-                '\n'.join(textwrap.wrap(email_token.decode()))
+                '\n'.join(textwrap.wrap(verify_token.decode()))
+                in message.as_string()
+            )
+
+    assert email_found is True
+
+    # 4. set the user's email address as verified
+    email_verified_info = actions.set_user_emailaddr_verified(
+        {'email':'testuser@test.org',
+         'reqid':123,
+         'pii_salt':'super-secret-salt'},
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url
+    )
+
+    assert email_verified_info['success'] is True
+    assert email_verified_info['user_id'] == 4
+    assert email_verified_info['is_active'] is True
+    assert email_verified_info['user_role'] == 'authenticated'
+
+    # 5. send a password forgot email to the user
+
+    # 5a. create a new session for the user first
+    session_payload = {
+        'user_id':4,
+        'user_agent':'Mozzarella Killerwhale',
+        'expires':datetime.utcnow()+timedelta(hours=1),
+        'ip_address': '1.1.1.1',
+        'extra_info_json':{'pref_datasets_always_private':True},
+        'pii_salt':'super-secret-salt',
+        'reqid':1
+    }
+    session_token_info = actions.auth_session_new(
+        session_payload,
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url
+    )
+
+    # 5b. now send a forgot-password email
+    forgotpass_token = tokens.generate_email_token(
+        session_payload['ip_address'],
+        session_payload['user_agent'],
+        'testuser@test.org',
+        session_token_info['session_token'],
+        Fernet.generate_key()
+    )
+
+    forgotpass_email_info = actions.send_forgotpass_verification_email(
+        {'email_address':'testuser@test.org',
+         'session_token':session_token_info['session_token'],
+         'server_name':'Authnzerver',
+         'server_baseurl':'https://localhost/auth',
+         'password_forgot_url':'/password/reset-step1',
+         'verification_token':forgotpass_token,
+         'verification_expiry':900,
+         'smtp_user':None,
+         'smtp_pass':None,
+         'smtp_server':'localhost',
+         'smtp_port':2587,
+         'smtp_sender':'Authnzerver <authnzerver@test.org>',
+         'reqid':1337,
+         'pii_salt':'super-secret-salt'},
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url
+    )
+    assert forgotpass_email_info['success'] is True
+    assert forgotpass_email_info['email_address'] == 'testuser@test.org'
+
+    # 6. check the mailbox to see if the forgot password email was received
+    mailbox = Maildir(maildir)
+
+    email_found = False
+
+    for _, message in mailbox.items():
+
+        if 'Please verify your password reset request' in message['Subject']:
+
+            email_found = True
+            assert message['From'] == 'Authnzerver <authnzerver@test.org>'
+            assert message['To'] == 'testuser@test.org'
+            assert (
+                '\n'.join(textwrap.wrap(forgotpass_token.decode()))
                 in message.as_string()
             )
 
