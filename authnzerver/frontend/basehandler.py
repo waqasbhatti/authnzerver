@@ -697,27 +697,33 @@ class BaseHandler(tornado.web.RequestHandler):
                 'result':None
             }
 
-    def render_blocked_message(self, code=403):
+    def render_blocked_message(self,
+                               code=403,
+                               message=None):
         '''
         This renders the template indicating that the user is blocked.
 
         '''
 
         self.set_status(code)
+
+        if not message:
+            message = (
+                "Sorry, it appears that you're not authorized to "
+                "view the page you were trying to get to. "
+                "If you believe this is in error, please contact "
+                "the admins of this server instance."
+            )
+
         self.render(
             'errorpage.html',
             baseurl=self.conf.baseurl,
             current_user=self.current_user,
             conf=self.conf,
-            page_title="403 - You cannot access this page",
+            page_title=f"HTTP {code} - Oh no, something went wrong!",
             flash_message_list=self.flash_message_list,
             alert_type=self.alert_type,
-            error_message=(
-                "Sorry, it appears that you're not authorized to "
-                "view the page you were trying to get to. "
-                "If you believe this is in error, please contact "
-                "the admins of this server instance."
-            ),
+            error_message=message,
         )
 
     def render_page_not_found(self, message=None):
@@ -739,7 +745,7 @@ class BaseHandler(tornado.web.RequestHandler):
             baseurl=self.conf.baseurl,
             current_user=self.current_user,
             conf=self.conf,
-            page_title="404 - Item not found",
+            page_title="HTTP 404 - Item not found",
             flash_message_list=self.flash_message_list,
             alert_type=self.alert_type,
             error_message=error_message,
@@ -921,16 +927,14 @@ class BaseHandler(tornado.web.RequestHandler):
                             )
                             self.set_status(429)
                             self.set_header('Retry-After','120')
-                            self.write({
-                                'status':'failed',
-                                'result':{
-                                    'rate':self.request_rate_60sec,
-                                },
-                                'message':(
-                                    'You have exceeded your API request rate.'
-                                )
-                            })
-                            raise tornado.web.Finish()
+                            message = (
+                                "You have exceeded the request rate limit. "
+                                "Please try again in a couple of minutes."
+                            )
+                            self.render_blocked_message(
+                                code=429,
+                                message=message
+                            )
 
                 else:
 
