@@ -25,10 +25,12 @@ def get_test_authdb():
     authdb.initial_authdb_inserts('sqlite:///test-timing.authdb.sqlite')
 
 
-@mark.xfail(
-    reason=("Timing is unreliable at the moment and "
-            "depends on server load variability.")
-)
+# @mark.xfail(
+#     reason=("Timing is unreliable at the moment and "
+#             "depends on server load variability.")
+# )
+@mark.skip("Takes forever to run and possibly irrelevant "
+           "now that we do exponential back-off for failed passwords.")
 def test_login_timing():
     '''This tests obfuscating the presence/absence of users based on password
     checks.
@@ -101,7 +103,7 @@ def test_login_timing():
 
     # verify our email
     emailverify = (
-        actions.verify_user_email_address(
+        actions.set_user_emailaddr_verified(
             {'email':user_payload['email'],
              'user_id': user_created['user_id'],
              'pii_salt':'super-secret-salt',
