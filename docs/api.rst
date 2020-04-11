@@ -586,6 +586,11 @@ Requires the following ``body`` items in a request:
 - ``apikey_dict`` (dict): the decrypted and validated API key information dict
   from the frontend.
 
+- ``user_id`` (int): the user ID of the user that this API key is tied to
+
+- ``user_role`` (str): the role of the user that this API key is tied to
+
+
 Returns a ``response`` with the following items:
 
 - None, check the value of ``success`` to see if the API key is valid
@@ -601,6 +606,8 @@ Requires the following ``body`` items in a request:
 
 - ``user_id`` (int): the user ID of the target user whose API key is being
   revoked
+
+- ``user_role`` (str): the role of the user that this API key is tied to
 
 Returns a ``response`` with the following items:
 
