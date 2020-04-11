@@ -39,23 +39,40 @@
 - [x] Remove numpy from requirements (change frontendbase and `test_auth_timing`)
 
 
-## TODO for v0.2
+## TODO for vNEXT
 
 ### Frontend bits
 
-- [ ] Add a full frontend listening as an /authf endpoint, this will include a
-  Bootstrap UI for login, logout, etc. Change the existing /auth endpoint to
-  make sure it only listens to specified IP address ranges, and then rename it
-  to /authb to signify backend auth requests. We'll also need to ship Bootstrap
-  and Tornado templates and copy these over to the basedir for the user to
-  change if required.
+- [ ] Add a full frontend listening as an /auth endpoint, this will include a
+  Bootstrap UI for login, logout, etc. Change the existing / endpoint to make
+  sure it only listens to specified IP address ranges, and then maybe rename it
+  to /authb to signify backend auth requests.
+- [x] We'll also need to ship Bootstrap and Tornado templates and copy these
+  over to the basedir for the user to change if required.
+- [ ] Handle CORS and cookie domains correctly: this requires adding
+  `AUTHNZRV_FRONTEND_COOKIEDOMAIN`, `AUTHNZRV_FRONTEND_COOKIEPATH`
+  env vars to allow the frontend to authorize other servers, and possibly
+  also other headers for CORS (need to figure this bit out).
 - [ ] [ASVS] "Verify that cookie-based session tokens use "__Host-" prefix (see
-      references) to provide session cookie confidentiality."
+  references) to provide session cookie confidentiality." -> figure out why this
+  doesn't work currently.
 - [ ] [ASVS] "Verify that users are able to view and log out of any or all
-      currently active sessions and devices."
-- [ ] Add timeouts to any frontend requests to authnzerver.
-- [ ] Lock user accounts after 10 attempts for two hours. Send an email to the
-      user indicating a large volume of failed attempts.
+  currently active sessions and devices." -> Probably tie in to the user event
+  log below.
+- [x] Add timeouts to any frontend requests to authnzerver.
+- [x] Lock user accounts after 10 (configurable) attempts for 1 hour (also
+  configurable).
+- [ ] Send an email to the user indicating a large volume of failed attempts.
+- [ ] Add admin UI (or just move the index page to this if superusers log in).
+- [ ] Wire up the change-password and delete-user links on the index page.
+- [ ] Add edit-user bits on the index page.
+
+### User event log
+
+- [ ] Add a user event log. This will require a separate table in the auth DB
+      and a module in the actions subpackage. Call the log function on any event
+      that the user does and store in the log. The user can then view their own
+      events and the admin users can do the same for any user.
 
 ### 2FA
 
@@ -72,6 +89,24 @@
 ### Group handling
 
 - [ ] Implement user groups and sharing of items between group members.
+- [ ] We need a Groups table in the DB, that has the following columns: `id`,
+      `system_id`, `group_name`, `group_role` (foreign key into the Roles
+      table), maybe also a `group_owner` column (foreign key into the Users
+      table).
+- [ ] We also need a UserGroups table that maps between `user_ids` and
+      `group_ids` so that users can be part of multiple different groups (this
+      is a many-to-many relation).
+- [ ] Add APIs for groups: 'group-new', 'group-add-user', 'group-del-user',
+      'group-delete', 'group-edit' (superuser only or group-owner only).
+- [ ] Add groups as items in the permissions policy and fill in the bits.
+
+### Documentation
+
+- [ ] Document the permissions model JSON and the allowed bits and required
+      roles and actions.
+- [ ] Document the environment variables and how to launch the server and the
+      frontend.
+- [ ] Add Sphinx-able docstrings everywhere.
 
 ### Misc
 
@@ -82,10 +117,68 @@
       this even work in Python?)
 - [ ] Maybe add a `change_role` action and figure out how this would work.
 - [ ] Docker container.
-- [ ] Possibly move from shared key to public/private key to secure
-  frontend-authnzerver communications. Probably use PyNACL for this (see
-  below). Also see: https://stackoverflow.com/a/59835994 for AES-GCM shared-key
-  alternative to Fernet shared-key.
+- [ ] Add `test_api_*.py` for all of the HTTP API request types. Use
+      `test_server.py` as a prototype.
+- [x] Add Sphinx docs for all the modules and make a readthedocs website.
+- [x] For `confload.py`, add the ability to load an item from a URL in either
+      text or JSON form.
+- [x] Make confvars.py loadable from the command line options so we can change
+      how the config variables are loaded. Copy over confvars.py and
+      default-permissions-model.json to the server's basedir on autosetup.
+- [ ] Add a /auth/health handler for responding to health-checkers for frontend
+      and /health for the backend.
+- [ ] Definitely move to the PyNACL scheme below for public/private keys. Add a
+      /auth/keys handler that returns the current public keys for the server in
+      JSON format. Each key will have a key-id, a not-before, and an expiry
+      date. Set up a periodic handler to update the private/public keys every
+      couple of days (store them in the DB probably). Look at JWK
+      openid-configuration URLs and pointers to cert endpoints.
+- [x] Figure out some way to test email sending.
+- [ ] Add geoip and ASN lookups (deal with Maxmind's new API thing). Then allow
+      rate-limiting by ASN or GeoIP region. Add backend APIs probably:
+      'user-geoip-check', 'user-asn-check', 'user-iprange-check' (for IP range
+      rate-limits)
+
+
+## JWK notes
+
+The key list is returned as JSON, e.g. from the IETF RFC:
+
+```json
+ {"keys":
+       [
+         {"kty":"EC",
+          "crv":"P-256",
+          "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+          "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+          "use":"enc",
+          "kid":"1"},
+
+         {"kty":"RSA",
+          "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx
+     4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMs
+     tn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2
+     QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbI
+     SD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqb
+     w0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+          "e":"AQAB",
+          "alg":"RS256",
+          "kid":"2011-04-29"}
+       ]
+     }
+```
+
+We'll reuse the JWK format, but we'll use our own key type (probably "X25519"
+and "Ed25519") and use "x" for the public key indicator, something like:
+
+```json
+{"kty":"OKP","crv":"X25519","kid":"Bob"
+ "x":"3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08"}
+```
+
+That's from here: https://tools.ietf.org/html/draft-ietf-jose-cfrg-curves-06
+
+We'll need two Curve25519 keys: one for encryption and one for signing.
 
 
 ## PyNACL notes
