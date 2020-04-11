@@ -15,7 +15,14 @@
       {% if current_user['user_role'] in ('authenticated','superuser','staff') %}
 
       <p>Hi <strong>{{ current_user['full_name'] }}</strong>! You're signed in
-      and your user role is: <strong>{{ current_user['user_role'] }}</strong>.</p>
+        and your user role is: <strong>{{ current_user['user_role'] }}</strong>.</p>
+
+      <ul>
+        <li><a href="{{ conf.baseurl }}/password/change">Change your password</a></li>
+        <li class="danger">
+          <a href="{{ conf.baseurl }}/user/delete">Delete your account</a>
+        </li>
+      </ul>
 
       {% else %}
 

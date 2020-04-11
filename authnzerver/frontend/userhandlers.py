@@ -290,6 +290,145 @@ class VerifyUserHandler(basehandler.BaseHandler):
         # actual processing here
         #
 
+        try:
+
+            email = self.get_argument('email')
+            email_is_valid = validate_email_address(email)
+            if not email_is_valid:
+                raise ValueError("Email address provided did "
+                                 "not pass validation.")
+            password = self.get_argument('password')[:1024]
+            verification = xhtml_escape(
+                self.get_argument('verificationcode')
+            )
+            verification_token = verification.replace('\n','').encode('utf-8')
+
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] Could not validate the input email, "
+                "password, or verification code for this request. "
+                "Exception was: %r" % (self.reqid, e)
+            )
+            self.save_flash_messages(
+                "A valid email address, password, and "
+                "verification code are all required.",
+                "warning"
+            )
+            self.redirect("%s/users/verify" % self.conf.baseurl)
+
+        #
+        # handle the verification token
+        #
+        verification_token_ok = verify_email_token(
+            verification_token,
+            self.current_user['ip_address'],
+            self.current_user['user_agent'],
+            self.current_user['session_token'],
+            email,
+            self.conf.session_cookie_secret,
+            match_returned_items=('ipa','ema'),
+            ttl_seconds=900,
+            reqid=self.reqid
+        )
+
+        if not verification_token_ok:
+
+            LOGGER.error(
+                "[%s] Failed to validate the email verification token "
+                "returned by user after sign-up. Provided email: %s, "
+                "ip_address: %s, user_agent: %s, session_token: %s" %
+                (self.reqid,
+                 pii_hash(email, self.conf.pii_salt),
+                 pii_hash(self.current_user['ip_address'],
+                          self.conf.pii_salt),
+                 pii_hash(self.current_user['user_agent'],
+                          self.conf.pii_salt),
+                 pii_hash(self.current_user['session_token'],
+                          self.conf.pii_salt))
+            )
+            error_message = (
+                "We could not validate the "
+                "verification code you provided. "
+                "Please contact the server admins "
+                "or wait 24 hours to try "
+                "signing up again to obtain a new "
+                "code for the same email address."
+            )
+            self.save_flash_messages(
+                error_message,
+                "danger"
+            )
+            self.redirect('%s/users/verify' % self.conf.baseurl)
+
+        #
+        # the verification token is valid, now log the user in using their
+        # provided email and password
+        #
+        login_ok, login_resp, login_messages = await self.authnzerver_request(
+            'user-login',
+            {'session_token':self.current_user['session_token'],
+             'email':email,
+             'password':password}
+        )
+
+        if not login_ok:
+
+            LOGGER.error(
+                "[%s] User signed-up successfully, but failed to login. "
+                "Provided email: %s, ip_address: %s, user_agent: %s, "
+                "session_token: %s" %
+                (self.reqid,
+                 pii_hash(email, self.conf.pii_salt),
+                 pii_hash(self.current_user['ip_address'],
+                          self.conf.pii_salt),
+                 pii_hash(self.current_user['user_agent'],
+                          self.conf.pii_salt),
+                 pii_hash(self.current_user['session_token'],
+                          self.conf.pii_salt))
+            )
+            error_message = (
+                "Your new account was activated successfully, "
+                "but we were unable to log you in because the "
+                "email/password combination you used didn't work. "
+                "Please try again or contact the server admins "
+                "if this error persists."
+            )
+            self.save_flash_messages(
+                error_message,
+                "warning"
+            )
+
+            await self.new_session_token(
+                expires_days=self.session_expiry
+            )
+
+            self.redirect('%s/login' % self.conf.baseurl)
+
+        #
+        # login succeeded, get a new session token, and redirect to the base URL
+        #
+        new_session_token = await self.new_session_token(
+            user_id=login_resp['user_id'],
+            expires_days=self.session_expiry,
+        )
+
+        LOGGER.info(
+            "[%s] Login request succeeded for email: %s, "
+            "old anonymous session_token: %s, "
+            "new logged-in session_token: %s. "
+            "Authnzerver messages: '%s'" %
+            (self.reqid,
+             pii_hash(email, self.conf.pii_salt),
+             pii_hash(self.current_user['session_token'],
+                      self.conf.pii_salt),
+             pii_hash(new_session_token,
+                      self.conf.pii_salt),
+             ' '.join(login_messages))
+        )
+
+        self.redirect(self.conf.baseurl)
+
 
 class DeleteUserHandler(basehandler.BaseHandler):
 
