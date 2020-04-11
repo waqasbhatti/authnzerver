@@ -459,7 +459,7 @@ def verify_apikey(payload,
     apikey_verify_allowed = check_user_access(
         {'user_id':user_id,
          'user_role':user_role,
-         'action':'read',
+         'action':'view',
          'target_name':'apikey',
          'target_owner':apikey_dict['uid'],
          'target_visibility':'private',
