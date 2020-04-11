@@ -60,7 +60,7 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
             retdict = {
                 'status':'failed',
                 'data':None,
-                'message':"Sorry, API keys are not allowed for this endpoint."
+                'messages':"Sorry, API keys are not allowed for this endpoint."
             }
             self.write(retdict)
             raise tornado.web.Finish()
@@ -104,7 +104,7 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
             retdict = {
                 'status':'failed',
                 'data':None,
-                'message':"Sorry, API keys are not allowed for this endpoint."
+                'messages':"Sorry, API keys are not allowed for this endpoint."
             }
             self.write(retdict)
             raise tornado.web.Finish()
@@ -152,7 +152,7 @@ class ChangePasswordHandler(basehandler.BaseHandler):
             retdict = {
                 'status':'failed',
                 'data':None,
-                'message':"Sorry, API keys are not allowed for this endpoint."
+                'messages':"Sorry, API keys are not allowed for this endpoint."
             }
             self.write(retdict)
             raise tornado.web.Finish()

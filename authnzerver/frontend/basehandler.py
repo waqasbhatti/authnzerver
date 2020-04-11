@@ -499,8 +499,8 @@ class BaseHandler(tornado.web.RequestHandler):
                     self.set_status(401)
                     retdict = {
                         'status':'failed',
-                        'message':message,
-                        'result':None
+                        'messages':message,
+                        'data':None
                     }
                     self.api_key_verified = False
                     self.api_key_dict = None
@@ -514,9 +514,9 @@ class BaseHandler(tornado.web.RequestHandler):
                 )
                 retdict = {
                     'status':'failed',
-                    'message':('No credentials provided or '
-                               'they could not be parsed safely'),
-                    'result':None
+                    'messages':('No credentials provided or '
+                                'they could not be parsed safely'),
+                    'data':None
                 }
 
                 self.api_key_verified = False
@@ -529,8 +529,8 @@ class BaseHandler(tornado.web.RequestHandler):
             LOGGER.exception('[%s] Could not verify API key.' % self.reqid)
             retdict = {
                 'status':'failed',
-                'message':'Your API key appears to be invalid or has expired.',
-                'result':None
+                'messages':'Your API key appears to be invalid or has expired.',
+                'data':None
             }
 
             self.api_key_verified = False
@@ -558,8 +558,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
             retdict = {
                 'status':'failed',
-                'message':("'_xsrf' argument missing from POST'"),
-                'result':None
+                'messages':("'_xsrf' argument missing from POST'"),
+                'data':None
             }
             return retdict
 
@@ -570,8 +570,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
             retdict = {
                 'status':'failed',
-                'message':("'_xsrf' argument missing from POST"),
-                'result':None
+                'messages':("'_xsrf' argument missing from POST"),
+                'data':None
             }
             return retdict
 
@@ -579,8 +579,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
             retdict = {
                 'status':'failed',
-                'message':("XSRF cookie does not match POST argument"),
-                'result':None
+                'messages':("XSRF cookie does not match POST argument"),
+                'data':None
             }
             return retdict
 
@@ -588,8 +588,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
             retdict = {
                 'status':'ok',
-                'message':("Successful XSRF cookie match to POST argument"),
-                'result': None
+                'messages':("Successful XSRF cookie match to POST argument"),
+                'data': None
             }
             return retdict
 
@@ -615,8 +615,8 @@ class BaseHandler(tornado.web.RequestHandler):
                 self.set_status(403)
                 retdict = {
                     'status':'failed',
-                    'result':None,
-                    'message':"Sorry, you don't have access."
+                    'data':None,
+                    'messages':"Sorry, you don't have access."
                 }
                 self.write(retdict)
                 raise tornado.web.Finish()
@@ -632,8 +632,8 @@ class BaseHandler(tornado.web.RequestHandler):
                 self.set_status(403)
                 retdict = {
                     'status':'failed',
-                    'result':None,
-                    'message':("Sorry, you don't have access. "
+                    'data':None,
+                    'messages':("Sorry, you don't have access. "
                                "API keys are not allowed for this endpoint.")
                 }
                 self.write(retdict)
@@ -667,10 +667,10 @@ class BaseHandler(tornado.web.RequestHandler):
             self.xsrf_type = 'unknown'
             self.post_check = {
                 'status':'failed',
-                'message':(
+                'messages':(
                     'Unknown authorization type, neither API key or session.'
                 ),
-                'result':None
+                'data':None
             }
 
     def render_blocked_message(self,
@@ -991,34 +991,34 @@ class BaseHandler(tornado.web.RequestHandler):
         else:
 
             # check if the API key is valid
-            api_key_check = await self.check_auth_header_api_key()
+            api_key_check = await self.check_header_apikey()
 
-            if not api_key_check['status'] == 'ok':
+            if api_key_check['status'] != 'ok':
 
-                message = api_key_check['message']
+                message = api_key_check['messages']
 
                 self.post_check = {
                     'status':'failed',
-                    'message': message,
-                    'result':None
+                    'messages': message,
+                    'data':None
                 }
 
                 self.write({
                     'status':'failed',
-                    'message':message,
-                    'result':None
+                    'messages':message,
+                    'data':None
                 })
                 raise tornado.web.Finish()
 
-            # if API key auth succeeds, fill in the current_user dict with info
-            # from there
+            # if API key initial verification succeeds, fill in the
+            # current_user dict with info from API key claims
             else:
 
-                message = api_key_check['message']
+                message = api_key_check['messages']
                 self.post_check = {
                     'status':'ok',
-                    'message': message,
-                    'result':api_key_check['result']
+                    'messages': message,
+                    'data':api_key_check['data']
                 }
 
                 #
@@ -1158,10 +1158,10 @@ class BaseHandler(tornado.web.RequestHandler):
                         self.set_header('Retry-After','120')
                         self.write({
                             'status':'failed',
-                            'result':{
+                            'data':{
                                 'rate':self.request_rate_60sec,
                             },
-                            'message':(
+                            'messages':(
                                 'You have exceeded your API request rate.'
                             )
                         })
