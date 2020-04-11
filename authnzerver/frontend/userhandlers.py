@@ -63,7 +63,7 @@ class NewUserHandler(basehandler.BaseHandler):
                 alert_type=self.alert_type,
             )
 
-    def post(self):
+    async def post(self):
         '''
         This handles the POST for the new user sign up form.
 
@@ -257,7 +257,7 @@ class VerifyUserHandler(basehandler.BaseHandler):
             alert_type=self.alert_type,
         )
 
-    def post(self):
+    async def post(self):
         '''
         This handles the POST for the verify user page.
 
@@ -452,7 +452,7 @@ class DeleteUserHandler(basehandler.BaseHandler):
             alert_type=self.alert_type,
         )
 
-    def post(self):
+    async def post(self):
         '''
         This handles the POST for the delete user action.
 

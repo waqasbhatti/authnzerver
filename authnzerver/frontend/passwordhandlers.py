@@ -48,7 +48,7 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
             alert_type=self.alert_type,
         )
 
-    def post(self):
+    async def post(self):
         '''
         This handles the POST for step 1.
 
@@ -68,6 +68,14 @@ class ForgotPasswordStep1Handler(basehandler.BaseHandler):
         # disallow if the XSRF check failed
         if self.post_check['status'] != 'ok':
             self.render_blocked_message(code=401)
+
+        # redirect if the user's already logged in
+        if self.current_user['user_role'] not in ('anonymous','locked'):
+            self.save_flash_messages(
+                "You are already signed in.",
+                "warning"
+            )
+            self.redirect(self.conf.baseurl)
 
         #
         # actual processing here
@@ -92,7 +100,7 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
             alert_type=self.alert_type,
         )
 
-    def post(self):
+    async def post(self):
         '''
         This handles the POST for the reset password step 2.
 
@@ -112,6 +120,14 @@ class ForgotPasswordStep2Handler(basehandler.BaseHandler):
         # disallow if the XSRF check failed
         if self.post_check['status'] != 'ok':
             self.render_blocked_message(code=401)
+
+        # redirect if the user's already logged in
+        if self.current_user['user_role'] not in ('anonymous','locked'):
+            self.save_flash_messages(
+                "You are already signed in.",
+                "warning"
+            )
+            self.redirect(self.conf.baseurl)
 
         #
         # actual processing here
@@ -140,7 +156,7 @@ class ChangePasswordHandler(basehandler.BaseHandler):
             alert_type=self.alert_type,
         )
 
-    def post(self):
+    async def post(self):
         '''
         This handles the POST for the change password form.
 
