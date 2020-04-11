@@ -391,7 +391,7 @@ class BaseHandler(tornado.web.RequestHandler):
                          'Will fail this request.' % self.reqid)
             raise tornado.web.HTTPError(statuscode=401)
 
-    async def check_auth_header_api_key(self):
+    async def check_header_apikey(self):
         '''
         This checks the API key provided in the header of the HTTP request.
 
@@ -452,62 +452,38 @@ class BaseHandler(tornado.web.RequestHandler):
                 # actual address)
                 issuer_ok = self.api_key_issuer == api_key_dict['iss']
 
-                # pass api_key dict to the backend to check for:
-                # 1. not-before,
-                # 2. expiry again,
-                # 3. match to the user ID
-                # 4. match to the user role,
-                # 5. match to the actual api_key token
+                # we do only the initial checks here. the prepare() function
+                # takes these claims and does another check to make sure the API
+                # key is legit.
                 if (ipaddr_ok and
                     apiversion_ok and
                     audience_ok and
                     subject_ok and
                     issuer_ok):
 
-                    verify_ok, resp, msgs = (
-                        await self.authnzerver_request(
-                            'api_key-verify',
-                            {'api_key_dict':api_key_dict}
-                        )
-                    )
+                    retdict = {
+                        'status':'ok',
+                        'messages':"API key initial verification OK",
+                        'data': api_key_dict
+                    }
 
-                    # check if backend agrees it's OK
-                    if verify_ok:
-
-                        retdict = {
-                            'status':'ok',
-                            'message':msgs,
-                            'result': api_key_dict
-                        }
-
-                        self.api_key_verified = True
-                        self.api_key_dict = api_key_dict
-                        return retdict
-
-                    else:
-
-                        self.set_status(401)
-                        retdict = {
-                            'status':'failed',
-                            'message':msgs,
-                            'result': None
-                        }
-                        self.api_key_verified = False
-                        self.api_key_dict = None
-                        return retdict
+                    self.api_key_verified = True
+                    self.api_key_dict = api_key_dict
+                    return retdict
 
                 # if the key doesn't pass initial verification, fail this
                 # request immediately
                 else:
 
                     message = (
-                        '[%s] One of the provided API key IP address = %s, '
-                        'API version = %s, subject = %s, audience = %s '
-                        'do not match the '
-                        'current request IP address = %s, '
-                        'current API version = %s, '
-                        'current request subject = %s, '
-                        'current request audience = %s' %
+                        "[%s] API key initial verification: "
+                        "one of the provided API key IP address = %s, "
+                        "API version = %s, subject = %s, audience = %s "
+                        "do not match the "
+                        "current request IP address = %s, "
+                        "current API version = %s, "
+                        "current request subject = %s, "
+                        "current request audience = %s" %
                         (self.reqid,
                          pii_hash(api_key_dict['ipa'], self.pii_salt),
                          api_key_dict['ver'],
@@ -1076,6 +1052,57 @@ class BaseHandler(tornado.web.RequestHandler):
                 }
                 self.user_id = self.current_user['user_id']
                 self.user_role = self.current_user['user_role']
+
+                #
+                # now, we pass the API key dict to the backend for role and
+                # user_id verification and also to see if it hasn't been revoked
+                #
+                (backend_apikey_success,
+                 backend_apikey_resp,
+                 backend_apikey_messages) = await self.authnzerver_request(
+                     'apikey-verify',
+                     {'user_id':self.user_id,
+                      'user_role':self.user_role,
+                      'apikey_dict':self.api_key_dict}
+                )
+
+                if not backend_apikey_success:
+
+                    message = backend_apikey_messages['messages']
+
+                    LOGGER.error(
+                        "[%s] API key verification refused by the "
+                        "backend authnzerver. "
+                        "Current request IP address = %s, "
+                        "current API version = %s, "
+                        "current request subject = %s, "
+                        "current request audience = %s, "
+                        "API key user_id = %s, "
+                        "API key user_role = %s"
+                        "Authnzerver messages: %s" %
+                        (self.reqid,
+                         pii_hash(self.request.remote_ip, self.pii_salt),
+                         self.api_key_apiversion,
+                         self.request.host,
+                         self.request.uri,
+                         pii_hash(self.user_id, self.pii_salt),
+                         self.user_role,
+                         ' '.join(backend_apikey_messages))
+                    )
+
+                    self.post_check = {
+                        'status':'failed',
+                        'messages': message,
+                        'data':None
+                    }
+
+                    self.set_status(401)
+                    self.write({
+                        'status':'failed',
+                        'messages':message,
+                        'data':None
+                    })
+                    raise tornado.web.Finish()
 
                 #
                 # check the rate now
