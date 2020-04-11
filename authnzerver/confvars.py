@@ -227,6 +227,26 @@ CONF = {
         'readable_from_file':False,
         'postprocess_value':None,
     },
+    'userlocktries':{
+        'env':'%s_USERLOCKTRIES' % ENVPREFIX,
+        'cmdline':'userlocktries',
+        'type':int,
+        'default':10,
+        'help':('This sets the maximum number of failed logins per user '
+                'that triggers a temporary lock on their account.'),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
+    'userlocktime':{
+        'env':'%s_USERLOCKTIME' % ENVPREFIX,
+        'cmdline':'userlocktime',
+        'type':int,
+        'default':3600,
+        'help':('This sets the lockout time in seconds for failed user logins '
+                'that exceed the maximum number of failed login tries.'),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
     'workers':{
         'env':'%s_WORKERS' % ENVPREFIX,
         'cmdline':'workers',
@@ -280,6 +300,28 @@ CONF = {
         'default':'Authnzerver <authnzerver@localhost>',
         'help':('The account name and email address that the '
                 'authnzerver will send from.'),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
+    'tls_cert_file':{
+        'env':'%s_TLSCERT_FILE' % ENVPREFIX,
+        'cmdline':'tlscertfile',
+        'type':str,
+        'default':'',
+        'help':('The TLS certificate to use. If this is provided along '
+                'with the certificate key in the --tlscertkey option, '
+                'the server will start in TLS-enabled mode.'),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
+    'tls_cert_key':{
+        'env':'%s_TLSCERT_KEY' % ENVPREFIX,
+        'cmdline':'tlscertkey',
+        'type':str,
+        'default':'',
+        'help':("The TLS certificate's key to use. If this is provided along "
+                "with the certificate in the --tlscertfile option, "
+                "the server will start in TLS-enabled mode."),
         'readable_from_file':False,
         'postprocess_value':None,
     },

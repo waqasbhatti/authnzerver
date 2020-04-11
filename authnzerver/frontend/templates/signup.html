@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block pagecontent %}
+
+<div class="container" >
+  <div class="row align-items-center justify-content-center" >
+    <div class="col-sm-12 col-md-5" >
+
+      <div class="card mt-4 mb-1">
+        <div class="card-body">
+          <div class="card-title" >
+            <h4>Sign up for a user account</h4>
+          </div>
+          <div class="card-text" >
+            <form action="{{ conf.baseurl }}/users/new" method="post">
+              {% module xsrf_form_html() %}
+
+              <div class="form-group" >
+                <label for="fullname" >Your name</label>
+                <input type="text" class="form-control"
+                       name="fullname" id="fullname" required
+                       minlength="2" maxlength="280"
+                       placeholder="Type in your name">
+                <small id="fullnamehelp"
+                       class="form-text text-muted">
+                  Must be at least 2 characters long.
+                </small>
+              </div>
+
+              <div class="form-group" >
+                <label for="email" >Email address</label>
+                <input type="email" class="form-control"
+                       name="email" id="email" required
+                       minlength="4" maxlength="280"
+                       placeholder="user@example.org">
+              </div>
+
+              <div class="form-group" >
+                <label for="password" >Password</label>
+                <input type="password" class="form-control"
+                       name="password" id="password"
+                       aria-describedby="passhelp"
+                       autocomplete="new-password" required
+                       minlength="12" maxlength="1024"
+                       placeholder="Type in a password">
+                <small id="passhelp"
+                       class="form-text text-muted">
+                  Must be at least 12 characters long.
+                </small>
+              </div>
+
+              <button type="submit" class="btn btn-primary" >Sign up</button>
+
+            </form>
+
+            <div class="mt-2 text-right" >
+              <a href="{{ conf.baseurl }}/login" >
+                Already have an account? Sign in.
+              </a>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% end %}

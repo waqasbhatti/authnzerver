@@ -49,12 +49,15 @@ from email.mime.text import MIMEText
 from email.utils import formatdate, make_msgid
 import smtplib
 import time
+import re
+import textwrap
 
 from sqlalchemy import select
 
 from .. import authdb
 from .session import auth_session_exists
 from ..permissions import pii_hash
+from ..validators import validate_email_address
 
 
 ####################
@@ -120,7 +123,7 @@ Please enter this code:
 
 {verification_code}
 
-into the account verification form at: {server_baseurl}{password_forgot_url}
+into the password reset form at: {server_baseurl}{password_forgot_url}
 
 to verify that you made this request. This code will expire on
 
@@ -175,7 +178,7 @@ Thanks,
 '''
 
 
-def authnzerver_send_email(
+def send_email(
         sender,
         subject,
         text,
@@ -184,6 +187,7 @@ def authnzerver_send_email(
         user,
         password,
         pii_salt,
+        bcc=False,
         port=587
 ):
     '''
@@ -225,6 +229,15 @@ def authnzerver_send_email(
         personally identifying information in the logs emitted from this
         function.
 
+    bcc : bool or list of str
+        If True, will set the To: field in the email itself to
+        "undisclosed-recipients" and send the email to all recipients such that
+        none of them know who the message was sent to (effectively BCCs all the
+        recipients). If this is set to a list of email addresses in RFC822
+        format as strings, will only BCC those email addresses. If this is set
+        to False, the To: field in the email itself will contain the addresses
+        of all recipients.
+
     port : int
         The SMTP port to use when logging into the email server via SMTP.
 
@@ -236,12 +249,117 @@ def authnzerver_send_email(
 
     '''
 
+    # validate the sender's email address
+    if '<' in sender and '>' in sender:
+        sender_email = re.findall(r'<(\S+)>', sender)
+        if not sender_email:
+            LOGGER.error("Invalid sender email address. Can't send this email.")
+            return False
+        else:
+            sender_email = sender_email[0]
+    else:
+        sender_email = sender
+
+    valid_sender_email = validate_email_address(sender_email)
+    if not valid_sender_email:
+        LOGGER.error("Invalid sender email address. Can't send this email.")
+        return False
+
+    # remove all newlines from the subject, the sender's email address,
+    # and all the recipient email address to prevent header injection attacks
+    cleaned_sender = sender.replace('\n','')
+    cleaned_subject = subject.replace('\n','')
+    cleaned_recipients = [x.replace('\n','') for x in recipients]
+
+    # validate the recipients' email addresses
+    validated_recipients = []
+
+    for recipient in cleaned_recipients:
+
+        if '<' in recipient and '>' in recipient:
+            recipient_email = re.findall(r'<(\S+)>', recipient)
+            if recipient_email:
+                recipient_email = recipient_email[0]
+            else:
+                LOGGER.warning(
+                    "Recipient email address: %s is not valid, skipping..." %
+                    pii_hash(recipient, pii_salt)
+                )
+                continue
+        else:
+            recipient_email = recipient
+
+        recipient_email_valid = validate_email_address(recipient_email)
+
+        if not recipient_email_valid:
+            LOGGER.warning(
+                "Recipient email address: %s not valid, skipping..." %
+                pii_hash(recipient, pii_salt)
+            )
+        else:
+            validated_recipients.append(recipient)
+
+    if not validated_recipients:
+
+        LOGGER.error("No valid recipients found for this email.")
+        return False
+
+    #
+    # construct the message
+    #
+
     msg = MIMEText(text)
-    msg['From'] = sender
+    msg['From'] = cleaned_sender
     msg['To'] = ', '.join(recipients)
     msg['Message-Id'] = make_msgid()
-    msg['Subject'] = subject
+    msg['Subject'] = cleaned_subject
     msg['Date'] = formatdate(time.time())
+    msg['Sender'] = sender_email
+
+    #
+    # handle the BCC kwarg
+    #
+
+    # if everyone is to be BCCed, remove all the recipients from the "To:" field
+    if bcc is True:
+
+        msg['To'] = "undisclosed-recipients"
+
+    # if there are specific people who need to be BCCed, clean their addresses,
+    # validate them, and then add them to the validated_recipients list
+    elif isinstance(bcc, (list, tuple)):
+
+        for bcc_recipient in bcc:
+
+            cleaned_bcc_recipient = bcc_recipient.replace('\n','')
+
+            if '<' in cleaned_bcc_recipient and '>' in cleaned_bcc_recipient:
+                bcc_recipient_email = re.findall(r'<(\S+)>',
+                                                 cleaned_bcc_recipient)
+                if bcc_recipient_email:
+                    bcc_recipient_email = bcc_recipient_email[0]
+                else:
+                    LOGGER.warning(
+                        "BCC email address: %s is not valid, skipping..." %
+                        pii_hash(bcc_recipient, pii_salt)
+                    )
+                    continue
+
+            else:
+                bcc_recipient_email = cleaned_bcc_recipient
+
+            bcc_email_valid = validate_email_address(bcc_recipient_email)
+            if not bcc_email_valid:
+                LOGGER.warning(
+                    "BCC email address: %s not valid, skipping..." %
+                    pii_hash(bcc_recipient, pii_salt)
+                )
+            else:
+                validated_recipients.append(cleaned_bcc_recipient)
+
+    #
+    # finally, send the emails
+    #
 
     # next, we'll try to login to the SMTP server
     try:
@@ -251,25 +369,28 @@ def authnzerver_send_email(
 
         if server.has_extn('STARTTLS'):
 
+            # try to send the email
             try:
 
                 server.starttls()
                 server.ehlo()
 
-                server.login(
-                    user,
-                    password
-                )
+                if server.has_extn('AUTH'):
+                    server.login(
+                        user,
+                        password
+                    )
 
                 server.sendmail(
-                    sender,
-                    recipients,
+                    cleaned_sender,
+                    validated_recipients,
                     msg.as_string()
                 )
 
                 server.quit()
                 return True
 
+            # if it fails, bail out
             except Exception as e:
 
                 LOGGER.error(
@@ -282,8 +403,8 @@ def authnzerver_send_email(
                 return False
         else:
 
-            LOGGER.error('Email server: %s does not support TLS, '
-                         'will not send an insecure email.' % server)
+            LOGGER.error('Email server: %s does not support STARTTLS, '
+                         'refusing to send an insecure email.' % server)
             server.quit()
             return False
 
@@ -295,14 +416,17 @@ def authnzerver_send_email(
             % (', '.join([pii_hash(x, pii_salt) for x in recipients]),
                subject, e)
         )
-        server.quit()
+        try:
+            server.quit()
+        except Exception:
+            pass
         return False
 
 
 def send_signup_verification_email(payload,
                                    raiseonfail=False,
                                    override_authdb_path=None):
-    '''This actually sends the verification email.
+    '''Sends an account verification email.
 
     Parameters
     -----------
@@ -543,12 +667,24 @@ def send_signup_verification_email(payload,
         datetime.utcnow() + verification_expiry_td
     ).isoformat()
 
+    # format the verification token and wrap it to 70 chars per line because now
+    # it's a bit too long for one line. we'll use a textbox on the verification
+    # page to let people to paste this in
+    if isinstance(payload['verification_token'], bytes):
+        payload['verification_token'] = (
+            payload['verification_token'].decode('utf-8')
+        )
+
+    formatted_verification_token = '\n'.join(
+        textwrap.wrap(payload['verification_token'])
+    )
+
     # generate the email message
     msgtext = SIGNUP_VERIFICATION_EMAIL_TEMPLATE.format(
         server_baseurl=payload['server_baseurl'],
         server_name=payload['server_name'],
         account_verify_url=payload['account_verify_url'],
-        verification_code=payload['verification_token'],
+        verification_code=formatted_verification_token,
         verification_expiry='%s (UTC time)' % verification_expiry_dt,
         browser_identifier=browser.replace('_','.'),
         ip_address=ip_addr,
@@ -561,7 +697,7 @@ def send_signup_verification_email(payload,
     )
 
     # send the email
-    email_sent = authnzerver_send_email(
+    email_sent = send_email(
         sender,
         subject,
         msgtext,
@@ -594,7 +730,7 @@ def send_signup_verification_email(payload,
 
         LOGGER.info(
             '[%s] Verify email request succeeded for '
-            'user_id: %s, email: %s, session_token: %s.'
+            'user_id: %s, email: %s, session_token: %s. '
             'Email sent on: %s UTC.' %
             (payload['reqid'],
              pii_hash(payload['created_info']['user_id'], payload['pii_salt']),
@@ -637,9 +773,9 @@ def send_signup_verification_email(payload,
         }
 
 
-def verify_user_email_address(payload,
-                              raiseonfail=False,
-                              override_authdb_path=None):
+def set_user_emailaddr_verified(payload,
+                                raiseonfail=False,
+                                override_authdb_path=None):
     '''Sets the verification status of the email address of the user.
 
     This is called by the frontend after it verifies that the token challenge to
@@ -947,15 +1083,15 @@ def send_forgotpass_verification_email(payload,
         ) > timedelta(hours=24)
 
         if check_elapsed:
-            send_email = True
+            send_forgotpass_email = True
         else:
-            send_email = False
+            send_forgotpass_email = False
 
     # if we've never sent a forgot-password email before, it's OK to send it
     else:
-        send_email = True
+        send_forgotpass_email = True
 
-    if not send_email:
+    if not send_forgotpass_email:
 
         LOGGER.error(
             "[%s] Forgot-password email request failed for "
@@ -1024,12 +1160,24 @@ def send_forgotpass_verification_email(payload,
         datetime.utcnow() + verification_expiry_td
     ).isoformat()
 
+    # format the verification token and wrap it to 70 chars per line because now
+    # it's a bit too long for one line. we'll use a textbox on the verification
+    # page to let people to paste this in
+    if isinstance(payload['verification_token'], bytes):
+        payload['verification_token'] = (
+            payload['verification_token'].decode('utf-8')
+        )
+
+    formatted_verification_token = '\n'.join(
+        textwrap.wrap(payload['verification_token'])
+    )
+
     # generate the email message
     msgtext = FORGOTPASS_VERIFICATION_EMAIL_TEMPLATE.format(
         server_baseurl=payload['server_baseurl'],
         password_forgot_url=payload['password_forgot_url'],
         server_name=payload['server_name'],
-        verification_code=payload['verification_token'],
+        verification_code=formatted_verification_token,
         verification_expiry='%s (UTC time)' % verification_expiry_dt,
         browser_identifier=browser.replace('_','.'),
         ip_address=ip_addr,
@@ -1042,7 +1190,7 @@ def send_forgotpass_verification_email(payload,
     )
 
     # send the email
-    email_sent = authnzerver_send_email(
+    email_sent = send_email(
         sender,
         subject,
         msgtext,
@@ -1073,7 +1221,7 @@ def send_forgotpass_verification_email(payload,
 
         LOGGER.info(
             '[%s] Forgot-password email request succeeded for '
-            'email: %s, session_token: %s.'
+            'email: %s, session_token: %s. '
             'Email sent on: %s UTC.' %
             (payload['reqid'],
              pii_hash(payload['email_address'], payload['pii_salt']),

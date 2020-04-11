@@ -58,7 +58,7 @@ def test_role_permissions():
 
     # verify our email
     emailverify = (
-        actions.verify_user_email_address(
+        actions.set_user_emailaddr_verified(
             {'email':user_payload['email'],
              'user_id': user_created['user_id'],
              'pii_salt':'super-secret-salt',
@@ -308,7 +308,7 @@ def test_role_limits():
 
     # verify our email
     emailverify = (
-        actions.verify_user_email_address(
+        actions.set_user_emailaddr_verified(
             {'email':user_payload['email'],
              'user_id': user_created['user_id'],
              'pii_salt':'super-secret-salt',

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{{ static_url('css/bootstrap.min.css') }}">
+
+    <!-- our own CSS -->
+    {% block pagecss %}
+    {% end %}
+
+    <!-- any JS that needs to be loaded in advance -->
+    {% block topjs %}
+    {% end %}
+
+    <title>{{ page_title }}</title>
+  </head>
+
+  <body>
+
+    <!-- the top navigation bar -->
+    {% block topnav %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+
+      <a class="navbar-brand" href="{{ conf.baseurl }}">
+        Authnzerver
+      </a>
+
+      <button class="navbar-toggler"
+              type="button"
+              data-toggle="collapse"
+              data-target="#navbarNavAltMarkup"
+              aria-controls="navbarNavAltMarkup"
+              aria-expanded="false"
+              aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+
+        <div class="navbar-nav ml-auto">
+
+          <!-- the login box goes here -->
+          <form class="form-inline" action="{{ conf.baseurl }}/logout"
+                id="user-logout-form" method="POST" >
+            {% module xsrf_form_html() %}
+            {% module LoginBoxModule(baseurl=conf.baseurl,current_user=current_user) %}
+          </form>
+        </div>
+
+      </div>
+
+    </nav>
+    {% end %}
+
+    <!-- this is where all the alerts go -->
+    <!-- this uses the flash message Tornado template module -->
+    <div class="container-fluid">
+      <div class="row mt-2">
+        <div class="col-12">
+          <div id="alert-box">
+            {% module FlashMessageModule(flash_message_list=flash_message_list,
+            alert_type=alert_type) %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- main page content goes here -->
+    {% block pagecontent %}
+    {% end %}
+
+
+    <!-- the footer goes here -->
+    <div class="container" >
+      <footer class="text-muted">
+
+        <!-- footer content starts from here -->
+        {% block pagefooter %}
+        {% end %}
+
+      </footer>
+    </div>
+
+    <!-- bootstrap scripts -->
+    <script src="{{ static_url('js/jquery.min.js') }}"></script>
+    <script src="{{ static_url('js/popper.min.js') }}"></script>
+    <script src="{{ static_url('js/bootstrap.min.js') }}"></script>
+
+    <!-- cookie handling for prefs -->
+    <script src="{{ static_url('js/js.cookie.js') }}"></script>
+
+    <!-- other scripts to include -->
+
+    <!-- our own js modules go here-->
+    {% block pagejs_modules %}
+    {% end %}
+
+    <!-- page specific JS goes here -->
+    {% block pagejs %}
+    <script>
+      $(document).ready(function() {
+
+      });
+    </script>
+    {% end %}
+
+  </body>
+
+</html>

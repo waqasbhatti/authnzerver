@@ -21,7 +21,7 @@ LOGGER = logging.getLogger(__name__)
 #############
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 
 
@@ -45,20 +45,12 @@ class FrontendEncoder(json.JSONEncoder):
 json._default_encoder = FrontendEncoder()
 
 import ipaddress
-import base64
-
-import multiprocessing as mp
-
-
 import tornado.web
 import tornado.ioloop
 
-from cryptography.fernet import Fernet, InvalidToken
-
-from sqlalchemy.sql import select
-
-from . import authdb
 from . import actions
+from .messaging import encrypt_message, decrypt_message
+from .permissions import pii_hash
 
 
 #########################
@@ -77,77 +69,9 @@ def check_host(remote_ip):
         return False
 
 
-def decrypt_request(requestbody_base64, fernet_key):
-    '''
-    This decrypts the incoming request.
-
-    '''
-
-    frn = Fernet(fernet_key)
-
-    try:
-
-        request_bytes = base64.b64decode(requestbody_base64)
-        decrypted = frn.decrypt(request_bytes)
-        return json.loads(decrypted)
-
-    except InvalidToken:
-
-        LOGGER.error('invalid request could not be decrypted')
-        return None
-
-    except Exception:
-
-        LOGGER.exception('could not understand incoming request')
-        return None
-
-
-def encrypt_response(response_dict, fernet_key):
-    '''
-    This encrypts the outgoing response.
-
-    '''
-
-    frn = Fernet(fernet_key)
-
-    json_bytes = json.dumps(response_dict).encode()
-    json_encrypted_bytes = frn.encrypt(json_bytes)
-    response_base64 = base64.b64encode(json_encrypted_bytes)
-    return response_base64
-
-
 #####################################
 ## AUTH REQUEST HANDLING FUNCTIONS ##
 #####################################
-
-def auth_echo(payload):
-    '''
-    This just echoes back the payload.
-
-    '''
-
-    # this checks if the database connection is live
-    currproc = mp.current_process()
-    engine = getattr(currproc, 'authdb_engine', None)
-    if not engine:
-        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb.get_auth_db(
-                currproc.auth_db_path,
-                echo=False
-            )
-        )
-
-    permissions = currproc.authdb_meta.tables['permissions']
-    s = select([permissions])
-    result = currproc.authdb_engine.execute(s)
-    # add the result to the outgoing payload
-    serializable_result = [dict(x) for x in result]
-    payload['dbtest'] = serializable_result
-    result.close()
-
-    LOGGER.info('responding from process: %s' % currproc.name)
-    return payload
-
 
 #
 # this maps request types -> request functions to execute
@@ -167,97 +91,27 @@ request_functions = {
     'user-changepass':actions.change_user_password,
     'user-delete':actions.delete_user,
     'user-list':actions.list_users,
+    'user-lookup-email':actions.get_user_by_email,
     'user-edit':actions.edit_user,
     'user-resetpass':actions.verify_password_reset,
     'user-lock':actions.toggle_user_lock,
     # email actions
-    'user-signup-sendemail':actions.send_signup_verification_email,
-    'user-verify-emailaddr':actions.verify_user_email_address,
-    'user-forgotpass-sendemail':actions.send_forgotpass_verification_email,
+    'user-sendemail-signup':actions.send_signup_verification_email,
+    'user-set-emailverified':actions.set_user_emailaddr_verified,
+    'user-sendemail-forgotpass':actions.send_forgotpass_verification_email,
     # apikey actions
-    'apikey-new':actions.issue_new_apikey,
+    'apikey-new':actions.issue_apikey,
     'apikey-verify':actions.verify_apikey,
+    'apikey-revoke':actions.revoke_apikey,
     # access and limit check actions
     'user-check-access': actions.check_user_access,
     'user-check-limit': actions.check_user_limit,
 }
 
 
-#############
-## HANDLER ##
-#############
-
-
-class EchoHandler(tornado.web.RequestHandler):
-    '''
-    This just echoes back whatever we send.
-
-    Useful to see if the encryption is working as intended.
-
-    '''
-
-    def initialize(self,
-                   authdb,
-                   fernet_secret,
-                   executor):
-        '''
-        This sets up stuff.
-
-        '''
-
-        self.authdb = authdb
-        self.fernet_secret = fernet_secret
-        self.executor = executor
-
-    async def post(self):
-        '''
-        Handles the incoming POST request.
-
-        '''
-
-        ipcheck = check_host(self.request.remote_ip)
-
-        if not ipcheck:
-            raise tornado.web.HTTPError(status_code=400)
-
-        payload = decrypt_request(self.request.body, self.fernet_secret)
-        if not payload:
-            raise tornado.web.HTTPError(status_code=401)
-
-        if payload['request'] != 'echo':
-            LOGGER.error("this handler can only echo things. "
-                         "invalid request: %s" % payload['request'])
-            raise tornado.web.HTTPError(status_code=400)
-
-        # if we successfully got past host and decryption validation, then
-        # process the request
-        try:
-
-            loop = tornado.ioloop.IOLoop.current()
-            response_dict = await loop.run_in_executor(
-                self.executor,
-                auth_echo,
-                payload
-            )
-
-            if response_dict is not None:
-                encrypted_base64 = encrypt_response(
-                    response_dict,
-                    self.fernet_secret
-                )
-
-                self.set_header('content-type','text/plain; charset=UTF-8')
-                self.write(encrypted_base64)
-                self.finish()
-
-            else:
-                raise tornado.web.HTTPError(status_code=401)
-
-        except Exception:
-
-            LOGGER.exception('failed to understand request')
-            raise tornado.web.HTTPError(status_code=400)
-
+#######################
+## MAIN AUTH HANDLER ##
+#######################
 
 class AuthHandler(tornado.web.RequestHandler):
     '''
@@ -268,7 +122,6 @@ class AuthHandler(tornado.web.RequestHandler):
     def initialize(self,
                    config,
                    executor,
-                   reqid_cache,
                    failed_passchecks):
         '''
         This sets up stuff.
@@ -287,7 +140,6 @@ class AuthHandler(tornado.web.RequestHandler):
         self.emailpass = self.config.emailpass
 
         self.executor = executor
-        self.reqid_cache = reqid_cache
         self.failed_passchecks = failed_passchecks
 
     async def post(self):
@@ -301,7 +153,7 @@ class AuthHandler(tornado.web.RequestHandler):
         if not ipcheck:
             raise tornado.web.HTTPError(status_code=400)
 
-        payload = decrypt_request(self.request.body, self.fernet_secret)
+        payload = decrypt_message(self.request.body, self.fernet_secret)
         if not payload:
             raise tornado.web.HTTPError(status_code=401)
 
@@ -319,23 +171,6 @@ class AuthHandler(tornado.web.RequestHandler):
             if reqid is None:
                 raise ValueError("No request ID provided. "
                                  "Ignoring this request.")
-
-            #
-            # put the reqid into a cache and get it back
-            #
-            reqid_cache_len = len(self.reqid_cache)
-            self.reqid_cache.add(reqid)
-            if len(self.reqid_cache) == reqid_cache_len:
-                raise ValueError(
-                    "[%s] Request ID was repeated. Ignoring this request." %
-                    reqid
-                )
-
-            #
-            # trim the reqid_cache as needed
-            #
-            if len(self.reqid_cache) > 1000:
-                self.reqid_cache.pop()
 
             #
             # dispatch the action handler function
@@ -372,23 +207,26 @@ class AuthHandler(tornado.web.RequestHandler):
             if (payload['request'] == 'user-login' and
                 response['success'] is False):
 
-                # increment the failure counter and return it
-                if (payload['body']['email'] in self.failed_passchecks):
-                    self.failed_passchecks[payload['body']['email']] += 1
-                else:
-                    self.failed_passchecks[payload['body']['email']] = 1
+                failure_status, failure_count, failure_wait = (
+                    await self.handle_failed_logins(payload)
+                )
 
-                failed_pass_count = self.failed_passchecks[
-                    payload['body']['email']
-                ]
-
-                # asyncio.sleep for an exponentially increasing period of time
-                # until 40.0 seconds ~= 10 tries
-                wait_time = 1.5**(failed_pass_count - 1.0)
-                if wait_time > 40.0:
-                    wait_time = 40.0
-
-                await asyncio.sleep(wait_time)
+                # if the user is locked for repeated login failures, handle that
+                if failure_status == 'locked':
+                    response = await self.lockuser_repeated_login_failures(
+                        payload,
+                        unlock_after_seconds=self.config.userlocktime
+                    )
+                elif failure_status == 'wait':
+                    LOGGER.warning(
+                        "[%s] User with email: %s is being rate-limited "
+                        "after %s failed login attempts. "
+                        "Current wait time: %.1f seconds." %
+                        (reqid,
+                         pii_hash(payload['body']['email'], self.pii_salt),
+                         failure_count,
+                         failure_wait)
+                    )
 
             # reset the failed counter to zero for each successful attempt
             elif (payload['request'] == 'user-login' and
@@ -398,6 +236,7 @@ class AuthHandler(tornado.web.RequestHandler):
                     payload['body']['email'],
                     None
                 )
+
             #
             # trim the failed_passchecks dict
             #
@@ -412,10 +251,9 @@ class AuthHandler(tornado.web.RequestHandler):
 
             response_dict = {"success": response['success'],
                              "response":response,
-                             "message": response['messages'],
-                             "reqid": reqid}
+                             "messages": response['messages']}
 
-            encrypted_base64 = encrypt_response(
+            encrypted_base64 = encrypt_message(
                 response_dict,
                 self.fernet_secret
             )
@@ -426,5 +264,140 @@ class AuthHandler(tornado.web.RequestHandler):
 
         except Exception:
 
-            LOGGER.exception('failed to understand request')
+            LOGGER.exception('Failed to understand request.')
             raise tornado.web.HTTPError(status_code=400)
+
+    async def handle_failed_logins(self, payload):
+        '''
+        This handles failed logins.
+
+        - Adds increasing wait times to successive logins if they keep failing.
+        - If the number of failed logins exceeds 10, the account is locked for
+          one hour, and an unlock action is scheduled on the ioloop.
+
+        '''
+
+        # increment the failure counter and return it
+        if (payload['body']['email'] in self.failed_passchecks):
+            self.failed_passchecks[payload['body']['email']] += 1
+        else:
+            self.failed_passchecks[payload['body']['email']] = 1
+
+        failed_pass_count = self.failed_passchecks[
+            payload['body']['email']
+        ]
+
+        if 0 < failed_pass_count <= self.config.userlocktries:
+            # asyncio.sleep for an exponentially increasing period of time
+            # until 40.0 seconds ~= 10 tries
+            wait_time = 1.5**(failed_pass_count - 1.0)
+            if wait_time > 40.0:
+                wait_time = 40.0
+            await asyncio.sleep(wait_time)
+            return ('wait', failed_pass_count, wait_time)
+
+        elif failed_pass_count > self.config.userlocktries:
+            return ('locked', failed_pass_count, 0.0)
+
+        else:
+            return ('ok', failed_pass_count, 0.0)
+
+    async def lockuser_repeated_login_failures(self,
+                                               payload,
+                                               unlock_after_seconds=3600):
+        '''
+        This locks the user account. Also schedules an unlock action for later.
+
+        '''
+
+        # look up the user ID using the email address
+        loop = tornado.ioloop.IOLoop.current()
+        user_info = await loop.run_in_executor(
+            self.executor,
+            actions.get_user_by_email,
+            {'email':payload['body']['email'],
+             'reqid':payload['body']['reqid'],
+             'pii_salt':payload['body']['pii_salt']}
+        )
+
+        if not user_info['success']:
+
+            LOGGER.error(
+                "Could not look up the user ID for email: %s to lock "
+                "their account after repeated failed login attempts." %
+                pii_hash(payload['body']['email'], payload['body']['pii_salt'])
+            )
+
+        else:
+
+            # attempt to lock the user using actions.internal_toggle_user_lock
+            locked_info = await loop.run_in_executor(
+                self.executor,
+                actions.internal_toggle_user_lock,
+                {'target_userid':user_info['user_info']['user_id'],
+                 'action':'lock',
+                 'reqid':payload['body']['reqid'],
+                 'pii_salt':payload['body']['pii_salt']}
+            )
+
+            if locked_info['success']:
+
+                unlock_after_dt = (datetime.utcnow() +
+                                   timedelta(seconds=unlock_after_seconds))
+
+                # schedule the unlock
+                loop.call_later(
+                    unlock_after_seconds,
+                    self.scheduled_user_unlock,
+                    user_info['user_info']['user_id'],
+                    payload['body']['reqid'],
+                    payload['body']['pii_salt']
+                )
+
+                LOGGER.warning(
+                    "Locked the account for user ID: %s, "
+                    "email: %s after repeated "
+                    "failed login attempts. "
+                    "Unlock scheduled for: %sZ" %
+                    (pii_hash(user_info['user_info']['user_id'],
+                              payload['body']['pii_salt']),
+                     pii_hash(payload['body']['email'],
+                              payload['body']['pii_salt']),
+                     unlock_after_dt)
+                )
+
+        # we'll return a failure here as the response no matter what happens
+        # above to deny the login
+        return {
+            "success": False,
+            "user_id":None,
+            "messages":[
+                "Your user account has been locked "
+                "after repeated login failures. "
+                "Try again in an hour or "
+                "contact the server admins."
+            ]
+        }
+
+    async def scheduled_user_unlock(self, user_id, reqid, pii_salt):
+        '''
+        This function is scheduled on the ioloop to unlock the specified user.
+
+        '''
+
+        LOGGER.warning(
+            "[%s] Unlocked the account for user ID: %s after "
+            "login-failure timeout expired." %
+            (reqid, pii_hash(user_id, pii_salt))
+        )
+
+        loop = tornado.ioloop.IOLoop.current()
+        locked_info = await loop.run_in_executor(
+            self.executor,
+            actions.internal_toggle_user_lock,
+            {'target_userid':user_id,
+             'action':'unlock',
+             'reqid':reqid,
+             'pii_salt':pii_salt}
+        )
+        return locked_info

@@ -58,6 +58,7 @@ setup(
     entry_points={
         'console_scripts':[
             'authnzrv=authnzerver.main:main',
+            'authnzrv-frontend=authnzerver.frontend.main:main',
         ],
     },
     include_package_data=True,

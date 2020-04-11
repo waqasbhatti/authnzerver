@@ -31,22 +31,24 @@ logging.basicConfig(
 #############
 
 from .apikey import (
-    issue_new_apikey,
-    verify_apikey
+    issue_apikey,
+    verify_apikey,
+    revoke_apikey
 )
 
 from .admin import (
     list_users,
     edit_user,
+    get_user_by_email,
     toggle_user_lock,
     internal_toggle_user_lock,
 )
 
 from .email import (
     send_signup_verification_email,
-    verify_user_email_address,
+    set_user_emailaddr_verified,
     send_forgotpass_verification_email,
-    authnzerver_send_email,
+    send_email,
 )
 
 from .session import (

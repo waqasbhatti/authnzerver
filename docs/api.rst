@@ -310,7 +310,23 @@ Requires the following ``body`` items in a request:
  Returns a ``response`` with the following items if successful:
 
 - ``user_info`` (list of dicts): a list containing all user info as a dict per
-  user
+  user. Each dict has the following items of information as dict keys:
+  ``'user_id', 'system_id', 'full_name', 'email', 'is_active', 'created_on',
+  'user_role', 'last_login_try', 'last_login_success'``.
+
+``user-lookup-email``: Look up a user's info given their email address
+----------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``email`` (str): the email address of the user to look up.
+
+ Returns a ``response`` with the following items if successful:
+
+- ``user_info`` (dict): a dict with the following items of information for the
+  user as dict keys: ``'user_id', 'system_id', 'full_name', 'email',
+  'is_active', 'created_on', 'user_role', 'last_login_try',
+  'last_login_success'``.
 
 ``user-edit``: Edit a user's properties
 ---------------------------------------
@@ -325,10 +341,9 @@ Requires the following ``body`` items in a request:
 
 - ``target_userid`` (int): the user ID that will be the subject of this request
 
-- ``update_dict`` (dict): the items to update. keys allowed for all users:
-
-- ``full_name``, ``email``. keys allowed for superusers only: ``is_active``,
-  ``user_role``.
+- ``update_dict`` (dict): the items to update. Keys that can be updated by all
+  authenticated users are: ``full_name``, ``email``. Additional keys that can be
+  updated by superusers only are: ``is_active``, ``user_role``.
 
 Returns a ``response`` with the following items if successful:
 
@@ -344,7 +359,8 @@ Requires the following ``body`` items in a request:
 
 - ``new_password`` (str): the new password provided by the user
 
-- ``session_token`` (str): the session token of the session initiating the request
+- ``session_token`` (str): the session token of the session initiating the
+  request
 
 Returns a ``response`` with the following items:
 
@@ -433,7 +449,7 @@ Returns a ``response`` with the following items if successful:
 Email actions
 =============
 
-``user-signup-sendemail``: Send a verification email to a new user
+``user-sendemail-signup``: Send a verification email to a new user
 ------------------------------------------------------------------
 
 Requires the following ``body`` items in a request:
@@ -470,7 +486,7 @@ Returns a ``response`` with the following items if successful:
 - ``verifyemail_sent_datetime`` (str): the UTC datetime the email was sent on in
   ISO format
 
-``user-forgotpass-sendemail``: Send a verification email to a user who forgot their password
+``user-sendemail-forgotpass``: Send a verification email to a user who forgot their password
 --------------------------------------------------------------------------------------------
 
 Requires the following ``body`` items in a request:
@@ -503,6 +519,26 @@ Returns a ``response`` with the following items if successful:
 - ``user_id`` (int): the user ID of the user the email was sent to
 
 - ``email_address`` (str): the email address the email was sent to
+
+- ``forgotemail_sent_datetime`` (str): the UTC datetime the email was sent on in
+  ISO format
+
+``user-set-emailverified``: Set the "verified" flag for a user completing sign-up
+---------------------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``email`` (str): the email address of the new user that has completed sign-up
+  and the verification token challenge.
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_id`` (int): the user ID of the newly signed-up user the email was sent
+  to
+
+- ``user_role`` (str): the user role of the newly signed-up user
+
+- ``is_active`` (bool): True if the user is successfully tagged as verified.
 
 - ``forgotemail_sent_datetime`` (str): the UTC datetime the email was sent on in
   ISO format
@@ -552,6 +588,30 @@ Requires the following ``body`` items in a request:
 - ``apikey_dict`` (dict): the decrypted and validated API key information dict
   from the frontend.
 
+- ``user_id`` (int): the user ID of the user that this API key is tied to
+
+- ``user_role`` (str): the role of the user that this API key is tied to
+
+
 Returns a ``response`` with the following items:
 
-- None, check the value of ``success`` to see if the the API key is valid
+- None, check the value of ``success`` to see if the API key is valid
+
+
+``apikey-revoke``: Revoke a previously issued API key
+-----------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``apikey_dict`` (dict): the decrypted and validated API key information dict
+  from the frontend.
+
+- ``user_id`` (int): the user ID of the target user whose API key is being
+  revoked
+
+- ``user_role`` (str): the role of the user that this API key is tied to
+
+Returns a ``response`` with the following items:
+
+- None, check the value of ``success`` to see if the API key revocation was
+  successful

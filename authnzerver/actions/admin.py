@@ -93,7 +93,7 @@ def list_users(payload,
     if 'user_id' not in payload:
 
         LOGGER.error(
-            '[%s] Invalid password change request, missing %s.' %
+            '[%s] Invalid user list request, missing %s.' %
             (payload['reqid'], 'user_id')
         )
 
@@ -185,7 +185,7 @@ def list_users(payload,
 
             LOGGER.error(
                 "[%s] User lookup request failed. "
-                "user_id provided: %s. Exception: %s" %
+                "user_id provided: %s. Exception: %r" %
                 (payload['reqid'],
                  pii_hash(payload['user_id'],
                           payload['pii_salt']), e)
@@ -204,9 +204,177 @@ def list_users(payload,
 
         LOGGER.error(
             "[%s] User lookup request failed. "
-            "user_id provided: %s. Exception: %s" %
+            "user_id provided: %s. Exception: %r" %
             (payload['reqid'],
              pii_hash(payload['user_id'],
+                      payload['pii_salt']), e)
+        )
+
+        if raiseonfail:
+            raise
+
+        return {
+            'success':False,
+            'user_info':None,
+            'messages':["User look up failed."],
+        }
+
+
+def get_user_by_email(payload,
+                      raiseonfail=False,
+                      override_authdb_path=None):
+    '''
+    This gets a user's information using their email address.
+
+    Parameters
+    ----------
+
+    payload : dict
+        This is the input payload dict. Required items:
+
+        - email: str
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    Returns
+    -------
+
+    dict
+        The dict returned is of the form::
+
+            {'success': True or False,
+             'user_info': a user info dict,
+             'messages': list of str messages if any}
+
+        The user info dict will contain the following items::
+
+            {'user_id','system_id', 'full_name', 'email',
+             'is_active','created_on','user_role',
+             'last_login_try','last_login_success'}
+
+    '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["Invalid user info request."],
+            }
+
+    if 'email' not in payload:
+
+        LOGGER.error(
+            '[%s] Invalid user lookup request, missing %s.' %
+            (payload['reqid'], 'user_id')
+        )
+
+        return {
+            'success':False,
+            'user_info':None,
+            'messages':["email provided."],
+        }
+
+    email = payload['email']
+
+    try:
+
+        # this checks if the database connection is live
+        currproc = mp.current_process()
+        engine = getattr(currproc, 'authdb_engine', None)
+
+        if override_authdb_path:
+            currproc.auth_db_path = override_authdb_path
+
+        if not engine:
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
+                authdb.get_auth_db(
+                    currproc.auth_db_path,
+                    echo=raiseonfail
+                )
+            )
+
+        users = currproc.authdb_meta.tables['users']
+
+        s = select([
+            users.c.user_id,
+            users.c.system_id,
+            users.c.full_name,
+            users.c.email,
+            users.c.is_active,
+            users.c.last_login_try,
+            users.c.last_login_success,
+            users.c.created_on,
+            users.c.user_role,
+        ]).order_by(
+            asc(users.c.user_id)
+        ).select_from(users).where(
+            users.c.email == email
+        )
+
+        result = currproc.authdb_conn.execute(s)
+        rows = result.fetchone()
+        result.close()
+
+        try:
+
+            serialized_result = dict(rows)
+
+            LOGGER.info(
+                "[%s] User lookup request succeeded. "
+                "email provided: %s." %
+                (payload['reqid'],
+                 pii_hash(payload['email'],
+                          payload['pii_salt']))
+            )
+            return {
+                'success':True,
+                'user_info':serialized_result,
+                'messages':["User look up successful."],
+            }
+
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] User lookup request failed. "
+                "email provided: %s. Exception: %r" %
+                (payload['reqid'],
+                 pii_hash(payload['email'],
+                          payload['pii_salt']), e)
+            )
+
+            if raiseonfail:
+                raise
+
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["User look up failed."],
+            }
+
+    except Exception as e:
+
+        LOGGER.error(
+            "[%s] User lookup request failed. "
+            "email provided: %s. Exception: %r" %
+            (payload['reqid'],
+             pii_hash(payload['email'],
                       payload['pii_salt']), e)
         )
 
@@ -650,7 +818,7 @@ def edit_user(payload,
             LOGGER.error(
                 "[%s] User edit request failed for "
                 "user_id: %s, role: %s, "
-                "session_token: %s, target_userid: %s. Exception: %s" %
+                "session_token: %s, target_userid: %s. Exception: %r" %
                 (payload['reqid'],
                  pii_hash(payload['user_id'],
                           payload['pii_salt']),
@@ -675,7 +843,7 @@ def edit_user(payload,
         LOGGER.error(
             "[%s] User edit request failed for "
             "user_id: %s, role: %s, "
-            "session_token: %s, target_userid: %s. Exception: %s" %
+            "session_token: %s, target_userid: %s. Exception: %r" %
             (payload['reqid'],
              pii_hash(payload['user_id'],
                       payload['pii_salt']),
