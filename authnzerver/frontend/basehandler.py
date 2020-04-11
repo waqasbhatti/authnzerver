@@ -1144,7 +1144,7 @@ class BaseHandler(tornado.web.RequestHandler):
                     if not rate_ok:
 
                         LOGGER.error(
-                            '[%] API key: %s: current rate = %s exceeds '
+                            '[%s] API key: %s: current rate = %s exceeds '
                             'their allowed rate for their role = %s. '
                             'total reqs = %s, time_zero = %s'
                             % (self.reqid,
