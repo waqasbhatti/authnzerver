@@ -208,10 +208,6 @@ class LogoutHandler(basehandler.BaseHandler):
         if self.post_check['status'] != 'ok':
             self.render_blocked_message(code=401)
 
-        #
-        # actual processing starts here
-        #
-
         # if the user isn't signed in, they can't sign out
         if (not self.current_user or
             (self.current_user and
@@ -238,6 +234,7 @@ class LogoutHandler(basehandler.BaseHandler):
         #
         # otherwise, process the sign out request
         #
+
         request_type = 'user-logout'
         request_body = {
             "session_token": self.current_user["session_token"],
