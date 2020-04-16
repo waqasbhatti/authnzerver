@@ -480,3 +480,89 @@ class DeleteUserHandler(basehandler.BaseHandler):
         #
         # actual processing here
         #
+        try:
+
+            email = self.get_argument('email')
+            email_is_valid = validate_email_address(email)
+            if not email_is_valid:
+                raise ValueError("Email address provided did "
+                                 "not pass validation.")
+            password = self.get_argument('password')[:1024]
+
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] Could not validate the input email or "
+                "password for the user delete request: "
+                "user_id: %s, role: %s, session_token: %s. "
+                "Exception was: %r" %
+                (self.reqid,
+                 pii_hash(self.current_user['user_id'], self.pii_salt),
+                 pii_hash(self.current_user['user_role'], self.pii_salt),
+                 pii_hash(self.current_user['session_token'], self.pii_salt), e)
+            )
+            self.save_flash_messages(
+                "A valid email address and password are "
+                "required to delete your account.",
+                "warning"
+            )
+            self.redirect("%s/users/delete" % self.conf.baseurl)
+
+        #
+        # handle the delete POST
+        #
+        request_type = 'user-delete'
+        request_dict = {
+            'user_id':self.current_user['user_id'],
+            'email':email,
+            'password':password,
+        }
+
+        delete_ok, delete_resp, delete_messages = (
+            await self.authnzerver_request(
+                request_type,
+                request_dict
+            )
+        )
+
+        if not delete_ok:
+
+            LOGGER.error(
+                "[%s] Delete user request failed: "
+                "user_id: %s, role: %s, session_token: %s. "
+                "Authnzerver messages: %s" %
+                (self.reqid,
+                 pii_hash(self.current_user['user_id'], self.pii_salt),
+                 pii_hash(self.current_user['user_role'], self.pii_salt),
+                 pii_hash(self.current_user['session_token'], self.pii_salt),
+                 ' '.join(delete_messages))
+            )
+            self.save_flash_messages(delete_messages, "warning")
+            self.redirect("%s/users/delete" % self.conf.baseurl)
+
+        #
+        # delete succeeded, make double-sure the current session token is dead
+        #
+        sessdel_ok, sessdel_resp, sessdel_msgs = await self.authnzerver_request(
+            'session-delete',
+            {'session_token':self.current_user['session_token']},
+        )
+
+        self.save_flash_messages(
+            "Your account has been deleted.",
+            'danger',
+        )
+
+        LOGGER.warning(
+            "[%s] Delete user request succeeded: "
+            "user_id: %s, role: %s, session_token: %s. "
+            "Authnzerver messages: %s" %
+            (self.reqid,
+             pii_hash(self.current_user['user_id'], self.pii_salt),
+             pii_hash(self.current_user['user_role'], self.pii_salt),
+             pii_hash(self.current_user['session_token'], self.pii_salt),
+             ' '.join(delete_messages))
+        )
+
+        self.clear_all_cookies()
+        self.redirect(self.conf.baseurl)
