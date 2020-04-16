@@ -53,6 +53,7 @@ from argon2 import PasswordHasher
 
 from .. import authdb
 from ..permissions import pii_hash
+from ..validators import normalize_value
 
 
 ############################
@@ -1487,7 +1488,7 @@ def auth_user_login(payload,
                 users.c.is_active,
                 users.c.user_role,
             ]).select_from(users).where(
-                users.c.email == payload['email']
+                users.c.email == normalize_value(payload['email'])
             ).where(
                 users.c.is_active.is_(True)
             ).where(
@@ -1583,7 +1584,7 @@ def auth_user_login(payload,
                     ).where(
                         users.c.user_id == user_info['user_id']
                     ).where(
-                        users.c.email == payload['email']
+                        users.c.email == normalize_value(payload['email'])
                     ).values({
                         'password': rehashed_password
                     })

@@ -57,7 +57,7 @@ from sqlalchemy import select
 from .. import authdb
 from .session import auth_session_exists
 from ..permissions import pii_hash
-from ..validators import validate_email_address
+from ..validators import validate_email_address, normalize_value
 
 
 ####################
@@ -570,7 +570,7 @@ def send_signup_verification_email(payload,
         users.c.is_active,
         users.c.user_role,
     ]).select_from(users).where(
-        users.c.email == payload['email_address']
+        users.c.email == normalize_value(payload['email_address'])
     ).where(
         users.c.user_id == payload['created_info']['user_id']
     )
@@ -721,7 +721,9 @@ def send_signup_verification_email(payload,
         ).where(
             users.c.is_active.is_(False)
         ).where(
-            users.c.email == payload['created_info']['user_email']
+            users.c.email == normalize_value(
+                payload['created_info']['user_email']
+            )
         ).values({
             'emailverify_sent_datetime': emailverify_sent_datetime,
         })
@@ -861,7 +863,7 @@ def set_user_emailaddr_verified(payload,
     ).where(
         users.c.is_active.is_(False)
     ).where(
-        users.c.email == payload['email']
+        users.c.email == normalize_value(payload['email'])
     ).values({
         'is_active':True,
         'email_verified':True,
@@ -874,7 +876,7 @@ def set_user_emailaddr_verified(payload,
         users.c.is_active,
         users.c.user_role,
     ]).select_from(users).where(
-        (users.c.email == payload['email'])
+        users.c.email == normalize_value(payload['email'])
     )
     result = currproc.authdb_conn.execute(sel)
     rows = result.fetchone()
@@ -1041,7 +1043,7 @@ def send_forgotpass_verification_email(payload,
         users.c.user_role,
         users.c.emailforgotpass_sent_datetime,
     ]).select_from(users).where(
-        users.c.email == payload['email_address']
+        users.c.email == normalize_value(payload['email_address'])
     ).where(
         users.c.is_active.is_(True)
     ).where(
@@ -1212,7 +1214,7 @@ def send_forgotpass_verification_email(payload,
         ).where(
             users.c.is_active.is_(True)
         ).where(
-            users.c.email == payload['email_address']
+            users.c.email == normalize_value(payload['email_address'])
         ).values({
             'emailforgotpass_sent_datetime': emailforgotpass_sent_datetime,
         })

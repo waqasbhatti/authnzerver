@@ -357,7 +357,7 @@ def change_user_password(payload,
     ).where(
         users.c.user_id == payload['user_id']
     ).where(
-        users.c.email == payload['email']
+        users.c.email == validators.normalize_value(payload['email'])
     ).where(
         users.c.is_active.is_(True)
     )
@@ -473,7 +473,7 @@ def change_user_password(payload,
         ).where(
             users.c.is_active.is_(True)
         ).where(
-            users.c.email == payload['email']
+            users.c.email == validators.normalize_value(payload['email'])
         ).values({
             'password': hashed_password
         })
@@ -623,9 +623,9 @@ def create_new_user(
     The emailverify_sent_datetime is set to the current time. The initial
     account's is_active is set to False and user_role is set to 'locked'.
 
-    The email verification token sent by the frontend expires in 2 hours. If the
-    user doesn't get to it by then, they'll have to wait at least 24 hours until
-    another one can be sent.
+    The email verification token sent by the frontend should expire with a short
+    timeout. If the user doesn't get to it by then, they should have to wait at
+    least 24 hours until another one can be sent.
 
     If the email address already exists in the database, then either the user
     has forgotten that they have an account or someone else is being
@@ -638,6 +638,12 @@ def create_new_user(
 
     Only after the user verifies their email, is_active will be set to True and
     user_role will be set to 'authenticated'.
+
+    This function normalizes the email address and the user's full name before
+    storing them in the database. It uses the
+    py:func:`authnzerver.validators.normalize_value` function to do this. All
+    other functions trying to match stored email addresses to users must do the
+    same operation or comparisons will fail.
 
     '''
 
@@ -818,6 +824,7 @@ def create_new_user(
         users.c.is_active,
         users.c.emailverify_sent_datetime,
     ]).select_from(users).where(
+        # NOTE: email is already normalized using validators.normalize_value()
         users.c.email == email
     )
     result = currproc.authdb_conn.execute(sel)
@@ -1020,7 +1027,7 @@ def delete_user(payload,
     ).where(
         users.c.user_id == payload['user_id']
     ).where(
-        users.c.email == payload['email']
+        users.c.email == validators.normalize_value(payload['email'])
     )
     result = currproc.authdb_conn.execute(sel)
     row = result.fetchone()
@@ -1096,7 +1103,7 @@ def delete_user(payload,
     delete = users.delete().where(
         users.c.user_id == payload['user_id']
     ).where(
-        users.c.email == payload['email']
+        users.c.email == validators.normalize_value(payload['email'])
     ).where(
         users.c.user_role != 'superuser'
     )
@@ -1290,7 +1297,7 @@ def verify_password_reset(payload,
     ]).select_from(
         users
     ).where(
-        users.c.email == payload['email_address']
+        users.c.email == validators.normalize_value(payload['email_address'])
     ).where(
         users.c.is_active.is_(True)
     )
@@ -1394,7 +1401,9 @@ def verify_password_reset(payload,
         ).where(
             users.c.is_active.is_(True)
         ).where(
-            users.c.email == payload['email_address']
+            users.c.email == validators.normalize_value(
+                payload['email_address']
+            )
         ).values({
             'password': hashed_password
         })
@@ -1403,7 +1412,9 @@ def verify_password_reset(payload,
         sel = select([
             users.c.password,
         ]).select_from(users).where(
-            (users.c.email == payload['email_address'])
+            users.c.email == validators.normalize_value(
+                payload['email_address']
+            )
         )
         result = currproc.authdb_conn.execute(sel)
         rows = result.fetchone()

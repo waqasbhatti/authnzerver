@@ -28,6 +28,7 @@ from sqlalchemy import select, asc
 from .. import authdb
 from .session import auth_session_exists
 from ..permissions import pii_hash, load_permissions_json
+from ..validators import normalize_value
 
 
 ##################
@@ -325,7 +326,7 @@ def get_user_by_email(payload,
         ]).order_by(
             asc(users.c.user_id)
         ).select_from(users).where(
-            users.c.email == email
+            users.c.email == normalize_value(email)
         )
 
         result = currproc.authdb_conn.execute(s)
