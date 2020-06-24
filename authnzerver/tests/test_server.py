@@ -12,13 +12,13 @@ import os.path
 import time
 from datetime import datetime, timedelta
 
-import pytest.mark
+from pytest import mark
 
 from authnzerver.autosetup import autogen_secrets_authdb
 from authnzerver.messaging import encrypt_message, decrypt_message
 
 
-@pytest.mark.skipif(
+@mark.skipif(
     os.environ.get("GITHUB_WORKFLOW",
                    reason="github doesn't allow server tests probably")
 )
@@ -166,7 +166,7 @@ def test_server_with_env(monkeypatch, tmpdir):
         )
 
 
-@pytest.mark.skipif(
+@mark.skipif(
     os.environ.get("GITHUB_WORKFLOW",
                    reason="github doesn't allow server tests probably")
 )
@@ -396,7 +396,7 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
         )
 
 
-@pytest.mark.skipif(
+@mark.skipif(
     os.environ.get("GITHUB_WORKFLOW",
                    reason="github doesn't allow server tests probably")
 )
