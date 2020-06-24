@@ -19,7 +19,7 @@ from authnzerver.messaging import encrypt_message, decrypt_message
 
 
 @skipif(os.environ.get("GITHUB_WORKFLOW",
-                       reason="github doesn't allow server tests probably")
+                       reason="github doesn't allow server tests probably"))
 def test_server_with_env(monkeypatch, tmpdir):
     '''
     This tests if the server starts fine with all config in the environment.
@@ -165,7 +165,7 @@ def test_server_with_env(monkeypatch, tmpdir):
 
 
 @skipif(os.environ.get("GITHUB_WORKFLOW",
-                       reason="github doesn't allow server tests probably")
+                       reason="github doesn't allow server tests probably"))
 def test_server_invalid_logins(monkeypatch, tmpdir):
     '''This tests if the server responds appropriately to invalid logins.
 
@@ -393,7 +393,7 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
 
 
 @skipif(os.environ.get("GITHUB_WORKFLOW",
-                       reason="github doesn't allow server tests probably")
+                       reason="github doesn't allow server tests probably"))
 def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
     '''This tests if the server responds appropriately to invalid logins.
 
