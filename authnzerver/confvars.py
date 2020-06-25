@@ -128,6 +128,19 @@ ENVPREFIX = 'AUTHNZERVER'
 ###############
 
 CONF = {
+    'allowedhosts':{
+        'env':'%s_ALLOWEDHOSTS' % ENVPREFIX,
+        'cmdline':'allowedhosts',
+        'type':str,
+        'default':'',
+        'help':('The allowed HTTP request header "Host" values '
+                'that the server will respond to, '
+                'other than "localhost" and "127.0.0.1". '
+                'Separate values with semicolons. Specifying '
+                'these helps prevent DNS-rebinding attacks.'),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
     'authdb':{
         'env':'%s_AUTHDB' % ENVPREFIX,
         'cmdline':'authdb',
