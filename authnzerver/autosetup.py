@@ -2,7 +2,8 @@
 # autosetup.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to set up the authnzerver automatically on first-start.
+'''This contains functions to set up the authnzerver automatically on
+first-start.
 
 '''
 
@@ -22,11 +23,19 @@ LOGGER = logging.getLogger(__name__)
 
 import os
 import os.path
+import shutil
+
+from .modtools import object_from_string
+
+
+# this is the module path
+modpath = os.path.abspath(os.path.dirname(__file__))
 
 
 def autogen_secrets_authdb(basedir,
                            database_url=None,
-                           interactive=False):
+                           interactive=False,
+                           generate_envfile=True):
     '''This automatically generates secrets files and an authentication DB.
 
     Run this only once on the first start of an authnzerver.
@@ -61,10 +70,14 @@ def autogen_secrets_authdb(basedir,
         If True, will ask the user for an admin email address and
         password. Otherwise, will auto-generate both.
 
+    generate_envfile : bool
+        If True, generates an .env file in the basedir containing all the
+        required information for the next start up of the server.
+
     Returns
     -------
 
-    (authdb_path, creds, secret_file, salt_file) : tuple of str
+    (authdb_path, creds, secret_file, salt_file, env_file) : tuple of str
         The names of the files written by this function will be returned as a
         tuple of strings.
 
@@ -235,11 +248,151 @@ def autogen_secrets_authdb(basedir,
             outfd.write(salt)
         os.chmod(salt_file, 0o100400)
 
+    # copy over the permission model and confvars
+    LOGGER.info(
+        "Copying default-permissions-model.json to basedir: %s" %
+        basedir
+    )
+    shutil.copy(
+        os.path.join(modpath, 'default-permissions-model.json'),
+        basedir
+    )
+    LOGGER.info(
+        "Copying confvars.py to basedir: %s" %
+        basedir
+    )
+    shutil.copy(
+        os.path.join(modpath, 'confvars.py'),
+        basedir
+    )
+
+    # generate the env file if asked for
+    if generate_envfile:
+        LOGGER.info(
+            "Generating an envfile: %s" %
+            os.path.join(basedir, '.env')
+        )
+
+        envfile = generate_env(
+            database_url if database_url is not None else authdb_path,
+            creds,
+            fernet_secret_file,
+            salt_file,
+            basedir,
+        )
+    else:
+        envfile = generate_env(
+            database_url,
+            creds,
+            fernet_secret_file,
+            salt_file,
+            basedir,
+        )
+
     #
     # return everything
     #
 
     if database_url is not None:
-        return database_url, creds, fernet_secret_file, salt_file
+        return (database_url,
+                creds,
+                fernet_secret_file,
+                salt_file,
+                envfile)
     else:
-        return authdb_path, creds, fernet_secret_file, salt_file
+        return (authdb_path,
+                creds,
+                fernet_secret_file,
+                salt_file,
+                envfile)
+
+
+def generate_env(database_path,
+                 creds,
+                 fernet_secret_file,
+                 salt_file,
+                 basedir):
+    """This generates environment variables containing the required items for
+    authnzrv start up after autosetup is complete.
+
+    If ``write_env_file`` is True, will write these to an ``.env`` file in the
+    ``basedir``.
+
+    Parameters
+    ----------
+
+    database_path : str
+        The SQLAlchemy URL of the database to use, or the path on disk to an
+        SQLite database. If ``database_path`` points to a file on disk, this
+        function will assume it's an SQLite file and construct the appropriate
+        SQLAlchemy database URL.
+
+    creds : str
+        The path to the admin credentials file.
+
+    fernet_secret_file : str
+        The path to the shared secret key needed to secure authnzerver-frontend
+        communications.
+
+    salt_file : str
+        The path to the file containing the PII salt to encrypt PII in
+        authnzerver logs.
+
+    basedir : str
+        The path to the authnzerver's basedir.
+
+    Returns
+    -------
+
+    environ_file
+        Returns the path to the ``.env`` file generated in the ``basedir`` as a
+        string.
+
+    """
+
+    # first, figure out the database URL
+    if os.path.exists(database_path):
+        database_url = 'sqlite:///%s' % os.path.abspath(database_path)
+    elif '://' in database_path:
+        database_url = database_path
+    else:
+        LOGGER.error("Could not understand the database_path provided.")
+        return None
+
+    # get the confvar.py file and generate the env variables in it
+    confvars = object_from_string(
+        '%s::CONF' % os.path.join(basedir, 'confvars.py')
+    )
+
+    env_file = os.path.abspath(os.path.join(basedir, '.env'))
+
+    with open(env_file,'w') as outfd:
+
+        for key, val in confvars.items():
+
+            if key == 'authdb':
+                env_key, env_val = val['env'], database_url
+
+            elif key == 'secret':
+                env_key, env_val = (val['env'],
+                                    os.path.abspath(fernet_secret_file))
+
+            elif key == 'piisalt':
+                env_key, env_val = (val['env'],
+                                    os.path.abspath(salt_file))
+
+            elif key == 'permissions':
+                env_key, env_val = (
+                    val['env'],
+                    os.path.abspath(
+                        os.path.join(basedir,
+                                     'default-permissions-model.json')
+                    )
+                )
+
+            else:
+                env_key, env_val = val['env'], val['default']
+
+            outfd.write("%s=%s\n" % (env_key, env_val))
+
+    return env_file
