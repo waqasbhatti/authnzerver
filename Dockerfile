@@ -6,10 +6,13 @@ WORKDIR /home/authnzerver
 USER authnzerver
 
 COPY --chown=authnzerver:authnzerver . .
-RUN python3 -m venv /home/authnzerver/.env && . /home/authnzerver/.env/bin/activate && pip install --no-cache-dir pip setuptools wheel -U && pip install -r requirements.txt
-RUN . /home/authnzerver/.env/bin/activate && pip install -e /home/authnzerver
+RUN python3 -m venv /home/authnzerver/.env \
+  && . /home/authnzerver/.env/bin/activate \
+  && pip install --no-cache-dir pip setuptools wheel -U \
+  && pip install --no-cache-dir -r requirements.txt
+RUN . /home/authnzerver/.env/bin/activate \
+  && pip --no-cache-dir install -e /home/authnzerver
 
-
-EXPOSE 13141
+EXPOSE 13431
 
 ENTRYPOINT ["/home/authnzerver/docker_entrypoint.sh"]
