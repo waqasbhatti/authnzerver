@@ -357,10 +357,15 @@ def main():
     # check the authdb is set up with the correct tables
     # running these after the DB is already set up doesn't do anything
     if 'sqlite:///' in auth_database_url:
+
+        sqlite_authdb_filepath = auth_database_url.replace('sqlite:///','')
+
+        LOGGER.info("Checking SQLite auth DB: %s..." % sqlite_authdb_filepath)
         authdb_module.create_sqlite_authdb(
-            auth_database_url.replace('sqlite:///','')
+            sqlite_authdb_filepath
         )
     else:
+        LOGGER.info("Checking auth DB at provided auth DB URL...")
         authdb_module.create_authdb(
             auth_database_url
         )
