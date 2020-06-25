@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec /home/authnzerver/.env/bin/authnzrv $@
+exec /home/authnzerver/.env/bin/authnzrv "$@"
