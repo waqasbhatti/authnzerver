@@ -63,19 +63,89 @@ With that said, it can be installed (preferably in a virtualenv) using `pip`:
 
 There's a [Docker container for
 authnzerver](https://hub.docker.com/r/waqasbhatti/authnzerver) available on
-Docker Hub. To use this, follow the steps below:
+Docker Hub.
 
-1. Pull the container. The command below pulls the master branch version for
- now; stable versions will be added to Docker Hub later:
+The command below pulls the master branch version for now; stable versions will
+ be added to Docker Hub later:
 
 ```
 docker pull waqasbhatti/authnzerver:latest
 ```
 
-2. Run the autosetup to set up a base directory, the auth DB, and the
-envfile. The commands below set up an empty base directory on your Docker host,
-mount it into the container as a volume, then tell authnzerver to use it for its
-base directory.
+#### Using docker-compose
+
+The authnzerver requires several environment variables to run. These are noted
+in the [Configuring the server](#configuring-the-server) section of this file.
+
+See below for an example docker-compose.yml snippet to include authnzerver as a
+service.
+
+First, we're using an SQLite auth DB in the mounted authnzerver base
+directory. Another database can be specified here by using the appropriate
+[SQLAlchemy database
+URL](https://docs.sqlalchemy.org/en/latest/core/engines.html#database-urls). On
+every start up, the authnzerver will attempt to recreate its database tables
+only if these don't exist already.
+
+Next, the required `AUTHNZERVER_SECRET` and `AUTHNZERVER_PIISALT` environment
+variables are passed in from the host environment. Set these in your
+docker-compose `.env` file or in another manner as appropriate.  Make sure to
+use strong random values here, for example:
+
+```
+python3 -c "import secrets; [print('AUTHNZERVER_%s=%s' % (x, secrets.token_urlsafe())) for x in ('SECRET','PIISALT')]"
+```
+
+Finally, note that we're setting the listen address for the authnzerver to
+"0.0.0.0" so it can listen to requests on its container's external network
+interface.
+
+The docker-compose.yml file snippet:
+
+```yaml
+volumes:
+  authnzerver_basedir:
+
+services:
+
+  authnzerver:
+    image: waqasbhatti/authnzerver:latest
+    expose: [13431]
+    volumes:
+      - authnzerver_basedir:/home/authnzerver/basedir
+    environment:
+      AUTHNZERVER_AUTHDB: sqlite:////home/authnzerver/basedir/.authdb.sqlite
+      AUTHNZERVER_BASEDIR: /home/authnzerver/basedir
+      AUTHNZERVER_CACHEDIR: /tmp/authnzerver-cache
+      AUTHNZERVER_DEBUGMODE: 0
+      AUTHNZERVER_LISTEN: 0.0.0.0
+      AUTHNZERVER_PORT: 13431
+      AUTHNZERVER_SECRET:
+      AUTHNZERVER_PIISALT:
+      AUTHNZERVER_SESSIONEXPIRY: 30
+      AUTHNZERVER_USERLOCKTRIES: 10
+      AUTHNZERVER_USERLOCKTIME: 3600
+      AUTHNZERVER_WORKERS: 4
+      AUTHNZERVER_EMAILSERVER: localhost
+      AUTHNZERVER_EMAILPORT: 25
+      AUTHNZERVER_EMAILUSER: authnzerver
+      AUTHNZERVER_EMAILPASS:
+      AUTHNZERVER_EMAILSENDER: Authnzerver <authnzerver@localhost>
+      AUTHNZERVER_TLSCERT_FILE:
+      AUTHNZERVER_TLSCERT_KEY:
+```
+
+#### Running the Docker container for dev using auto-setup
+
+The authnzerver can set up its own basedir and all required files if called with
+`--autosetup` command line option. To run it this way, follow the steps below:
+
+1. Pull the container.
+
+2. Run it with the `--autosetup` option to set up a base directory, the auth DB,
+and the envfile. The commands below set up an empty base directory on your
+Docker host, mount it into the container as a volume, then tell authnzerver to
+use it for its base directory.
 
 ```bash
 mkdir authnzerver-basedir
@@ -86,7 +156,7 @@ docker run -v $(PWD):/home/authnzerver/basedir \
 ```
 
 This will start an interactive session where you can set your auth DB and
-initial admin credentials:
+initial admin credentials.
 
 ```
 [W 200625 17:42:21 autosetup:105] Enter a valid SQLAlchemy database URL to use for the auth DB.
@@ -144,22 +214,6 @@ docker run -v $(PWD):/home/authnzerver/basedir \
   --confvars="/home/authnzerver/basedir/confvars.py"
 ```
 
-In either case, launching the authnzerver container will look something like:
-
-```
-[W 200625 17:47:19 confload:568] Config item: "AUTHNZERVER_EMAILPASS" is invalid/missing, using provided default.
-[W 200625 17:47:19 confload:568] Config item: "AUTHNZERVER_TLSCERT_FILE" is invalid/missing, using provided default.
-[W 200625 17:47:19 confload:568] Config item: "AUTHNZERVER_TLSCERT_KEY" is invalid/missing, using provided default.
-[I 200625 17:47:19 main:262] The server's base directory is: /home/authnzerver
-[I 200625 17:47:19 main:265] The server's cache directory is: /tmp/authnzerver-cache
-[I 200625 17:47:19 main:271] Session token expiry is set to: 30 days
-[I 200625 17:47:19 main:354] Removed 0 stale items from authnzerver cache.
-[I 200625 17:47:19 main:382] Auth DB is already set up at the provided database URL.
-[W 200625 17:47:19 session:934] No sessions older than 2020-05-26T17:47:19.633377Z found to delete.
-[I 200625 17:47:19 main:440] Starting authnzerver. Listening on http://0.0.0.0:13431.
-[I 200625 17:47:19 main:442] The server is starting with TLS disabled.
-[I 200625 17:47:19 main:444] Background worker processes: 4. IOLoop in use: uvloop.
-```
 
 ### Running locally
 
