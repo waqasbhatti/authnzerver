@@ -44,7 +44,6 @@ class FrontendEncoder(json.JSONEncoder):
 # tornado.web.RequestHandler.write(dict) is called.
 json._default_encoder = FrontendEncoder()
 
-import ipaddress
 import tornado.web
 import tornado.ioloop
 
@@ -57,15 +56,15 @@ from .permissions import pii_hash
 ## REQ/RESP VALIDATION ##
 #########################
 
-def check_host(remote_ip):
+def check_header_host(allowed_hosts_regex, header_host):
     '''
-    This just returns False if the remote_ip != 127.0.0.1
+    This checks if the header_host item is in the allowed_hosts.
 
     '''
-    try:
-        return (ipaddress.ip_address(remote_ip) ==
-                ipaddress.ip_address('127.0.0.1'))
-    except ValueError:
+    rematch = allowed_hosts_regex.findall(header_host)
+    if rematch is not None:
+        return True
+    else:
         return False
 
 
@@ -142,16 +141,24 @@ class AuthHandler(tornado.web.RequestHandler):
         self.executor = executor
         self.failed_passchecks = failed_passchecks
 
+        self.allowed_hosts_regex = config.allowed_hosts_regex
+
     async def post(self):
         '''
         Handles the incoming POST request.
 
         '''
 
-        ipcheck = check_host(self.request.remote_ip)
+        ipcheck = check_header_host(self.allowed_hosts_regex,
+                                    self.request.host)
 
         if not ipcheck:
-            raise tornado.web.HTTPError(status_code=400)
+            LOGGER.warning(
+                "Invalid host in request header: '%s' "
+                "did not match the allowed hosts regex: '%s'. Request dropped."
+                % (self.request.host, self.allowed_hosts_regex)
+            )
+            raise tornado.web.HTTPError(status_code=401)
 
         payload = decrypt_message(self.request.body, self.fernet_secret)
         if not payload:

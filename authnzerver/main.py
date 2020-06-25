@@ -29,6 +29,7 @@ import socket
 import sys
 import signal
 import time
+import re
 from functools import partial
 
 from sqlalchemy.exc import IntegrityError
@@ -287,6 +288,36 @@ def main():
         finalizer=_close_authentication_database
     )
 
+    ##########################
+    ## SET UP ALLOWED HOSTS ##
+    ##########################
+
+    # initially restrict to localhost only
+    allowed_hosts = {
+        r"localhost",
+        r"127\.0\.0\.1",
+    }
+
+    # if we're listening on all interfaces, add some more allowed hosts
+    if listen not in ('127.0.0.1', 'localhost'):
+
+        # get our hostname, FQDN, and IP address
+        our_hostname = socket.gethostname()
+        our_fqdn = socket.getfqdn()
+        our_ipaddr = socket.gethostbyname(our_fqdn)
+
+        allowed_hosts.add(r"%s" % our_hostname.replace('.',r'\.'))
+        allowed_hosts.add(r"%s" % our_fqdn.replace('.',r'\.'))
+        allowed_hosts.add(r"%s" % our_ipaddr.replace('.',r'\.'))
+
+        if listen != '0.0.0.0':
+            allowed_hosts.add(r"%s" % listen.replace('.',r'\.'))
+
+    allowed_hosts_regex = r"(%s)" % '|'.join(allowed_hosts)
+    loaded_config.allowed_hosts_regex = re.compile(allowed_hosts_regex)
+    LOGGER.info("Allowed host regex for incoming HTTP requests is: '%s'" %
+                allowed_hosts_regex)
+
     ###################
     ## HANDLER SETUP ##
     ###################
@@ -337,8 +368,7 @@ def main():
 
     # try to guard against the DNS rebinding attack
     # http://www.tornadoweb.org/en/stable/guide/security.html#dns-rebinding
-    app.add_handlers(r'(localhost|127\.0\.0\.1)',
-                     handlers)
+    app.add_handlers(allowed_hosts_regex, handlers)
 
     # start up the HTTP server and our application
     http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
