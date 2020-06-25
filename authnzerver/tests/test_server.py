@@ -32,9 +32,11 @@ def test_server_with_env(monkeypatch, tmpdir):
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file = autogen_secrets_authdb(
-        basedir,
-        interactive=False
+    authdb_path, creds, secrets_file, salt_file, env_file = (
+        autogen_secrets_authdb(
+            basedir,
+            interactive=False
+        )
     )
 
     # read in the secrets file for the secret
@@ -182,9 +184,11 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file = autogen_secrets_authdb(
-        basedir,
-        interactive=False
+    authdb_path, creds, secrets_file, salt_file, env_file = (
+        autogen_secrets_authdb(
+            basedir,
+            interactive=False
+        )
     )
 
     # read in the secrets file for the secret
@@ -413,9 +417,11 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file = autogen_secrets_authdb(
-        basedir,
-        interactive=False
+    authdb_path, creds, secrets_file, salt_file, env_file = (
+        autogen_secrets_authdb(
+            basedir,
+            interactive=False
+        )
     )
 
     # read in the secrets file for the secret
