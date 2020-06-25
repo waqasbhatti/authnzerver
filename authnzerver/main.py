@@ -298,20 +298,10 @@ def main():
         r"127\.0\.0\.1",
     }
 
-    # if we're listening on all interfaces, add some more allowed hosts
-    if listen not in ('127.0.0.1', 'localhost'):
-
-        # get our hostname, FQDN, and IP address
-        our_hostname = socket.gethostname()
-        our_fqdn = socket.getfqdn()
-        our_ipaddr = socket.gethostbyname(our_fqdn)
-
-        allowed_hosts.add(r"%s" % our_hostname.replace('.',r'\.'))
-        allowed_hosts.add(r"%s" % our_fqdn.replace('.',r'\.'))
-        allowed_hosts.add(r"%s" % our_ipaddr.replace('.',r'\.'))
-
-        if listen != '0.0.0.0':
-            allowed_hosts.add(r"%s" % listen.replace('.',r'\.'))
+    # get any additional hosts to allow from the config
+    config_allowed_hosts = loaded_config.allowedhosts.split(';')
+    for h in config_allowed_hosts:
+        allowed_hosts.add(r"%s" % h.replace('.',r'\.'))
 
     allowed_hosts_regex = r"(%s)" % '|'.join(allowed_hosts)
     loaded_config.allowed_hosts_regex = re.compile(allowed_hosts_regex)
