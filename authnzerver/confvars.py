@@ -163,7 +163,7 @@ CONF = {
         'env':'%s_DEBUGMODE' % ENVPREFIX,
         'cmdline':'debugmode',
         'type':int,
-        'default':False,
+        'default':0,
         'help':('If 1, will enable an '
                 '/echo endpoint for debugging purposes.'),
         'readable_from_file':False,
