@@ -209,10 +209,14 @@ class AuthHandler(tornado.web.RequestHandler):
             )
 
             #
-            # see if the request was user-login. in this case,
-            # we'll apply backoff to slow down repeated failed passwords
+            # see if the request was one that requires an email and password. in
+            # this case, we'll apply backoff to slow down repeated failed
+            # passwords
             #
-            if (payload['request'] == 'user-login' and
+            passcheck_requests = {'user-login',
+                                  'user-passcheck-nosession'}
+
+            if (payload['request'] in passcheck_requests and
                 response['success'] is False):
 
                 failure_status, failure_count, failure_wait = (
@@ -237,7 +241,7 @@ class AuthHandler(tornado.web.RequestHandler):
                     )
 
             # reset the failed counter to zero for each successful attempt
-            elif (payload['request'] == 'user-login' and
+            elif (payload['request'] in passcheck_requests and
                   response['success'] is True):
 
                 self.failed_passchecks.pop(
