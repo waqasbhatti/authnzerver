@@ -219,12 +219,26 @@ Returns a ``response`` with the following items if successful:
 - ``user_id`` (int): a user ID associated with the logged-in user or None if
   logout failed.
 
-``user-passcheck``: Perform a user password check
--------------------------------------------------
+``user-passcheck``: Perform a user password check (requires an existing session)
+--------------------------------------------------------------------------------
 
 Requires the following ``body`` items in a request:
 
 - ``session_token`` (str): the session token associated with the ``user_id``
+
+- ``password`` (str): the password associated with the ``user_id``
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_id`` (int): a user ID associated with the logged-in user or None if
+  password check failed.
+
+``user-passcheck-nosession``: Perform a user password check (without an existing session)
+-----------------------------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``email`` (str): the email address associated with the ``user_id``
 
 - ``password`` (str): the password associated with the ``user_id``
 

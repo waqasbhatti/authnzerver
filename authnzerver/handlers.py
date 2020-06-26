@@ -85,6 +85,7 @@ request_functions = {
     'user-login':actions.auth_user_login,
     'user-logout':actions.auth_user_logout,
     'user-passcheck': actions.auth_password_check,
+    'user-passcheck-nosession':actions.auth_password_check_nosession,
     # user actions
     'user-new':actions.create_new_user,
     'user-changepass':actions.change_user_password,

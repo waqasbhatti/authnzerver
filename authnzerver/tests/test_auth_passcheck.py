@@ -163,3 +163,110 @@ def test_passcheck():
         os.remove('test-passcheck.authdb.sqlite-wal')
     except Exception:
         pass
+
+
+def test_passcheck_nosession():
+    '''
+    This tests if we can check the password for a user with their email and
+    password only, with no need for an existing session.
+
+    '''
+
+    try:
+        os.remove('test-passcheck.authdb.sqlite')
+    except Exception:
+        pass
+    try:
+        os.remove('test-passcheck.authdb.sqlite-shm')
+    except Exception:
+        pass
+    try:
+        os.remove('test-passcheck.authdb.sqlite-wal')
+    except Exception:
+        pass
+
+    get_test_authdb()
+
+    # create the user
+    user_payload = {'full_name': 'Test User',
+                    'email':'testuser-passcheck@test.org',
+                    'password':'aROwQin9L8nNtPTEMLXd',
+                    'pii_salt':'super-secret-salt',
+                    'reqid':1}
+    user_created = actions.create_new_user(
+        user_payload,
+        override_authdb_path='sqlite:///test-passcheck.authdb.sqlite'
+    )
+    assert user_created['success'] is True
+    assert user_created['user_email'] == 'testuser-passcheck@test.org'
+    assert ('User account created. Please verify your email address to log in.'
+            in user_created['messages'])
+
+    # verify our email
+    emailverify = (
+        actions.set_user_emailaddr_verified(
+            {'email':user_payload['email'],
+             'user_id': user_created['user_id'],
+             'pii_salt':'super-secret-salt',
+             'reqid':1},
+            override_authdb_path='sqlite:///test-passcheck.authdb.sqlite'
+        )
+    )
+
+    assert emailverify['success'] is True
+    assert emailverify['user_id'] == user_created['user_id']
+    assert emailverify['is_active'] is True
+    assert emailverify['user_role'] == 'authenticated'
+
+    #
+    # now run a password check
+    #
+
+    # correct password
+    pass_check = actions.auth_password_check_nosession(
+        {'email':user_payload['email'],
+         'password':user_payload['password'],
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
+        override_authdb_path='sqlite:///test-passcheck.authdb.sqlite',
+        raiseonfail=True
+    )
+    assert pass_check['success'] is True
+    assert pass_check['user_id'] == emailverify['user_id']
+
+    # incorrect password
+    pass_check = actions.auth_password_check_nosession(
+        {'email':user_payload['email'],
+         'password':'incorrectponylithiumfastener',
+         'pii_salt':'super-secret-salt',
+         'reqid':1},
+        override_authdb_path='sqlite:///test-passcheck.authdb.sqlite',
+        raiseonfail=True
+    )
+    assert pass_check['success'] is False
+    assert pass_check['user_id'] is None
+
+    currproc = mp.current_process()
+    if getattr(currproc, 'authdb_meta', None):
+        del currproc.authdb_meta
+
+    if getattr(currproc, 'connection', None):
+        currproc.authdb_conn.close()
+        del currproc.authdb_conn
+
+    if getattr(currproc, 'authdb_engine', None):
+        currproc.authdb_engine.dispose()
+        del currproc.authdb_engine
+
+    try:
+        os.remove('test-passcheck.authdb.sqlite')
+    except Exception:
+        pass
+    try:
+        os.remove('test-passcheck.authdb.sqlite-shm')
+    except Exception:
+        pass
+    try:
+        os.remove('test-passcheck.authdb.sqlite-wal')
+    except Exception:
+        pass
