@@ -35,6 +35,11 @@ from .apikey import (
     verify_apikey,
     revoke_apikey
 )
+from .apikey_nosession import (
+    issue_apikey as issue_apikey_nosession,
+    verify_apikey as verify_apikey_nosession,
+    revoke_apikey as revoke_apikey_nosession,
+)
 
 from .admin import (
     list_users,
@@ -72,3 +77,39 @@ from .user import (
 )
 
 from .access import check_user_access, check_user_limit
+
+
+__all__ = [
+    'issue_apikey',
+    'verify_apikey',
+    'revoke_apikey',
+    'issue_apikey_nosession',
+    'verify_apikey_nosession',
+    'revoke_apikey_nosession',
+    'list_users',
+    'edit_user',
+    'get_user_by_email',
+    'toggle_user_lock',
+    'internal_toggle_user_lock',
+    'send_signup_verification_email',
+    'set_user_emailaddr_verified',
+    'send_forgotpass_verification_email',
+    'send_email',
+    'auth_session_new',
+    'auth_session_exists',
+    'auth_session_set_extrainfo',
+    'auth_session_delete',
+    'auth_password_check',
+    'auth_password_check_nosession',
+    'auth_user_login',
+    'auth_user_logout',
+    'auth_kill_old_sessions',
+    'auth_delete_sessions_userid',
+    'create_new_user',
+    'change_user_password',
+    'delete_user',
+    'verify_password_reset',
+    'check_user_access',
+    'check_user_limit',
+    'LOGGER',
+]

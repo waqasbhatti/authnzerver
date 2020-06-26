@@ -177,6 +177,21 @@ APIKeys = Table(
            nullable=False)
 )
 
+APIKeysNoSession = Table(
+    'apikeys_nosession',
+    AUTHDB_META,
+    Column('apikey', Text(), primary_key=True, nullable=False),
+    Column('issued', DateTime(), nullable=False, default=datetime.utcnow),
+    Column('expires', DateTime(), index=True, nullable=False),
+    Column('not_valid_before', DateTime(), index=True, nullable=False),
+    Column('user_id', Integer(),
+           ForeignKey('users.user_id', ondelete="CASCADE"),
+           nullable=False),
+    Column('user_role', String(length=100),
+           ForeignKey('roles.name', ondelete="CASCADE"),
+           nullable=False),
+)
+
 
 #######################
 ## UTILITY FUNCTIONS ##

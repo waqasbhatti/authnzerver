@@ -561,8 +561,8 @@ Returns a ``response`` with the following items if successful:
 API key actions
 ===============
 
-``apikey-new``: Create a new API key tied to a user ID, role, and IP address
-----------------------------------------------------------------------------
+``apikey-new``: Create a new API key tied to a user ID, role, and existing user session
+---------------------------------------------------------------------------------------
 
 Requires the following ``body`` items in a request:
 
@@ -585,6 +585,8 @@ Requires the following ``body`` items in a request:
 
 - ``ip_address`` (str): the IP address that this API key is tied to
 
+- ``user_agent`` (str): the user agent of the user creating the API key
+
 - ``session_token`` (str): the session token of the user requesting this API key
 
 Returns a ``response`` with the following items if successful:
@@ -594,8 +596,8 @@ Returns a ``response`` with the following items if successful:
 - ``expires`` (str): a UTC datetime in ISO format indicating when the API key
   expires
 
-``apikey-verify``: Verify an API key's user ID, role, expiry, and token
------------------------------------------------------------------------
+``apikey-verify``: Verify a session-tied API key's user ID, role, expiry, and token
+-----------------------------------------------------------------------------------
 
 Requires the following ``body`` items in a request:
 
@@ -612,8 +614,75 @@ Returns a ``response`` with the following items:
 - None, check the value of ``success`` to see if the API key is valid
 
 
-``apikey-revoke``: Revoke a previously issued API key
------------------------------------------------------
+``apikey-revoke``: Revoke a previously issued session-tied API key
+------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``apikey_dict`` (dict): the decrypted and validated API key information dict
+  from the frontend.
+
+- ``user_id`` (int): the user ID of the target user whose API key is being
+  revoked
+
+- ``user_role`` (str): the role of the user that this API key is tied to
+
+Returns a ``response`` with the following items:
+
+- None, check the value of ``success`` to see if the API key revocation was
+  successful
+
+``apikey-new-nosession``: Create a new API key tied to a user ID, role, and IP address
+--------------------------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``audience`` (str): the service this API key is being issued for (usually the
+  host name of the frontend server)
+
+- ``subject`` (list of str): the specific API endpoint(s) this API key is being
+  issued for (usually a list of URIs for specific service endpoints)
+
+-``apiversion`` (int): the version of the API this key is valid for
+
+- ``expires_days`` (int): the number of days that the API key will be valid for
+
+- ``not_valid_before`` (int): the number of seconds after the current UTC time
+  required before the API key becomes valid
+
+- ``user_id`` (int): the user ID of the user that this API key is tied to
+
+- ``user_role`` (str): the role of the user that this API key is tied to
+
+- ``ip_address`` (str): the IP address that this API key is tied to
+
+Returns a ``response`` with the following items if successful:
+
+- ``apikey`` (str): the API key information dict dumped to JSON
+
+- ``expires`` (str): a UTC datetime in ISO format indicating when the API key
+  expires
+
+``apikey-verify-nosession``: Verify a no-session API key's user ID, role, expiry, and token
+-------------------------------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``apikey_dict`` (dict): the decrypted and validated API key information dict
+  from the frontend.
+
+- ``user_id`` (int): the user ID of the user that this API key is tied to
+
+- ``user_role`` (str): the role of the user that this API key is tied to
+
+
+Returns a ``response`` with the following items:
+
+- None, check the value of ``success`` to see if the API key is valid
+
+
+``apikey-revoke-nosession``: Revoke a previously issued no-session API key
+--------------------------------------------------------------------------
 
 Requires the following ``body`` items in a request:
 
