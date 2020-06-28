@@ -16,21 +16,23 @@ The workflow to use here is:
    template to add a form field for the token. An AJAX call can pick this up
    from the form and send it in the POST request as the ``_xsrf`` parameter. For
    an SPA, this is more difficult. For a Tornado app, the static HTML of the SPA
-   endpoint can be served using a handler that makes sure to set the ``_xsrf``
-   cookie (session-only scoped). That way, any response back from the SPA
-   endpoint will have the ``_xsrf`` cookie (this is not HttpOnly), and the
-   request itself can read the cookie and send it back as verification in the
-   request header or POST request params.
+   endpoint can be served using a ``StaticFileHandler`` that makes sure to set
+   the ``_xsrf`` cookie (session-only scoped) by calling ``self.xsrf_cookie`` in
+   the ``initialize()`` or ``prepare()`` method (this sets the cookie as a
+   side-effect). That way, any response back from the SPA endpoint will have the
+   ``_xsrf`` cookie (this is not HttpOnly), and the POST request can then read
+   the cookie and send it back as verification in the request header or POST
+   request params.
 
-2. After login is verified, run the ``new_apikey`` function. This returns an API
-   key and a refresh token. The API key should have an expiry no longer than 15
-   minutes (or about the time needed to process a single API call). The refresh
-   token has a longer expiry time (no longer than 24 hours or maybe the actual
-   session lifetime) to allow for the user coming back and having to fetch a new
-   API key. The refresh token is effectively a password, and the authnzerver
-   stores it as such, generating a random 32-byte token, then using Argon2-ID to
-   hash and store it in the DB. To verify it, we run the Argon2-ID hash as we do
-   for passwords.
+2. After login is verified, run the ``new_apikey()`` function below. This
+   returns an API key and a refresh token. The API key should have an expiry no
+   longer than 15 minutes (or about the time needed to process a single API
+   call). The refresh token has a longer expiry time (no longer than 24 hours or
+   maybe the actual session lifetime) to allow for the user coming back and
+   having to fetch a new API key. The refresh token is effectively a password,
+   and the authnzerver stores it as such, generating a random 32-byte token,
+   then using Argon2-ID to hash and store it in the DB. To verify it, we run the
+   Argon2-ID hash as we do for passwords.
 
 3. For SPAs, send back the API key and its expiry date in the response body, and
    set the refresh token as an HttpOnly, Secure cookie, with the TTL set to the
@@ -41,22 +43,30 @@ The workflow to use here is:
    expires. The verification of the API key itself can take place statelessly if
    it is decrypted correctly, has not expired, and the the claims in the
    decrypted key dict match the API endpoint's requirements. If further
-   verification is required, the frontend can call ``verify_apikey``, which will
-   check the API key against the one stored in the DB.
+   verification is required, the frontend can call ``verify_apikey()``, which
+   will check the API key against the one stored in the DB.
 
 5. A bit before the API key expires, the client can hit an refresh-api-key
    endpoint on the frontend that is dedicated to refreshing the API key. The
    refresh token is presented in the cookie to the endpoint so the refresh
    request can be authenticated.
 
-5. The refresh token presented is verified, and if that passes, a new API key +
-   its expiry is sent back to the client, and a NEW refresh token is ALSO set as
-   an HttpOnly cookie.
+5. Use the ``refresh_apikey()`` function to refresh the API key. The refresh
+   token presented is verified, and if that passes, a new API key + its expiry
+   is sent back to the client, and a NEW refresh token MUST ALSO be set as an
+   HttpOnly cookie if the client is an SPA (send back the refresh token in the
+   response body if not).
 
 6. To enforce logout or account deletion or lock, the API key and the refresh
    token are deleted from the ``apikeys_nosession`` table by the
-   ``revoke_apikey`` function below. The refresh token is also deleted from the
-   client if it hits the logout/delete endpoint.
+   ``revoke_apikey()`` function below. The refresh token cookie MUST also be
+   deleted from the client if it hits the logout/delete endpoint successfully.
+
+References:
+
+- https://pragmaticwebsecurity.com/cheatsheets.html
+- https://hasura.io/blog/best-practices-of-using-jwt-with-graphql/
+- https://levelup.gitconnected.com/secure-jwts-with-backend-for-frontend-9b7611ad2afb
 
 '''
 
@@ -103,10 +113,14 @@ import secrets
 import multiprocessing as mp
 
 from sqlalchemy import select
+from argon2 import PasswordHasher
 
 from .. import authdb
 from ..permissions import pii_hash
 from .access import check_user_access
+
+
+token_hasher = PasswordHasher()
 
 
 ######################
@@ -131,8 +145,8 @@ def issue_apikey(payload,
         - audience: str, the service this API key is being issued for
         - subject: str, the specific API endpoint API key is being issued for
         - apiversion: int or str, the API version that the API key is valid for
-        - expires_days: int, the number of days after which the API key will
-          expire
+        - expires_seconds: int, the number of seconds after which the API key
+          expires
         - not_valid_before: float or int, the amount of seconds after utcnow()
           when the API key becomes valid
         - user_id: int, the user ID of the user requesting the API key
@@ -159,12 +173,14 @@ def issue_apikey(payload,
             {'success': True or False,
              'apikey': apikey dict,
              'expires': expiry datetime in ISO format,
+             'refresh_token': refresh token str,
+             'refresh_token_expires': expiry of refresh token in ISO format,
              'messages': list of str messages if any}
 
     Notes
     -----
 
-    API keys are tied to an IP address and client header combination.
+    API keys are tied to an IP address, user ID, and role.
 
     This function will return a dict with all the API key information. This
     entire dict should be serialized to JSON, encrypted and time-stamp signed by
@@ -186,7 +202,7 @@ def issue_apikey(payload,
 
     for key in ('user_id',
                 'user_role',
-                'expires_days',
+                'expires_seconds',
                 'not_valid_before',
                 'issuer',
                 'audience',
@@ -267,10 +283,10 @@ def issue_apikey(payload,
     # encode to bytes, then encrypt, then sign it, and finally send back to the
     # client
     issued = datetime.utcnow()
-    expires = datetime.utcnow() + timedelta(days=payload['expires_days'])
+    expires = issued + timedelta(seconds=payload['expires_seconds'])
 
     notvalidbefore = (
-        datetime.utcnow() +
+        issued +
         timedelta(seconds=payload['not_valid_before'])
     )
 
@@ -289,6 +305,15 @@ def issue_apikey(payload,
     }
     apikey_json = json.dumps(apikey_dict)
 
+    # generate the refresh token now
+    refresh_token = secrets.token_urlsafe(32)
+
+    # the refresh token is effectively a password, so we'll treat it as such
+    hashed_refresh_token = token_hasher.hash(refresh_token)
+
+    # the refresh token expires in 24 hours
+    refresh_token_expiry = issued + timedelta(days=1)
+
     # we'll also store this dict in the apikeys table
     apikeys = currproc.authdb_meta.tables['apikeys_nosession']
 
@@ -300,6 +325,10 @@ def issue_apikey(payload,
         'issued':issued,
         'expires':expires,
         'not_valid_before':notvalidbefore,
+        'refresh_token':hashed_refresh_token,
+        'refresh_issued':issued,
+        'refresh_expires':refresh_token_expiry,
+        'refresh_nbf':notvalidbefore,
         'user_id':payload['user_id'],
         'user_role':payload['user_role'],
     })
@@ -312,11 +341,12 @@ def issue_apikey(payload,
     #
 
     LOGGER.info(
-        "[%s] API key request successful. "
+        "[%s] No-session API key request successful. "
         "user_id: %s, role: %s, "
-        "ip_address: %s requested an API key for "
+        "ip_address: %s requested a no-session API key for "
         "audience: %s, subject: %s, apiversion: %s."
-        "API key not valid before: %s, expires on: %s." %
+        "No-session API key not valid before: %s, expires on: %s. "
+        "refresh token for key expires on: %s. " %
         (payload['reqid'],
          pii_hash(payload['user_id'],
                   payload['pii_salt']),
@@ -327,7 +357,8 @@ def issue_apikey(payload,
          payload['subject'],
          payload['apiversion'],
          notvalidbefore.isoformat(),
-         expires.isoformat())
+         expires.isoformat(),
+         refresh_token_expiry.isoformat())
     )
 
     messages = (
@@ -340,6 +371,8 @@ def issue_apikey(payload,
         'success':True,
         'apikey':apikey_json,
         'expires':expires.isoformat(),
+        'refresh_token':refresh_token,
+        'refresh_token_expires':refresh_token_expiry.isoformat(),
         'messages':([
             messages
         ])
@@ -472,6 +505,8 @@ def verify_apikey(payload,
     # - expired must be in the future
     # - issued must be in the past
     # - not_valid_before must be in the past
+    dt_utcnow = datetime.utcnow()
+
     sel = select([
         apikeys.c.apikey,
         apikeys.c.expires,
@@ -482,11 +517,11 @@ def verify_apikey(payload,
     ).where(
         apikeys.c.user_role == apikey_dict['rol']
     ).where(
-        apikeys.c.expires > datetime.utcnow()
+        apikeys.c.expires > dt_utcnow
     ).where(
-        apikeys.c.issued < datetime.utcnow()
+        apikeys.c.issued < dt_utcnow
     ).where(
-        apikeys.c.not_valid_before < datetime.utcnow()
+        apikeys.c.not_valid_before < dt_utcnow
     )
     result = currproc.authdb_conn.execute(sel)
     row = result.fetchone()
@@ -495,7 +530,7 @@ def verify_apikey(payload,
     if row is not None and len(row) != 0:
 
         LOGGER.info(
-            '[%s] API key verified successfully. '
+            '[%s] No-session API key verified successfully. '
             'user_id: %s, role: %s, audience: %s, subject: %s, '
             'apiversion: %s, expires on: %s' %
             (payload['reqid'],
@@ -511,7 +546,7 @@ def verify_apikey(payload,
         return {
             'success':True,
             'messages':[(
-                "API key verified successfully. Expires: %s." %
+                "No-session API key verified successfully. Expires: %s." %
                 row['expires'].isoformat()
             )]
         }
@@ -519,7 +554,7 @@ def verify_apikey(payload,
     else:
 
         LOGGER.error(
-            '[%s] API key verification failed. Failed key '
+            '[%s] No-session API key verification failed. Failed key '
             'user_id: %s, role: %s, audience: %s, subject: %s, '
             'apiversion: %s, expires on: %s' %
             (payload['reqid'],
@@ -700,12 +735,6 @@ def revoke_apikey(payload,
         apikeys.c.user_id == apikey_dict['uid']
     ).where(
         apikeys.c.user_role == apikey_dict['rol']
-    ).where(
-        apikeys.c.expires > datetime.utcnow()
-    ).where(
-        apikeys.c.issued < datetime.utcnow()
-    ).where(
-        apikeys.c.not_valid_before < datetime.utcnow()
     )
     result = currproc.authdb_conn.execute(delete)
     result.close()
@@ -722,3 +751,251 @@ def revoke_apikey(payload,
         'success':True,
         'messages':["API key revocation successful."]
     }
+
+
+def refresh_apikey(payload,
+                   raiseonfail=False,
+                   override_authdb_path=None,
+                   override_permissions_json=None):
+    '''Refreshes a no-session API key.
+
+    Requires a refresh token.
+
+    Parameters
+    ----------
+
+    payload : dict
+        This dict contains the following keys:
+
+        - apikey_dict: the decrypted and verified API key info dict from the
+          frontend.
+
+        - user_id: the user ID of the person revoking this key. Only superusers
+          or staff can revoke an API key that doesn't belong to them.
+
+        - user_role: the user ID of the person revoking this key. Only
+          superusers or staff can revoke an API key that doesn't belong to them.
+
+        - refresh_token: the refresh token needed to refresh the API key
+
+        - ip_address: the current IP address of the user
+
+        - expires_seconds: int, the number of minutes after which the API key
+          expires
+
+        - not_valid_before: float or int, the amount of seconds after utcnow()
+          when the API key becomes valid
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    override_permissions_json : str or None
+        If given as a str, is the alternative path to the permissions JSON to
+        use. This is used to check if the user_id is allowed to actually refresh
+        ("delete" then "create") an API key.
+
+
+    Returns
+    -------
+
+    dict
+        The dict returned is of the form::
+
+            {'success': True if API key was revoked and False otherwise,
+             'messages': list of str messages if any}
+
+    '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'messages':["Invalid API key revocation request."],
+            }
+
+    for key in ('apikey_dict', 'user_id', 'user_role', 'refresh_token'):
+        if 'apikey_dict' not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid no-session API key refresh request, missing %s.' %
+                (payload['reqid'], key)
+            )
+
+            return {
+                'success':False,
+                'messages':["Some required keys are missing from payload."]
+            }
+
+    apikey_dict = payload['apikey_dict']
+    user_id = payload['user_id']
+    user_role = payload['user_role']
+    refresh_token = payload['refresh_token']
+
+    #
+    # go ahead and try to refresh the API key
+    #
+
+    # this checks if the database connection is live
+    currproc = mp.current_process()
+    engine = getattr(currproc, 'authdb_engine', None)
+
+    if override_authdb_path:
+        currproc.auth_db_path = override_authdb_path
+
+    if not engine:
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            authdb.get_auth_db(
+                currproc.auth_db_path,
+                echo=raiseonfail
+            )
+        )
+
+    apikeys = currproc.authdb_meta.tables['apikeys_nosession']
+    dt_utcnow = datetime.utcnow()
+
+    # check the hashed refresh token against the stored refresh token
+    refresh_token_sel = select([
+        apikeys.c.refresh_token
+    ]).select_from(apikeys).where(
+        apikeys.c.apikey == apikey_dict['tkn']
+    ).where(
+        apikeys.c.user_id == apikey_dict['uid']
+    ).where(
+        apikeys.c.user_role == apikey_dict['rol']
+    ).where(
+        apikeys.c.refresh_expires > dt_utcnow
+    ).where(
+        apikeys.c.refresh_nbf < dt_utcnow
+    ).where(
+        apikeys.c.refresh_issue < dt_utcnow
+    )
+    result = currproc.authdb_conn.execute(refresh_token_sel)
+    stored_refresh_token_hash = result.scalar()
+
+    if stored_refresh_token_hash is None:
+
+        LOGGER.error(
+            "[%s] Invalid no-session API key refresh request. "
+            "from user_id: %s, role: %s. "
+            "The API key presented does not have a valid refresh token." %
+            (payload['reqid'],
+             pii_hash(user_id, payload['pii_salt']),
+             pii_hash(user_role, payload['pii_salt']))
+        )
+        return {
+            'success':False,
+            'messages':[
+                "API key refresh failed. "
+                "The API key presented does not have a valid refresh token. "
+                "You may need to login again to generate a new API key."
+            ]
+        }
+
+    try:
+        token_hasher.verify(stored_refresh_token_hash,
+                            refresh_token)
+    except Exception:
+
+        LOGGER.error(
+            "[%s] Invalid no-session API key refresh request. "
+            "from user_id: %s, role: %s. "
+            "The API key presented did not pass "
+            "refresh-token hash verification." %
+            (payload['reqid'],
+             pii_hash(user_id, payload['pii_salt']),
+             pii_hash(user_role, payload['pii_salt']))
+        )
+        return {
+            'success':False,
+            'messages':[
+                "API key refresh failed. "
+                "The API key presented does not have a valid refresh token. "
+                "You may need to login again to generate a new API key."
+            ]
+        }
+
+    #
+    # now that the refresh token has been verified, delete the old API key and
+    # then generate a new API key
+    #
+    revoke_try = revoke_apikey(
+        {"apikey_dict":apikey_dict,
+         "user_id":user_id,
+         "user_role":user_role},
+        raiseonfail=raiseonfail,
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=override_permissions_json,
+    )
+
+    if not revoke_try["success"]:
+
+        LOGGER.error(
+            "[%s] Invalid no-session API key refresh request. "
+            "from user_id: %s, role: %s. "
+            "Could not delete the old API key." %
+            (payload['reqid'],
+             pii_hash(user_id, payload['pii_salt']),
+             pii_hash(user_role, payload['pii_salt']))
+        )
+        return {
+            'success':False,
+            'messages':[
+                "API key refresh failed. "
+                "The API key presented does not have a valid refresh token."
+                "You may need to login again to generate a new API key."
+            ]
+        }
+
+    new_apikey_try = issue_apikey(
+        {"issuer":apikey_dict["iss"],
+         "apiversion":apikey_dict["ver"],
+         "user_id":user_id,
+         "user_role":user_role,
+         "audience":apikey_dict["aud"],
+         "subject":apikey_dict["sub"],
+         "ip_address":payload["ip_address"],
+         "expires_seconds":payload["expires_seconds"],
+         "not_valid_before":payload["not_valid_before"]},
+        raiseonfail=raiseonfail,
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=override_permissions_json,
+    )
+
+    if not new_apikey_try["success"]:
+
+        LOGGER.error(
+            "[%s] Invalid no-session API key refresh request. "
+            "from user_id: %s, role: %s. "
+            "Could not generate a new API key." %
+            (payload['reqid'],
+             pii_hash(user_id, payload['pii_salt']),
+             pii_hash(user_role, payload['pii_salt']))
+        )
+        return {
+            'success':False,
+            'messages':[
+                "API key refresh failed. "
+                "The API key presented does not have a valid refresh token."
+                "You may need to login again to generate a new API key."
+            ]
+        }
+
+    #
+    # otherwise, everything is ok, return the new API key
+    #
+
+    LOGGER.info(
+        "[%s] API key refresh request succeeded. "
+        "User_id: %s, role: %s." %
+        (payload['reqid'],
+         pii_hash(user_id, payload['pii_salt']),
+         pii_hash(user_role, payload['pii_salt']))
+    )
+
+    return new_apikey_try
