@@ -301,10 +301,10 @@ def issue_apikey(payload,
     # encode to bytes, then encrypt, then sign it, and finally send back to the
     # client
     issued = datetime.utcnow()
-    expires = datetime.utcnow() + timedelta(days=payload['expires_days'])
+    expires = issued + timedelta(days=payload['expires_days'])
 
     notvalidbefore = (
-        datetime.utcnow() +
+        issued +
         timedelta(seconds=payload['not_valid_before'])
     )
 
@@ -510,6 +510,8 @@ def verify_apikey(payload,
     # - expired must be in the future
     # - issued must be in the past
     # - not_valid_before must be in the past
+    dt_utcnow = datetime.utcnow()
+
     sel = select([
         apikeys.c.apikey,
         apikeys.c.expires,
@@ -520,11 +522,11 @@ def verify_apikey(payload,
     ).where(
         apikeys.c.user_role == apikey_dict['rol']
     ).where(
-        apikeys.c.expires > datetime.utcnow()
+        apikeys.c.expires > dt_utcnow
     ).where(
-        apikeys.c.issued < datetime.utcnow()
+        apikeys.c.issued < dt_utcnow
     ).where(
-        apikeys.c.not_valid_before < datetime.utcnow()
+        apikeys.c.not_valid_before < dt_utcnow
     )
     result = currproc.authdb_conn.execute(sel)
     row = result.fetchone()
@@ -736,12 +738,6 @@ def revoke_apikey(payload,
         apikeys.c.user_id == apikey_dict['uid']
     ).where(
         apikeys.c.user_role == apikey_dict['rol']
-    ).where(
-        apikeys.c.expires > datetime.utcnow()
-    ).where(
-        apikeys.c.issued < datetime.utcnow()
-    ).where(
-        apikeys.c.not_valid_before < datetime.utcnow()
     )
     result = currproc.authdb_conn.execute(delete)
     result.close()
