@@ -325,8 +325,8 @@ Requires the following ``body`` items in a request:
 
 - ``user_info`` (list of dicts): a list containing all user info as a dict per
   user. Each dict has the following items of information as dict keys:
-  ``'user_id', 'system_id', 'full_name', 'email', 'is_active', 'created_on',
-  'user_role', 'last_login_try', 'last_login_success'``.
+  ``user_id``, ``system_id``, ``full_name``, ``email``, ``is_active``,
+  ``created_on``, ``user_role``, ``last_login_try``, ``last_login_success``.
 
 ``user-lookup-email``: Look up a user's info given their email address
 ----------------------------------------------------------------------
@@ -338,9 +338,9 @@ Requires the following ``body`` items in a request:
  Returns a ``response`` with the following items if successful:
 
 - ``user_info`` (dict): a dict with the following items of information for the
-  user as dict keys: ``'user_id', 'system_id', 'full_name', 'email',
-  'is_active', 'created_on', 'user_role', 'last_login_try',
-  'last_login_success'``.
+  user as dict keys: ``user_id``, ``system_id``, ``full_name``, ``email``,
+  ``is_active``, ``created_on``, ``user_role``, ``last_login_try``,
+  ``last_login_success``.
 
 ``user-edit``: Edit a user's properties
 ---------------------------------------
