@@ -720,6 +720,24 @@ Returns a ``response`` with the following items:
 - None, check the value of ``success`` to see if the API key revocation was
   successful
 
+``apikey-revokeall-nosession``: Revoke all previously issued no-session API keys
+--------------------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``apikey_dict`` (dict): the decrypted and validated API key information dict
+  from the frontend. A valid and unexpired API no-session is required to
+  validate the all-keys revocation request.
+
+- ``user_id`` (int): the user ID of the target user whose API key is being
+  revoked
+
+- ``user_role`` (str): the role of the user that this API key is tied to
+
+Returns a ``response`` with the following items:
+
+- None, check the value of ``success`` to see if the API key revocation was
+  successful
 
 ``apikey-refresh-nosession``: Refresh a previously issued no-session API key
 ----------------------------------------------------------------------------

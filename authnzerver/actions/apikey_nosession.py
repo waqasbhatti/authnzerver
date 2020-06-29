@@ -24,15 +24,15 @@ The workflow to use here is:
    the cookie and send it back as verification in the request header or POST
    request params.
 
-2. After login is verified, run the ``new_apikey()`` function below. This
-   returns an API key and a refresh token. The API key should have an expiry no
-   longer than 15 minutes (or about the time needed to process a single API
-   call). The refresh token has a longer expiry time (no longer than 24 hours or
-   maybe the actual session lifetime) to allow for the user coming back and
-   having to fetch a new API key. The refresh token is effectively a password,
-   and the authnzerver stores it as such, generating a random 32-byte token,
-   then using Argon2-ID to hash and store it in the DB. To verify it, we run the
-   Argon2-ID hash as we do for passwords.
+2. After login is verified, run the :py:func:`.issue_apikey` function
+   below. This returns an API key and a refresh token. The API key should have
+   an expiry no longer than 15 minutes (or about the time needed to process a
+   single API call). The refresh token has a longer expiry time (no longer than
+   24 hours or maybe the actual session lifetime) to allow for the user coming
+   back and having to fetch a new API key. The refresh token is effectively a
+   password, and the authnzerver stores it as such, generating a random 32-byte
+   token, then using Argon2-ID to hash and store it in the DB. To verify it, we
+   run the Argon2-ID hash as we do for passwords.
 
 3. For SPAs, send back the API key and its expiry date in the response body, and
    set the refresh token as an HttpOnly, Secure cookie, with the TTL set to the
@@ -43,24 +43,25 @@ The workflow to use here is:
    expires. The verification of the API key itself can take place statelessly if
    it is decrypted correctly, has not expired, and the the claims in the
    decrypted key dict match the API endpoint's requirements. If further
-   verification is required, the frontend can call ``verify_apikey()``, which
-   will check the API key against the one stored in the DB.
+   verification is required, the frontend can call :py:func:`.verify_apikey`,
+   which will check the API key against the one stored in the DB.
 
 5. A bit before the API key expires, the client can hit an refresh-api-key
    endpoint on the frontend that is dedicated to refreshing the API key. The
    refresh token is presented in the cookie to the endpoint so the refresh
    request can be authenticated.
 
-6. Use the ``refresh_apikey()`` function to refresh the API key. The refresh
-   token presented is verified, and if that passes, a new API key + its expiry
-   is sent back to the client, and a NEW refresh token MUST ALSO be set as an
-   HttpOnly cookie if the client is an SPA (send back the refresh token in the
-   response body if not).
+6. Use the :py:func:`.refresh_apikey` function to refresh the API key. The
+   refresh token presented is verified, and if that passes, a new API key + its
+   expiry is sent back to the client, and a NEW refresh token MUST ALSO be set
+   as an HttpOnly cookie if the client is an SPA (send back the refresh token in
+   the response body if not).
 
 7. To enforce logout or account deletion or lock, the API key and the refresh
    token are deleted from the ``apikeys_nosession`` table by the
-   ``revoke_apikey()`` function below. The refresh token cookie MUST also be
-   deleted from the client if it hits the logout/delete endpoint successfully.
+   :py:func:`.revoke_apikey` or :py:func:`.revoke_all_apikeys` function
+   below. The refresh token cookie MUST also be deleted from the client if it
+   hits the logout/delete endpoint successfully.
 
 References
 ----------
