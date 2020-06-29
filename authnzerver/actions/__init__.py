@@ -40,6 +40,7 @@ from .apikey_nosession import (
     verify_apikey as verify_apikey_nosession,
     refresh_apikey as refresh_apikey_nosession,
     revoke_apikey as revoke_apikey_nosession,
+    revoke_all_apikeys as revoke_all_apikeys_nosession,
 )
 
 from .admin import (
@@ -88,6 +89,7 @@ __all__ = [
     'verify_apikey_nosession',
     'refresh_apikey_nosession',
     'revoke_apikey_nosession',
+    'revoke_all_apikeys_nosession',
     'list_users',
     'edit_user',
     'get_user_by_email',

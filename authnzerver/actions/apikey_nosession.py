@@ -51,18 +51,19 @@ The workflow to use here is:
    refresh token is presented in the cookie to the endpoint so the refresh
    request can be authenticated.
 
-5. Use the ``refresh_apikey()`` function to refresh the API key. The refresh
+6. Use the ``refresh_apikey()`` function to refresh the API key. The refresh
    token presented is verified, and if that passes, a new API key + its expiry
    is sent back to the client, and a NEW refresh token MUST ALSO be set as an
    HttpOnly cookie if the client is an SPA (send back the refresh token in the
    response body if not).
 
-6. To enforce logout or account deletion or lock, the API key and the refresh
+7. To enforce logout or account deletion or lock, the API key and the refresh
    token are deleted from the ``apikeys_nosession`` table by the
    ``revoke_apikey()`` function below. The refresh token cookie MUST also be
    deleted from the client if it hits the logout/delete endpoint successfully.
 
-References:
+References
+----------
 
 - https://pragmaticwebsecurity.com/cheatsheets.html
 - https://hasura.io/blog/best-practices-of-using-jwt-with-graphql/
@@ -740,6 +741,186 @@ def revoke_apikey(payload,
     return {
         'success':True,
         'messages':["API key revocation successful."]
+    }
+
+
+def revoke_all_apikeys(payload,
+                       raiseonfail=False,
+                       override_authdb_path=None,
+                       override_permissions_json=None):
+    '''Revokes an API key.
+
+    This does not require a session, but does require a current valid API key to
+    revoke all API keys belonging to the specified user.
+
+    Parameters
+    ----------
+
+    payload : dict
+        This dict contains the following keys:
+
+        - apikey_dict: the decrypted and verified API key info dict from the
+          frontend.
+
+        - user_id: the user ID of the person revoking this key. Only superusers
+          or staff can revoke an API key that doesn't belong to them.
+
+        - user_role: the user ID of the person revoking this key. Only
+          superusers or staff can revoke an API key that doesn't belong to them.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    override_permissions_json : str or None
+        If given as a str, is the alternative path to the permissions JSON to
+        use. This is used to check if the user_id is allowed to actually revoke
+        ("delete") an API key.
+
+
+    Returns
+    -------
+
+    dict
+        The dict returned is of the form::
+
+            {'success': True if API key was revoked and False otherwise,
+             'messages': list of str messages if any}
+
+    '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'messages':["Invalid API key revocation request."],
+            }
+
+    for key in ('apikey_dict','user_id','user_role'):
+        if 'apikey_dict' not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid API key revocation request, missing %s.' %
+                (payload['reqid'], key)
+            )
+
+            return {
+                'success':False,
+                'messages':["Some required keys are missing from payload."]
+            }
+
+    apikey_dict = payload['apikey_dict']
+    user_id = payload['user_id']
+    user_role = payload['user_role']
+
+    # check if the user is allowed to revoke API keys
+    apikey_revocation_allowed = check_user_access(
+        {'user_id':user_id,
+         'user_role':user_role,
+         'action':'delete',
+         'target_name':'apikey',
+         'target_owner':apikey_dict['uid'],
+         'target_visibility':'private',
+         'target_sharedwith':None,
+         'reqid':payload['reqid'],
+         'pii_salt':payload['pii_salt']},
+        raiseonfail=raiseonfail,
+        override_permissions_json=override_permissions_json,
+        override_authdb_path=override_authdb_path
+    )
+
+    if not apikey_revocation_allowed['success']:
+
+        LOGGER.error(
+            "[%s] Invalid API key revocation request. "
+            "from user_id: %s, role: %s. API keys are "
+            "not revocable by this user." %
+            (payload['reqid'],
+             pii_hash(user_id, payload['pii_salt']),
+             pii_hash(user_role, payload['pii_salt']))
+        )
+        return {
+            'success':False,
+            'messages':["All API keys revocation failed. "
+                        "You are not allowed to delete API keys."]
+        }
+
+    #
+    # verify the presented API key
+    #
+    apikey_verification = verify_apikey(
+        {"apikey_dict":apikey_dict,
+         "user_id":user_id,
+         "user_role":user_role,
+         "reqid":payload["reqid"],
+         "pii_salt":payload["pii_salt"]},
+        raiseonfail=raiseonfail,
+        override_permissions_json=override_permissions_json,
+        override_authdb_path=override_authdb_path
+    )
+
+    if not apikey_verification['success']:
+
+        LOGGER.error(
+            "[%s] Invalid API key revocation request. "
+            "from user_id: %s, role: %s. The presented API key is "
+            "invalid and can't be used for revoking all API keys." %
+            (payload['reqid'],
+             pii_hash(user_id, payload['pii_salt']),
+             pii_hash(user_role, payload['pii_salt']))
+        )
+        return {
+            'success':False,
+            'messages':["All API keys revocation failed. "
+                        "The API key presented is invalid."]
+        }
+
+    #
+    # everything checks out so go ahead and delete the API key
+    #
+
+    # this checks if the database connection is live
+    currproc = mp.current_process()
+    engine = getattr(currproc, 'authdb_engine', None)
+
+    if override_authdb_path:
+        currproc.auth_db_path = override_authdb_path
+
+    if not engine:
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            authdb.get_auth_db(
+                currproc.auth_db_path,
+                echo=raiseonfail
+            )
+        )
+
+    apikeys = currproc.authdb_meta.tables['apikeys_nosession']
+
+    # delete all the API keys belonging to this user ID
+    delete = apikeys.delete().where(
+        apikeys.c.user_id == apikey_dict['uid']
+    ).where(
+        apikeys.c.user_role == apikey_dict['rol']
+    )
+    result = currproc.authdb_conn.execute(delete)
+    result.close()
+
+    LOGGER.info(
+        "[%s] All API keys revocation request succeeded. "
+        "User_id: %s, role: %s." %
+        (payload['reqid'],
+         pii_hash(user_id, payload['pii_salt']),
+         pii_hash(user_role, payload['pii_salt']))
+    )
+
+    return {
+        'success':True,
+        'messages':["All API keys revocation successful."]
     }
 
 
