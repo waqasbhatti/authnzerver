@@ -105,6 +105,7 @@ request_functions = {
     'apikey-revoke':actions.revoke_apikey,
     'apikey-new-nosession':actions.issue_apikey_nosession,
     'apikey-verify-nosession':actions.verify_apikey_nosession,
+    'apikey-refresh-nosession':actions.refresh_apikey_nosession,
     'apikey-revoke-nosession':actions.revoke_apikey_nosession,
     # access and limit check actions
     'user-check-access': actions.check_user_access,

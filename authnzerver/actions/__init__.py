@@ -38,6 +38,7 @@ from .apikey import (
 from .apikey_nosession import (
     issue_apikey as issue_apikey_nosession,
     verify_apikey as verify_apikey_nosession,
+    refresh_apikey as refresh_apikey_nosession,
     revoke_apikey as revoke_apikey_nosession,
 )
 
@@ -85,6 +86,7 @@ __all__ = [
     'revoke_apikey',
     'issue_apikey_nosession',
     'verify_apikey_nosession',
+    'refresh_apikey_nosession',
     'revoke_apikey_nosession',
     'list_users',
     'edit_user',

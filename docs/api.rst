@@ -566,11 +566,13 @@ API key actions
 
 Requires the following ``body`` items in a request:
 
+- ``issuer`` (str): the entity that will be designated as the API key issuer
+
 - ``audience`` (str): the service this API key is being issued for (usually the
   host name of the frontend server)
 
-- ``subject`` (list of str): the specific API endpoint(s) this API key is being
-  issued for (usually a list of URIs for specific service endpoints)
+- ``subject`` (list of str or str): the specific API endpoint(s) this API key is
+  being issued for (usually a list of URIs for specific service endpoints)
 
 -``apiversion`` (int): the version of the API this key is valid for
 
@@ -591,7 +593,7 @@ Requires the following ``body`` items in a request:
 
 Returns a ``response`` with the following items if successful:
 
-- ``apikey`` (str): the API key information dict dumped to JSON
+- ``apikey`` (str): the API key information dict dumped to a JSON string
 
 - ``expires`` (str): a UTC datetime in ISO format indicating when the API key
   expires
@@ -635,20 +637,32 @@ Returns a ``response`` with the following items:
 ``apikey-new-nosession``: Create a new API key tied to a user ID, role, and IP address
 --------------------------------------------------------------------------------------
 
+See :py:mod:`authnzerver.actions.apikey_nosession` for notes on how to use
+no-session API keys.
+
 Requires the following ``body`` items in a request:
 
+- ``issuer`` (str): the entity that will be designated as the API key issuer
+
 - ``audience`` (str): the service this API key is being issued for (usually the
-  host name of the frontend server)
+  host name of the frontend server or the API service)
 
-- ``subject`` (list of str): the specific API endpoint(s) this API key is being
-  issued for (usually a list of URIs for specific service endpoints)
+- ``subject`` (list of str or str): the specific API endpoint(s) this API key is
+  being issued for (usually a list of URIs for specific service endpoints)
 
--``apiversion`` (int): the version of the API this key is valid for
+- ``apiversion`` (int): the version of the API this key is valid for
 
-- ``expires_days`` (int): the number of days that the API key will be valid for
+- ``expires_seconds`` (int): the number of seconds that the API key will be
+  valid for
 
 - ``not_valid_before`` (int): the number of seconds after the current UTC time
   required before the API key becomes valid
+
+- ``refresh_expires`` (int): the number of seconds that the refresh token will
+  be valid for
+
+- ``refresh_nbf`` (int): the number of seconds after the current UTC time
+  required before the refresh token become valid
 
 - ``user_id`` (int): the user ID of the user that this API key is tied to
 
@@ -658,10 +672,17 @@ Requires the following ``body`` items in a request:
 
 Returns a ``response`` with the following items if successful:
 
-- ``apikey`` (str): the API key information dict dumped to JSON
+- ``apikey`` (str): the API key information dict dumped to a JSON string
 
 - ``expires`` (str): a UTC datetime in ISO format indicating when the API key
   expires
+
+- ``refresh_token`` (str): a refresh token to use when asking for a refreshed
+  API key
+
+- ``refresh_token_expires`` (str): a UTC datetime in ISO format indicating when
+  the refresh token expires
+
 
 ``apikey-verify-nosession``: Verify a no-session API key's user ID, role, expiry, and token
 -------------------------------------------------------------------------------------------
@@ -698,3 +719,46 @@ Returns a ``response`` with the following items:
 
 - None, check the value of ``success`` to see if the API key revocation was
   successful
+
+
+ ``apikey-refresh-nosession``: Refresh a previously issued no-session API key
+-----------------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``apikey_dict`` (dict): the decrypted and validated API key information dict
+  from the frontend.
+
+- ``user_id`` (int): the user ID of the target user whose API key is being
+  revoked
+
+- ``user_role`` (str): the role of the user that this API key is tied to
+
+- ``refresh_token`` (str): the refresh token of this API key
+
+- ``ip_address`` (str): the current IP address of the user
+
+- ``expires_seconds`` (int): the number of seconds that the API key will be
+  valid for
+
+- ``not_valid_before`` (int): the number of seconds after the current UTC time
+  required before the API key becomes valid
+
+- ``refresh_expires`` (int): the number of seconds that the refresh token will
+  be valid for
+
+- ``refresh_nbf`` (int): the number of seconds after the current UTC time
+  required before the refresh token become valid
+
+Returns a ``response`` with the following items:
+
+- ``apikey`` (str): the API key information dict dumped to a JSON string
+
+- ``expires`` (str): a UTC datetime in ISO format indicating when the API key
+  expires
+
+- ``refresh_token`` (str): a new refresh token to use when asking for a
+  refreshed API key
+
+- ``refresh_token_expires`` (str): a UTC datetime in ISO format indicating when
+  the refresh token expires

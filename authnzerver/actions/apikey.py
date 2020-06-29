@@ -651,35 +651,6 @@ def revoke_apikey(payload,
     user_id = payload['user_id']
     user_role = payload['user_role']
 
-    # check if the API key is valid
-    apikey_verification = verify_apikey(
-        {'user_id':user_id,
-         'user_role':user_role,
-         'apikey_dict':apikey_dict,
-         'pii_salt':payload['pii_salt'],
-         'reqid':payload['reqid']},
-        raiseonfail=raiseonfail,
-        override_permission_json=override_permissions_json,
-        override_authdb_path=override_authdb_path
-    )
-
-    # if API key verification fails, return immediately
-    if not apikey_verification['success']:
-
-        LOGGER.error(
-            "[%s] Invalid API key revocation request. "
-            "from user_id: %s, role: %s. The API key presented could not be "
-            "verified so can't be revoked." %
-            (payload['reqid'],
-             pii_hash(user_id, payload['pii_salt']),
-             pii_hash(user_role, payload['pii_salt']))
-        )
-        return {
-            'success':False,
-            'messages':["API key revocation failed. "
-                        "The API key presented could not be verified."]
-        }
-
     # check if the user is allowed to revoke the presented API key
     apikey_revocation_allowed = check_user_access(
         {'user_id':user_id,

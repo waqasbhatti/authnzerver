@@ -142,16 +142,30 @@ def issue_apikey(payload,
         The payload dict must have the following keys:
 
         - issuer: str, the entity that will be designated as the API key issuer
+
         - audience: str, the service this API key is being issued for
+
         - subject: str, the specific API endpoint API key is being issued for
+
         - apiversion: int or str, the API version that the API key is valid for
+
         - expires_seconds: int, the number of seconds after which the API key
           expires
+
         - not_valid_before: float or int, the amount of seconds after utcnow()
           when the API key becomes valid
+
         - user_id: int, the user ID of the user requesting the API key
+
         - user_role: str, the user role of the user requesting the API key
+
         - ip_address: str, the IP address to tie the API key to
+
+        - refresh_expires: int, the number of seconds after which the API key's
+          refresh token expires
+
+        - refresh_nbf: float or int, the amount of seconds after utcnow()
+          after which the refresh token becomes valid
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
@@ -208,7 +222,9 @@ def issue_apikey(payload,
                 'audience',
                 'subject',
                 'ip_address',
-                'apiversion'):
+                'apiversion',
+                'refresh_expires',
+                'refresh_nbf'):
 
         if key not in payload:
             LOGGER.error(
@@ -311,8 +327,11 @@ def issue_apikey(payload,
     # the refresh token is effectively a password, so we'll treat it as such
     hashed_refresh_token = token_hasher.hash(refresh_token)
 
-    # the refresh token expires in 24 hours
-    refresh_token_expiry = issued + timedelta(days=1)
+    # the refresh token expiry and nbf
+    refresh_token_expiry = (issued +
+                            timedelta(seconds=payload['refresh_expires']))
+    refresh_token_nbf = (issued +
+                         timedelta(seconds=payload['refresh_nbf']))
 
     # we'll also store this dict in the apikeys table
     apikeys = currproc.authdb_meta.tables['apikeys_nosession']
@@ -328,7 +347,7 @@ def issue_apikey(payload,
         'refresh_token':hashed_refresh_token,
         'refresh_issued':issued,
         'refresh_expires':refresh_token_expiry,
-        'refresh_nbf':notvalidbefore,
+        'refresh_nbf':refresh_token_nbf,
         'user_id':payload['user_id'],
         'user_role':payload['user_role'],
     })
@@ -648,35 +667,6 @@ def revoke_apikey(payload,
     user_id = payload['user_id']
     user_role = payload['user_role']
 
-    # check if the API key is valid
-    apikey_verification = verify_apikey(
-        {'user_id':user_id,
-         'user_role':user_role,
-         'apikey_dict':apikey_dict,
-         'pii_salt':payload['pii_salt'],
-         'reqid':payload['reqid']},
-        raiseonfail=raiseonfail,
-        override_permission_json=override_permissions_json,
-        override_authdb_path=override_authdb_path
-    )
-
-    # if API key verification fails, return immediately
-    if not apikey_verification['success']:
-
-        LOGGER.error(
-            "[%s] Invalid API key revocation request. "
-            "from user_id: %s, role: %s. The API key presented could not be "
-            "verified so can't be revoked." %
-            (payload['reqid'],
-             pii_hash(user_id, payload['pii_salt']),
-             pii_hash(user_role, payload['pii_salt']))
-        )
-        return {
-            'success':False,
-            'messages':["API key revocation failed. "
-                        "The API key presented could not be verified."]
-        }
-
     # check if the user is allowed to revoke the presented API key
     apikey_revocation_allowed = check_user_access(
         {'user_id':user_id,
@@ -780,11 +770,17 @@ def refresh_apikey(payload,
 
         - ip_address: the current IP address of the user
 
-        - expires_seconds: int, the number of minutes after which the API key
+        - expires_seconds: int, the number of seconds after which the API key
           expires
 
         - not_valid_before: float or int, the amount of seconds after utcnow()
           when the API key becomes valid
+
+        - refresh_expires: int, the number of seconds after which the API key's
+          refresh token expires
+
+        - refresh_nbf: float or int, the amount of seconds after utcnow()
+          after which the refresh token becomes valid
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
@@ -873,7 +869,7 @@ def refresh_apikey(payload,
     ).where(
         apikeys.c.refresh_nbf < dt_utcnow
     ).where(
-        apikeys.c.refresh_issue < dt_utcnow
+        apikeys.c.refresh_issued < dt_utcnow
     )
     result = currproc.authdb_conn.execute(refresh_token_sel)
     stored_refresh_token_hash = result.scalar()
@@ -927,7 +923,9 @@ def refresh_apikey(payload,
     revoke_try = revoke_apikey(
         {"apikey_dict":apikey_dict,
          "user_id":user_id,
-         "user_role":user_role},
+         "user_role":user_role,
+         "reqid":payload["reqid"],
+         "pii_salt":payload["pii_salt"]},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path,
         override_permissions_json=override_permissions_json,
@@ -961,7 +959,11 @@ def refresh_apikey(payload,
          "subject":apikey_dict["sub"],
          "ip_address":payload["ip_address"],
          "expires_seconds":payload["expires_seconds"],
-         "not_valid_before":payload["not_valid_before"]},
+         "not_valid_before":payload["not_valid_before"],
+         "refresh_expires":payload["refresh_expires"],
+         "refresh_nbf":payload["refresh_nbf"],
+         "reqid":payload["reqid"],
+         "pii_salt":payload["pii_salt"]},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path,
         override_permissions_json=override_permissions_json,
