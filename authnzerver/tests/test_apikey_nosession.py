@@ -460,6 +460,156 @@ def test_revoke_apikey(tmpdir):
     teardown()
 
 
+def test_revoke_all_apikeys(tmpdir):
+    """
+    This tests if all API keys for a user can be revoked.
+
+    """
+
+    delete_test_authdb(tmpdir)
+    test_authdb_url = get_test_authdb(tmpdir)
+    teardown()
+
+    # 1. create a new user
+    payload = {'full_name': 'Test User',
+               'email':'testuser@test.org',
+               'password':'aROwQin9L8nNtPTEMLXd',
+               'reqid':1,
+               'pii_salt':'super-secret-salt'}
+    user_created = actions.create_new_user(
+        payload,
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url
+    )
+    assert user_created['success'] is True
+    assert user_created['user_email'] == 'testuser@test.org'
+    assert user_created['user_id'] == 4
+
+    # 2. verify their email
+    email_verified_info = actions.set_user_emailaddr_verified(
+        {'email':'testuser@test.org',
+         'reqid':2,
+         'pii_salt':'super-secret-salt'},
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url
+    )
+
+    assert email_verified_info['success'] is True
+    assert email_verified_info['user_id'] == 4
+    assert email_verified_info['is_active'] is True
+    assert email_verified_info['user_role'] == 'authenticated'
+
+    # 3. generate a couple of API keys
+    apikey_payload_one = {
+        "issuer":"authnzerver",
+        "audience":"test-service",
+        "subject":"/test-endpoint-one",
+        "apiversion":1,
+        "expires_seconds":7,
+        "not_valid_before":1,
+        "user_id":4,
+        "user_role":"authenticated",
+        "ip_address":"1.2.3.4",
+        "refresh_expires":10,
+        "refresh_nbf":2,
+        "reqid":3,
+        "pii_salt":"super-secret-salt",
+    }
+
+    apikey_info_one = actions.issue_apikey_nosession(
+        apikey_payload_one,
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url,
+        override_permissions_json=permissions_json
+    )
+
+    apikey_one = json.loads(apikey_info_one["apikey"])
+
+    apikey_payload_two = {
+        "issuer":"authnzerver",
+        "audience":"test-service",
+        "subject":"/test-endpoint-two",
+        "apiversion":1,
+        "expires_seconds":7,
+        "not_valid_before":1,
+        "user_id":4,
+        "user_role":"authenticated",
+        "ip_address":"1.2.3.4",
+        "refresh_expires":10,
+        "refresh_nbf":2,
+        "reqid":3,
+        "pii_salt":"super-secret-salt",
+    }
+
+    apikey_info_two = actions.issue_apikey_nosession(
+        apikey_payload_two,
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url,
+        override_permissions_json=permissions_json
+    )
+
+    apikey_two = json.loads(apikey_info_two["apikey"])
+
+    time.sleep(2)
+
+    # 1. try to revoke all API keys with an incorrect API key
+    good_tkn = apikey_one["tkn"]
+    apikey_one["tkn"] = "haha-bad-token"
+    revoke_one = actions.revoke_all_apikeys_nosession(
+        {"apikey_dict":apikey_one,
+         "user_id":4,
+         "user_role":"authenticated",
+         "reqid":2,
+         "pii_salt":"super-secret-salt"},
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url,
+        override_permissions_json=permissions_json
+    )
+    assert revoke_one["success"] is False
+
+    # 2. try to revoke all API keys with a correct API key
+    revoke_two = actions.revoke_all_apikeys_nosession(
+        {"apikey_dict":apikey_two,
+         "user_id":4,
+         "user_role":"authenticated",
+         "reqid":2,
+         "pii_salt":"super-secret-salt"},
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url,
+        override_permissions_json=permissions_json
+    )
+    assert revoke_two["success"] is True
+
+    # 3. make sure we can't use any API key afterwards
+    apikey_one["tkn"] = good_tkn
+
+    verify_one = actions.verify_apikey_nosession(
+        {"apikey_dict":apikey_one,
+         "user_id":4,
+         "user_role":"authenticated",
+         "reqid":3,
+         "pii_salt":"super-secret-salt"},
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url,
+        override_permissions_json=permissions_json
+    )
+    assert verify_one["success"] is False
+
+    verify_two = actions.verify_apikey_nosession(
+        {"apikey_dict":apikey_two,
+         "user_id":4,
+         "user_role":"authenticated",
+         "reqid":4,
+         "pii_salt":"super-secret-salt"},
+        raiseonfail=True,
+        override_authdb_path=test_authdb_url,
+        override_permissions_json=permissions_json
+    )
+    assert verify_two["success"] is False
+
+    teardown()
+
+
 def test_refresh_apikey(tmpdir):
     """
     This tests refreshing an API key.
