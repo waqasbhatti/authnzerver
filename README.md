@@ -56,12 +56,7 @@ With that said, it can be installed (preferably in a virtualenv) using `pip`:
 # use pip install authnzerver --pre for unstable releases
 ```
 
-
-## Running the server
-
-### Running with Docker
-
-There's a [Docker container for
+There's also a [Docker container for
 authnzerver](https://hub.docker.com/r/waqasbhatti/authnzerver) available on
 Docker Hub.
 
@@ -72,7 +67,19 @@ The command below pulls the master branch version for now; stable versions will
 docker pull waqasbhatti/authnzerver:latest
 ```
 
-#### Using docker-compose
+## Running the server
+
+### Running the Python package
+
+There is a single executable that will be in your `$PATH` if you have a
+virtualenv activated and the package installed: `authnzrv`.
+
+`authnzrv --help` will list all the options available.
+
+There's an example systemd `.service` file available in the `deploy` directory
+to run this server automatically on startup.
+
+### Running with docker-compose
 
 The authnzerver requires several environment variables to run. These are noted
 in the [Configuring the server](#configuring-the-server) section of this file.
@@ -139,7 +146,7 @@ docker-compose. This should enable requests from within the docker-compose
 network (i.e. other containers relying on authnzerver) to work correctly by
 using `http://authnzerver:13431` as the URL for the authnzerver.
 
-#### Running the Docker container for dev using auto-setup
+### Running the Docker container for dev using auto-setup
 
 The authnzerver can set up its own basedir and all required files if called with
 `--autosetup` command line option. To run it this way, follow the steps below:
@@ -215,17 +222,6 @@ docker run -v $(PWD):/home/authnzerver/basedir \
   --rm -it waqasbhatti/authnzerver:latest \
   --confvars="/home/authnzerver/basedir/confvars.py"
 ```
-
-
-### Running locally
-
-There is a single executable that will be in your `$PATH` if you have a
-virtualenv activated and the package installed: `authnzrv`.
-
-`authnzrv --help` will list all the options available.
-
-There's an example systemd `.service` file available in the `deploy` directory
-to run this server automatically on startup.
 
 
 ## Configuring the server

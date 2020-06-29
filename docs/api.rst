@@ -721,8 +721,8 @@ Returns a ``response`` with the following items:
   successful
 
 
- ``apikey-refresh-nosession``: Refresh a previously issued no-session API key
------------------------------------------------------------------------------
+``apikey-refresh-nosession``: Refresh a previously issued no-session API key
+----------------------------------------------------------------------------
 
 Requires the following ``body`` items in a request:
 
