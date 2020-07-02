@@ -403,7 +403,7 @@ use it for its base directory.
 
    mkdir authnzerver-basedir
    cd authnzerver-basedir
-   docker run -p 13431 -v $(PWD):/home/authnzerver/basedir \
+   docker run -p 13431:13431 -v $(PWD):/home/authnzerver/basedir \
      --rm -it waqasbhatti/authnzerver:latest \
      --autosetup --basedir=/home/authnzerver/basedir
 
