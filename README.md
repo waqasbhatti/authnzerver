@@ -69,6 +69,9 @@ docker pull waqasbhatti/authnzerver:latest
 
 ## Running the server
 
+The authnzerver requires several environment variables to run. These are noted
+in the [Configuring the server](#configuring-the-server) section of this file.
+
 ### Running the Python package
 
 There is a single executable that will be in your `$PATH` if you have a
@@ -80,9 +83,6 @@ There's an example systemd `.service` file available in the `deploy` directory
 to run this server automatically on startup.
 
 ### Running with docker-compose
-
-The authnzerver requires several environment variables to run. These are noted
-in the [Configuring the server](#configuring-the-server) section of this file.
 
 See below for an example docker-compose.yml snippet to include authnzerver as a
 service.
@@ -110,6 +110,7 @@ services:
       AUTHNZERVER_SESSIONEXPIRY: 30
       AUTHNZERVER_USERLOCKTRIES: 10
       AUTHNZERVER_USERLOCKTIME: 3600
+      AUTHNZERVER_PASSPOLICY: "min_length:12;max_unsafe_similarity:50"
       AUTHNZERVER_WORKERS: 4
       AUTHNZERVER_EMAILSERVER: "localhost"
       AUTHNZERVER_EMAILPORT: 25
@@ -253,6 +254,13 @@ AUTHNZERVER_AUTHDB=
 AUTHNZERVER_SESSIONEXPIRY=30
 AUTHNZERVER_USERLOCKTRIES=10
 AUTHNZERVER_USERLOCKTIME=3600
+
+# the password policy
+# min_length is the minimum required characters for a password
+# max_unsafe_similarity is the max allowed string similarity
+# between the password and unsafe items like the user's own name,
+# the server's domain name, or the user's email address
+AUTHNZERVER_PASSPOLICY: "min_length:12;max_unsafe_similarity:50"
 
 # permissions model JSON
 AUTHNZERVER_PERMISSIONS=path/to/default-permissions-model.json
