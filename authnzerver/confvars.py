@@ -330,7 +330,7 @@ CONF = {
         'postprocess_value':None,
     },
     'tls_cert_file':{
-        'env':'%s_TLSCERT_FILE' % ENVPREFIX,
+        'env':'%s_TLSCERTFILE' % ENVPREFIX,
         'cmdline':'tlscertfile',
         'type':str,
         'default':'',
@@ -341,7 +341,7 @@ CONF = {
         'postprocess_value':None,
     },
     'tls_cert_key':{
-        'env':'%s_TLSCERT_KEY' % ENVPREFIX,
+        'env':'%s_TLSCERTKEY' % ENVPREFIX,
         'cmdline':'tlscertkey',
         'type':str,
         'default':'',
