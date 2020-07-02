@@ -375,7 +375,7 @@ use strong random values here, for example:
 
 .. code-block:: bash
 
-    python3 -c "import secrets; [print('AUTHNZERVER_%s=%s' % (x, secrets.token_urlsafe())) for x in ('SECRET','PIISALT')]"
+    python3 -c "import secrets, base64; [print('AUTHNZERVER_%s=\"%s\"' % (x, base64.urlsafe_b64encode(secrets.token_bytes()).decode('utf-8'))) for x in ('SECRET','PIISALT')]"
 
 Finally, note that we're setting the listen address for the authnzerver to
 ``0.0.0.0`` so it can listen to requests on its container's external network
