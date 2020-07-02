@@ -8,15 +8,7 @@ Authnzerver
 
 `Authnzerver <https://github.com/waqasbhatti/authnzerver>`_ is a tiny
 authentication (authn) and authorization (authz) server implemented in Python
-and the Tornado web framework.
-
-It is meant to help add authentication (authn) and
-authorization (authz) to other HTTP servers. It's built using
-`Tornado <http://www.tornadoweb.org>`_, `SQLAlchemy <https://www.sqlalchemy.org/>`_,
-`cryptography <https://cryptography.io>`_,
-`argon2-cffi <https://argon2-cffi.readthedocs.io/en/stable/>`_,
-`python-diskcache <http://www.grantjenks.com/docs/diskcache>`_, and
-`uvloop <https://github.com/MagicStack/uvloop>`_
+and the `Tornado <http://www.tornadoweb.org>`_ web framework.
 
 I wrote it to help with the login/logout/signup flows for the `Light Curve
 Collection Server <https://github.com/waqasbhatti/lcc-server>`_ and extracted
@@ -42,6 +34,8 @@ package's `Fernet scheme <https://cryptography.io/en/latest/fernet/>`_, so
 you'll need a pre-shared key that both Authnzerver and your frontend server
 know.
 
+See :doc:`the HTTP API docs <./api>` for details on how to call Authnzerver from a
+frontend service.
 
 Installation
 ============
@@ -73,13 +67,12 @@ Pull the image::
    docker pull waqasbhatti/authnzerver:latest
 
 
-Running the server
-==================
+Using the server
+================
 
-`See the docs <https://authnzerver.readthedocs.io/en/latest/running.html>`_ on
-how to configure the server with environment variables or command-line options,
-and run it either as a Docker container or as script executable from the Python
-package.
+See :doc:`the server configuration and usage docs <./running>` on how to configure the
+server with environment variables or command-line options, and run it either as
+a Docker container or as script executable from the Python package.
 
 Quick start
 -----------
@@ -90,7 +83,7 @@ If you have authnzerver installed as a Python package in an activated virtualenv
 
 If you're running it as a Docker container::
 
-    docker run -p 13431:1341 -v $(PWD):/home/authnzerver/basedir \
+    docker run -p 13431:13431 -v $(PWD):/home/authnzerver/basedir \
       --rm -it waqasbhatti/authnzerver:latest \
       --autosetup --basedir=/home/authnzerver/basedir
 
