@@ -3,6 +3,9 @@ Permissions policy enforcement
 
 This page describes the permissions model used by the Authnzerver.
 
+.. note::
+   These docs are a work in progress, missing sections below will be filled in soon.
+
 Permissions policy definition
 =============================
 

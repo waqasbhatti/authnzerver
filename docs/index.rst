@@ -6,28 +6,45 @@
 Authnzerver
 ~~~~~~~~~~~
 
-Authnzerver is a tiny authentication (authn) and authorization (authz) server
-implemented in Python and the Tornado web framework.
+`Authnzerver <https://github.com/waqasbhatti/authnzerver>`_ is a tiny
+authentication (authn) and authorization (authz) server implemented in Python
+and the Tornado web framework.
 
-This documentation is a work in progress.
+It is meant to help add authentication (authn) and
+authorization (authz) to other HTTP servers. It's built using
+`Tornado <http://www.tornadoweb.org>`_, `SQLAlchemy <https://www.sqlalchemy.org/>`_,
+`cryptography <https://cryptography.io>`_,
+`argon2-cffi <https://argon2-cffi.readthedocs.io/en/stable/>`_,
+`python-diskcache <http://www.grantjenks.com/docs/diskcache>`_, and
+`uvloop <https://github.com/MagicStack/uvloop>`_
+
+I wrote it to help with the login/logout/signup flows for the `Light Curve
+Collection Server <https://github.com/waqasbhatti/lcc-server>`_ and extracted
+much of the code from there. It builds on the auth bits there and is eventually
+meant to replace them. It can do the following things:
+
+- Handle user sign-ups, logins, logouts, and locks/unlocks.
+
+- Handle user email verification, password changes, forgotten password
+  processes, and editing user properties.
+
+- Handle API key issuance and verification.
+
+- Handle access and rate-limit checks for arbitrary schemes of user roles,
+  permissions, and target items. There is a `default scheme
+  <https://github.com/waqasbhatti/authnzerver/blob/master/authnzerver/default-permissions-model.json>`_
+  of permissions and user roles, originally from the LCC-Server where this code
+  was extracted from. A custom permissions policy can be specified as JSON.
+
+Authnzerver talks to a frontend server over HTTP. Communications are secured
+with symmetric encryption using the `cryptography <https://cryptography.io>`_
+package's `Fernet scheme <https://cryptography.io/en/latest/fernet/>`_, so
+you'll need a pre-shared key that both Authnzerver and your frontend server
+know.
+
 
 Installation
 ============
-
-Requirements
-------------
-
-This package requires the following other packages:
-
-- tornado>=5.1
-- cryptography>=2.3
-- SQLAlchemy>=1.2.11
-- argon2-cffi>=18.3.0
-- diskcache>=3.0.6
-- uvloop>=0.11.0
-- confusable_homoglyphs>=3.2.0
-- requests>=2.22
-
 
 Installing with pip
 -------------------
@@ -37,8 +54,8 @@ Install authnzerver (preferably in a virtualenv)::
   (venv)$ pip install authnzerver
 
 
-Other installation methods
---------------------------
+Installing the latest version from Github
+-----------------------------------------
 
 To install the latest version (may be unstable at times)::
 
@@ -48,8 +65,38 @@ To install the latest version (may be unstable at times)::
   $ # or use pip install . to install requirements automatically
   $ # or use pip install -e . to install in develop mode along with requirements
 
+Installing the container from Docker Hub
+----------------------------------------
+
+Pull the image::
+
+   docker pull waqasbhatti/authnzerver:latest
+
+
+Running the server
+==================
+
+`See the docs <https://authnzerver.readthedocs.io/en/latest/running.html>`_ on
+how to configure the server with environment variables or command-line options,
+and run it either as a Docker container or as script executable from the Python
+package.
+
+Quick start
+-----------
+
+If you have authnzerver installed as a Python package in an activated virtualenv::
+
+    authnzrv --autosetup --basedir=$(PWD)
+
+If you're running it as a Docker container::
+
+    docker run -p 13431:1341 -v $(PWD):/home/authnzerver/basedir \
+      --rm -it waqasbhatti/authnzerver:latest \
+      --autosetup --basedir=/home/authnzerver/basedir
+
+
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :caption: Documentation
 
    running
