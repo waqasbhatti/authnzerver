@@ -339,14 +339,19 @@ def send_signup_verification_email(payload,
         - verification_expiry: int, number of seconds after which the token
           expires
 
-        In addition, the following keys must be provided by a wrapper function
+        In addition, the following items must be provided by a wrapper function
         to set up the email server.
 
-        - smtp_user
-        - smtp_pass
-        - smtp_server
-        - smtp_port
-        - smtp_sender
+        - emailuser
+        - emailpass
+        - emailserver
+        - emailport
+        - emailsender
+
+        These can be provided as part of the payload as dict keys or as
+        attributes in the SimpleNamespace object passed in the config kwarg. The
+        config object will be checked first, and the payload items will override
+        it.
 
         Finally, the payload must also include the following keys (usually added
         in by a wrapping function):
@@ -394,11 +399,6 @@ def send_signup_verification_email(payload,
                 'account_verify_url',
                 'verification_token',
                 'verification_expiry',
-                'smtp_sender',
-                'smtp_user',
-                'smtp_pass',
-                'smtp_server',
-                'smtp_port',
                 'created_info'):
 
         if key not in payload:
@@ -417,6 +417,48 @@ def send_signup_verification_email(payload,
                     "Invalid verify email request."
                 ])
             }
+
+    # now check for the SMTP server config items in the payload or in config
+    if config is not None:
+
+        emailsender = getattr(config, "emailsender", None)
+        emailuser = getattr(config, "emailuser", None)
+        emailpass = getattr(config, "emailpass", None)
+        emailserver = getattr(config, "emailserver", None)
+        emailport = getattr(config, "emailport", None)
+
+    # override with payload values
+    if 'emailsender' in payload:
+        emailsender = payload['emailsender']
+    if 'emailuser' in payload:
+        emailuser = payload['emailuser']
+    if 'emailpass' in payload:
+        emailpass = payload['emailpass']
+    if 'emailserver' in payload:
+        emailserver = payload['emailserver']
+    if 'emailport' in payload:
+        emailport = payload['emailport']
+
+    if (emailsender is None or
+        emailuser is None or
+        emailpass is None or
+        emailserver is None or
+        emailport is None):
+
+        LOGGER.error(
+            "[%s] Invalid email server settings "
+            "provided. Can't send an email." %
+            payload['reqid']
+        )
+        return {
+            'success':False,
+            'user_id':None,
+            'email_address':None,
+            'verifyemail_sent_datetime':None,
+            'messages':([
+                "Invalid email server settings provided. Can't send an email."
+            ])
+        }
 
     # check if we don't need to send an email to this user
     if payload['created_info']['send_verification'] is False:
@@ -589,7 +631,6 @@ def send_signup_verification_email(payload,
         ip_address=ip_addr,
         user_email=payload['email_address'],
     )
-    sender = payload['smtp_sender']
     recipients = [user_info['email']]
     subject = SIGNUP_VERIFICATION_EMAIL_SUBJECT.format(
         server_name=payload['server_name']
@@ -597,15 +638,15 @@ def send_signup_verification_email(payload,
 
     # send the email
     email_sent = send_email(
-        sender,
+        emailsender,
         subject,
         msgtext,
         recipients,
-        payload['smtp_server'],
-        payload['smtp_user'],
-        payload['smtp_pass'],
+        emailserver,
+        emailuser,
+        emailpass,
         payload['pii_salt'],
-        port=payload['smtp_port']
+        port=emailport
     )
 
     if email_sent:
@@ -851,14 +892,19 @@ def send_forgotpass_verification_email(payload,
         - verification_expiry: int, number of seconds after which the token
           expires
 
-        In addition, the following keys must be provided by a wrapper function
+        In addition, the following items must be provided by a wrapper function
         to set up the email server.
 
-        - smtp_user
-        - smtp_pass
-        - smtp_server
-        - smtp_port
-        - smtp_sender
+        - emailuser
+        - emailpass
+        - emailserver
+        - emailport
+        - emailsender
+
+        These can be provided as part of the payload as dict keys or as
+        attributes in the SimpleNamespace object passed in the config kwarg. The
+        config object will be checked first, and the payload items will override
+        it.
 
         Finally, the payload must also include the following keys (usually added
         in by a wrapping function):
@@ -905,12 +951,7 @@ def send_forgotpass_verification_email(payload,
                 'server_baseurl',
                 'password_forgot_url',
                 'verification_token',
-                'verification_expiry',
-                'smtp_sender',
-                'smtp_user',
-                'smtp_pass',
-                'smtp_server',
-                'smtp_port'):
+                'verification_expiry'):
 
         if key not in payload:
 
@@ -928,6 +969,48 @@ def send_forgotpass_verification_email(payload,
                     "Invalid forgot-password email request."
                 ])
             }
+
+    # now check for the SMTP server config items in the payload or in config
+    if config is not None:
+
+        emailsender = getattr(config, "emailsender", None)
+        emailuser = getattr(config, "emailuser", None)
+        emailpass = getattr(config, "emailpass", None)
+        emailserver = getattr(config, "emailserver", None)
+        emailport = getattr(config, "emailport", None)
+
+    # override with payload values
+    if 'emailsender' in payload:
+        emailsender = payload['emailsender']
+    if 'emailuser' in payload:
+        emailuser = payload['emailuser']
+    if 'emailpass' in payload:
+        emailpass = payload['emailpass']
+    if 'emailserver' in payload:
+        emailserver = payload['emailserver']
+    if 'emailport' in payload:
+        emailport = payload['emailport']
+
+    if (emailsender is None or
+        emailuser is None or
+        emailpass is None or
+        emailserver is None or
+        emailport is None):
+
+        LOGGER.error(
+            "[%s] Invalid email server settings "
+            "provided. Can't send an email." %
+            payload['reqid']
+        )
+        return {
+            'success':False,
+            'user_id':None,
+            'email_address':None,
+            'verifyemail_sent_datetime':None,
+            'messages':([
+                "Invalid email server settings provided. Can't send an email."
+            ])
+        }
 
     # this checks if the database connection is live
     currproc = mp.current_process()
@@ -1094,7 +1177,6 @@ def send_forgotpass_verification_email(payload,
         ip_address=ip_addr,
         user_email=payload['email_address'],
     )
-    sender = payload['smtp_sender']
     recipients = [user_info['email']]
     subject = FORGOTPASS_VERIFICATION_EMAIL_SUBJECT.format(
         server_name=payload['server_name']
@@ -1102,15 +1184,15 @@ def send_forgotpass_verification_email(payload,
 
     # send the email
     email_sent = send_email(
-        sender,
+        emailsender,
         subject,
         msgtext,
         recipients,
-        payload['smtp_server'],
-        payload['smtp_user'],
-        payload['smtp_pass'],
+        emailserver,
+        emailuser,
+        emailpass,
         payload['pii_salt'],
-        port=payload['smtp_port']
+        port=emailport
     )
 
     if email_sent:
