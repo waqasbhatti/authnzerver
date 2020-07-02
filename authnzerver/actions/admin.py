@@ -36,7 +36,8 @@ from ..permissions import pii_hash, load_permissions_json
 
 def list_users(payload,
                raiseonfail=False,
-               override_authdb_path=None):
+               override_authdb_path=None,
+               config=None):
     '''
     This lists users.
 
@@ -60,6 +61,11 @@ def list_users(payload,
 
     override_authdb_path : str or None
         If given as a str, is the alternative path to the auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -222,7 +228,8 @@ def list_users(payload,
 
 def get_user_by_email(payload,
                       raiseonfail=False,
-                      override_authdb_path=None):
+                      override_authdb_path=None,
+                      config=None):
     '''
     This gets a user's information using their email address.
 
@@ -246,6 +253,11 @@ def get_user_by_email(payload,
 
     override_authdb_path : str or None
         If given as a str, is the alternative path to the auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -395,7 +407,8 @@ def get_user_by_email(payload,
 def edit_user(payload,
               raiseonfail=False,
               override_permissions_json=None,
-              override_authdb_path=None):
+              override_authdb_path=None,
+              config=None):
     '''This edits users.
 
     Parameters
@@ -442,6 +455,11 @@ def edit_user(payload,
 
     override_authdb_path : str or None
         If given as a str, is the alternative path to the auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -866,7 +884,8 @@ def edit_user(payload,
 
 def internal_toggle_user_lock(payload,
                               raiseonfail=False,
-                              override_authdb_path=None):
+                              override_authdb_path=None,
+                              config=None):
     '''Locks/unlocks user accounts.
 
     This version of the function should only be run internally (i.e. not called
@@ -895,6 +914,11 @@ def internal_toggle_user_lock(payload,
 
     override_authdb_path : str or None
         If given as a str, is the alternative path to the auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -1098,7 +1122,8 @@ def internal_toggle_user_lock(payload,
 
 def toggle_user_lock(payload,
                      raiseonfail=False,
-                     override_authdb_path=None):
+                     override_authdb_path=None,
+                     config=None):
     '''Locks/unlocks user accounts.
 
     Can only be run by superusers and is suitable for use when called from a
@@ -1128,6 +1153,11 @@ def toggle_user_lock(payload,
 
     override_authdb_path : str or None
         If given as a str, is the alternative path to the auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------

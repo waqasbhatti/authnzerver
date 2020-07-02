@@ -249,7 +249,8 @@ def change_user_password(payload,
                          override_authdb_path=None,
                          raiseonfail=False,
                          min_pass_length=12,
-                         max_similarity=30):
+                         max_similarity=30,
+                         config=None):
     '''Changes the user's password.
 
     Parameters
@@ -284,6 +285,11 @@ def change_user_password(payload,
     max_similarity : int
         The maximum ratio required to fuzzy-match the input password against
         the server's domain name, the user's email, or their name.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -577,6 +583,7 @@ def create_new_user(
         max_similarity=30,
         override_authdb_path=None,
         raiseonfail=False,
+        config=None
 ):
     '''Makes a new user.
 
@@ -609,6 +616,11 @@ def create_new_user(
     max_similarity : int
         The maximum ratio required to fuzzy-match the input password against
         the server's domain name, the user's email, or their name.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -919,7 +931,8 @@ def create_new_user(
 
 def delete_user(payload,
                 raiseonfail=False,
-                override_authdb_path=None):
+                override_authdb_path=None,
+                config=None):
     '''Deletes a user.
 
     This can only be called by the user themselves or the superuser.
@@ -951,6 +964,11 @@ def delete_user(payload,
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -1166,7 +1184,8 @@ def verify_password_reset(payload,
                           raiseonfail=False,
                           override_authdb_path=None,
                           min_pass_length=12,
-                          max_similarity=30):
+                          max_similarity=30,
+                          config=None):
     '''
     Verifies a password reset request.
 
@@ -1199,6 +1218,11 @@ def verify_password_reset(payload,
     max_similarity : int
         The maximum ratio required to fuzzy-match the input password against
         the server's domain name, the user's email, or their name.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------

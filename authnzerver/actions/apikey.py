@@ -63,7 +63,8 @@ from .access import check_user_access
 def issue_apikey(payload,
                  raiseonfail=False,
                  override_authdb_path=None,
-                 override_permissions_json=None):
+                 override_permissions_json=None,
+                 config=None):
     '''Issues a new API key.
 
     Parameters
@@ -97,6 +98,11 @@ def issue_apikey(payload,
         If given as a str, is the alternative path to the permissions JSON to
         use. This is used to check if the user_id is allowed to actually request
         an API key.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -389,7 +395,8 @@ def issue_apikey(payload,
 def verify_apikey(payload,
                   raiseonfail=False,
                   override_authdb_path=None,
-                  override_permissions_json=None):
+                  override_permissions_json=None,
+                  config=None):
     '''Checks if an API key is valid.
 
     Parameters
@@ -415,6 +422,11 @@ def verify_apikey(payload,
         If given as a str, is the alternative path to the permissions JSON to
         use. This is used to check if the user_id is allowed to actually verify
         ("read") an API key.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -583,7 +595,8 @@ def verify_apikey(payload,
 def revoke_apikey(payload,
                   raiseonfail=False,
                   override_authdb_path=None,
-                  override_permissions_json=None):
+                  override_permissions_json=None,
+                  config=None):
     '''Revokes an API key.
 
     Parameters
@@ -612,6 +625,10 @@ def revoke_apikey(payload,
         use. This is used to check if the user_id is allowed to actually revoke
         ("delete") an API key.
 
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------

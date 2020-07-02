@@ -38,7 +38,8 @@ from .. import authdb
 def check_user_access(payload,
                       raiseonfail=False,
                       override_permissions_json=None,
-                      override_authdb_path=None):
+                      override_authdb_path=None,
+                      config=None):
     '''Checks for user access to a specified item based on a permissions policy.
 
     Parameters
@@ -79,6 +80,11 @@ def check_user_access(payload,
 
     override_authdb_path : str or None
         If given as a str, is the alternative path to the auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -338,7 +344,8 @@ def check_user_access(payload,
 def check_user_limit(payload,
                      raiseonfail=False,
                      override_permissions_json=None,
-                     override_authdb_path=None):
+                     override_authdb_path=None,
+                     config=None):
     '''Applies a specified limit to an item based on a permissions policy.
 
     Parameters
@@ -376,6 +383,11 @@ def check_user_limit(payload,
 
     override_authdb_path : str or None
         If given as a str, is the alternative path to the auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------

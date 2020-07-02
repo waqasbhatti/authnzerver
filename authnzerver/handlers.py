@@ -23,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 import json
 from datetime import datetime, timedelta
 import asyncio
+from functools import partial
 
 
 class FrontendEncoder(json.JSONEncoder):
@@ -196,21 +197,19 @@ class AuthHandler(tornado.web.RequestHandler):
             # inject the PII salt into the body of the request as well
             payload['body']['pii_salt'] = self.pii_salt
 
-            # inject the email settings into the body if an email function is
-            # called
-            if 'sendemail' in payload['request']:
-                payload['body']['smtp_sender'] = self.emailsender
-                payload['body']['smtp_user'] = self.emailuser
-                payload['body']['smtp_pass'] = self.emailpass
-                payload['body']['smtp_server'] = self.emailserver
-                payload['smtp_port'] = self.emailport
+            # inject the config object into the backend function call
+            # this passes along any secrets or settings from environ
+            # directly to those functions
+            backend_func = partial(
+                request_functions[payload['request']],
+                payload['body'],
+                config=self.config
+            )
 
             # run the function associated with the request type
             loop = tornado.ioloop.IOLoop.current()
             response = await loop.run_in_executor(
-                self.executor,
-                request_functions[payload['request']],
-                payload['body']
+                backend_func,
             )
 
             #

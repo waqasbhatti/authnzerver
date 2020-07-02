@@ -425,7 +425,8 @@ def send_email(
 
 def send_signup_verification_email(payload,
                                    raiseonfail=False,
-                                   override_authdb_path=None):
+                                   override_authdb_path=None,
+                                   config=None):
     '''Sends an account verification email.
 
     Parameters
@@ -465,6 +466,11 @@ def send_signup_verification_email(payload,
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -775,7 +781,8 @@ def send_signup_verification_email(payload,
 
 def set_user_emailaddr_verified(payload,
                                 raiseonfail=False,
-                                override_authdb_path=None):
+                                override_authdb_path=None,
+                                config=None):
     '''Sets the verification status of the email address of the user.
 
     This is called by the frontend after it verifies that the token challenge to
@@ -801,6 +808,11 @@ def set_user_emailaddr_verified(payload,
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -926,7 +938,8 @@ def set_user_emailaddr_verified(payload,
 
 def send_forgotpass_verification_email(payload,
                                        raiseonfail=False,
-                                       override_authdb_path=None):
+                                       override_authdb_path=None,
+                                       config=None):
     '''This actually sends the forgot password email.
 
     Parameters
@@ -965,6 +978,11 @@ def send_forgotpass_verification_email(payload,
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------

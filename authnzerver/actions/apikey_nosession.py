@@ -132,7 +132,8 @@ token_hasher = PasswordHasher()
 def issue_apikey(payload,
                  raiseonfail=False,
                  override_authdb_path=None,
-                 override_permissions_json=None):
+                 override_permissions_json=None,
+                 config=None):
     '''Issues a new API key.
 
     This version does not require a session.
@@ -179,6 +180,11 @@ def issue_apikey(payload,
         If given as a str, is the alternative path to the permissions JSON to
         use. This is used to check if the user_id is allowed to actually request
         an API key.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -403,7 +409,8 @@ def issue_apikey(payload,
 def verify_apikey(payload,
                   raiseonfail=False,
                   override_authdb_path=None,
-                  override_permissions_json=None):
+                  override_permissions_json=None,
+                  config=None):
     '''Checks if an API key is valid.
 
     This version does not require a session.
@@ -431,6 +438,11 @@ def verify_apikey(payload,
         If given as a str, is the alternative path to the permissions JSON to
         use. This is used to check if the user_id is allowed to actually verify
         ("read") an API key.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -599,7 +611,8 @@ def verify_apikey(payload,
 def revoke_apikey(payload,
                   raiseonfail=False,
                   override_authdb_path=None,
-                  override_permissions_json=None):
+                  override_permissions_json=None,
+                  config=None):
     '''Revokes an API key.
 
     This does not require a session.
@@ -630,6 +643,10 @@ def revoke_apikey(payload,
         use. This is used to check if the user_id is allowed to actually revoke
         ("delete") an API key.
 
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -748,7 +765,8 @@ def revoke_apikey(payload,
 def revoke_all_apikeys(payload,
                        raiseonfail=False,
                        override_authdb_path=None,
-                       override_permissions_json=None):
+                       override_permissions_json=None,
+                       config=None):
     '''Revokes an API key.
 
     This does not require a session, but does require a current valid API key to
@@ -780,6 +798,10 @@ def revoke_all_apikeys(payload,
         use. This is used to check if the user_id is allowed to actually revoke
         ("delete") an API key.
 
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -928,7 +950,8 @@ def revoke_all_apikeys(payload,
 def refresh_apikey(payload,
                    raiseonfail=False,
                    override_authdb_path=None,
-                   override_permissions_json=None):
+                   override_permissions_json=None,
+                   config=None):
     '''Refreshes a no-session API key.
 
     Requires a refresh token.
@@ -975,6 +998,10 @@ def refresh_apikey(payload,
         use. This is used to check if the user_id is allowed to actually refresh
         ("delete" then "create") an API key.
 
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------

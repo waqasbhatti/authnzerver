@@ -68,7 +68,8 @@ pass_hasher = PasswordHasher()
 
 def auth_session_new(payload,
                      override_authdb_path=None,
-                     raiseonfail=False):
+                     raiseonfail=False,
+                     config=None):
     '''Generates a new session token.
 
     Parameters
@@ -95,6 +96,11 @@ def auth_session_new(payload,
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -242,7 +248,8 @@ def auth_session_new(payload,
 
 def auth_session_set_extrainfo(payload,
                                raiseonfail=False,
-                               override_authdb_path=None):
+                               override_authdb_path=None,
+                               config=None):
     '''Adds info to the extra_info_json key of a session column.
 
     Parameters
@@ -267,6 +274,11 @@ def auth_session_set_extrainfo(payload,
 
     override_authdb_path : str or None
         The SQLAlchemy database URL to use if not using the default auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -417,6 +429,7 @@ def auth_session_exists(
         payload,
         override_authdb_path=None,
         raiseonfail=False,
+        config=None
 ):
     '''
     Checks if the provided session token exists.
@@ -441,6 +454,11 @@ def auth_session_exists(
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -589,6 +607,7 @@ def auth_session_delete(
         payload,
         override_authdb_path=None,
         raiseonfail=False,
+        config=None
 ):
     '''
     Removes a session token, effectively ending a session.
@@ -613,6 +632,11 @@ def auth_session_delete(
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -710,6 +734,7 @@ def auth_delete_sessions_userid(
         payload,
         override_authdb_path=None,
         raiseonfail=False,
+        config=None,
 ):
     '''Removes all session tokens corresponding to a user ID.
 
@@ -738,6 +763,11 @@ def auth_delete_sessions_userid(
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -853,6 +883,7 @@ def auth_kill_old_sessions(
         session_expiry_days=7,
         override_authdb_path=None,
         raiseonfail=False,
+        config=None,
 ):
     '''
     Kills all expired sessions.
@@ -869,6 +900,11 @@ def auth_kill_old_sessions(
 
     raiseonfail : bool
         If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -948,7 +984,8 @@ def auth_kill_old_sessions(
 
 def auth_password_check(payload,
                         override_authdb_path=None,
-                        raiseonfail=False):
+                        raiseonfail=False,
+                        config=None):
     '''This runs a password check given a session token and password.
 
     Used to gate high-security areas or operations that require re-verification
@@ -976,6 +1013,11 @@ def auth_password_check(payload,
     raiseonfail : bool
         If True, and something goes wrong, this will raise an Exception instead
         of returning normally with a failure condition.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -1252,7 +1294,8 @@ def auth_password_check(payload,
 
 def auth_password_check_nosession(payload,
                                   override_authdb_path=None,
-                                  raiseonfail=False):
+                                  raiseonfail=False,
+                                  config=None):
     '''This runs a password check given an email address and password.
 
     Used to gate high-security areas or operations that require re-verification
@@ -1282,6 +1325,11 @@ def auth_password_check_nosession(payload,
     raiseonfail : bool
         If True, and something goes wrong, this will raise an Exception instead
         of returning normally with a failure condition.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -1497,7 +1545,8 @@ def auth_password_check_nosession(payload,
 
 def auth_user_login(payload,
                     override_authdb_path=None,
-                    raiseonfail=False):
+                    raiseonfail=False,
+                    config=None):
     '''Logs a user in.
 
     Login flow for frontend:
@@ -1535,6 +1584,11 @@ def auth_user_login(payload,
     raiseonfail : bool
         If True, and something goes wrong, this will raise an Exception instead
         of returning normally with a failure condition.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -1902,7 +1956,8 @@ def auth_user_login(payload,
 
 def auth_user_logout(payload,
                      override_authdb_path=None,
-                     raiseonfail=False):
+                     raiseonfail=False,
+                     config=None):
     '''Logs out a user.
 
     Deletes the session token from the session store. On the next request
@@ -1933,6 +1988,11 @@ def auth_user_logout(payload,
     raiseonfail : bool
         If True, and something goes wrong, this will raise an Exception instead
         of returning normally with a failure condition.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
