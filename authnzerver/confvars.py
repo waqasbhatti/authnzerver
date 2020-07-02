@@ -264,12 +264,12 @@ CONF = {
         'env':'%s_PASSPOLICY' % ENVPREFIX,
         'cmdline':'passpolicy',
         'type':str,
-        'default':"min_length:12;max_unsafe_similarity:50",
+        'default':"min_pass_length:12;max_unsafe_similarity:50",
         'help':("This sets the minimum password length, "
-                "and the maximum allowed similarity "
+                "and the maximum allowed similarity (out of 100) "
                 "between the password and unsafe items like the "
                 "server's domain name, the user's own email address, "
-                "and their full name."),
+                "or their full name."),
         'readable_from_file':False,
         'postprocess_value':None,
     },

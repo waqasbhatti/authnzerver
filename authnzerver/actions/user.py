@@ -77,17 +77,20 @@ def validate_input_password(
         password,
         pii_salt,
         reqid,
-        min_length=12,
-        max_match_threshold=20
+        min_pass_length=12,
+        max_unsafe_similarity=20,
+        config=None
 ):
     '''Validates user input passwords.
 
-    1. must be at least min_length characters (we'll truncate the password at
-       1024 characters since we don't want to store entire novels)
+    Password rules are:
 
-    2. must not match within max_match_threshold of their email or full_name
+    1. must be at least min_pass_length characters (we'll truncate the password
+       at 1024 characters since we don't want to store entire novels)
 
-    3. must not match within max_match_threshold of the site's FQDN
+    2. must not match within max_unsafe_similarity of their email or full_name
+
+    3. must not match within max_unsafe_similarity of the site's FQDN
 
     4. must not have a single case-folded character take up more than 20% of the
        length of the password
@@ -117,12 +120,21 @@ def validate_input_password(
         The request ID associated with this password validation request. Used to
         track and correlate these requests in logs.
 
-    min_length : int
-        The minimum required character length of the password.
+    min_pass_length : int
+        The minimum required character length of the password. The value
+        provided in this kwarg will be overriden by the ``passpolicy`` attribute
+        in the config object if that is passed in as well.
 
-    max_match_threshold : int
+    max_unsafe_similarity : int
         The maximum ratio required to fuzzy-match the input password against
-        the server's domain name, the user's email, or their name.
+        the server's domain name, the user's email, or their name. The value
+        provided in this kwarg will be overriden by the ``passpolicy`` attribute
+        in the config object if that is passed in as well.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
 
     Returns
     -------
@@ -133,20 +145,38 @@ def validate_input_password(
 
     '''
 
+    # handle kwargs passed via config object
+    if config is not None:
+        passpolicy = getattr(config, "passpolicy", None)
+
+        if passpolicy:
+            try:
+                pass_minlen, pass_maxsim = passpolicy.split(';')
+                min_pass_length = int(pass_minlen.strip().split(':')[1])
+                max_unsafe_similarity = int(pass_maxsim.strip().split(':')[1])
+            except Exception:
+                LOGGER.error(
+                    "[%s] Invalid password policy could not be parsed: '%s'. "
+                    "Falling back to kwarg values."
+                    % (reqid, passpolicy)
+                )
+                pass
+
     messages = []
 
     # we'll ignore any repeated white space and fail immediately if the password
     # is all white space
-    if len(squeeze(password.strip())) < min_length:
+    if len(squeeze(password.strip())) < min_pass_length:
 
         LOGGER.warning('[%s] Password for new account '
                        'with email: %s is too short (%s chars < required %s).' %
                        (reqid,
                         pii_hash(email, pii_salt),
                         len(password),
-                        min_length))
+                        min_pass_length))
         messages.append('Your password is too short. '
-                        'It must have at least %s characters.' % min_length)
+                        'It must have at least %s characters.' %
+                        min_pass_length)
         passlen_ok = False
     else:
         passlen_ok = True
@@ -185,9 +215,9 @@ def validate_input_password(
     email_match = email_matcher.ratio()*100.0
     name_match = name_matcher.ratio()*100.0
 
-    fqdn_ok = fqdn_match < max_match_threshold
-    email_ok = email_match < max_match_threshold
-    name_ok = name_match < max_match_threshold
+    fqdn_ok = fqdn_match < max_unsafe_similarity
+    email_ok = email_match < max_unsafe_similarity
+    name_ok = name_match < max_unsafe_similarity
 
     if not fqdn_ok or not email_ok or not name_ok:
         LOGGER.warning('[%s] Password for new account '
@@ -249,7 +279,7 @@ def change_user_password(payload,
                          override_authdb_path=None,
                          raiseonfail=False,
                          min_pass_length=12,
-                         max_similarity=30,
+                         max_unsafe_similarity=30,
                          config=None):
     '''Changes the user's password.
 
@@ -280,11 +310,15 @@ def change_user_password(payload,
         If True, will raise an Exception if something goes wrong.
 
     min_pass_length : int
-        The minimum required character length of the password.
+        The minimum required character length of the password. The value
+        provided in this kwarg will be overriden by the ``passpolicy`` attribute
+        in the config object if that is passed in as well.
 
-    max_similarity : int
+    max_unsafe_similarity : int
         The maximum ratio required to fuzzy-match the input password against
-        the server's domain name, the user's email, or their name.
+        the server's domain name, the user's email, or their name. The value
+        provided in this kwarg will be overriden by the ``passpolicy`` attribute
+        in the config object if that is passed in as well.
 
     config : SimpleNamespace object or None
         An object containing systemwide config variables as attributes. This is
@@ -466,8 +500,9 @@ def change_user_password(payload,
         new_password,
         payload['pii_salt'],
         payload['reqid'],
-        min_length=min_pass_length,
-        max_match_threshold=max_similarity
+        min_pass_length=min_pass_length,
+        max_unsafe_similarity=max_unsafe_similarity,
+        config=config
     )
 
     if passok:
@@ -580,7 +615,7 @@ def change_user_password(payload,
 def create_new_user(
         payload,
         min_pass_length=12,
-        max_similarity=30,
+        max_unsafe_similarity=30,
         override_authdb_path=None,
         raiseonfail=False,
         config=None
@@ -613,7 +648,7 @@ def create_new_user(
     min_pass_length : int
         The minimum required character length of the password.
 
-    max_similarity : int
+    max_unsafe_similarity : int
         The maximum ratio required to fuzzy-match the input password against
         the server's domain name, the user's email, or their name.
 
@@ -768,8 +803,9 @@ def create_new_user(
         input_password,
         payload['pii_salt'],
         payload['reqid'],
-        min_length=min_pass_length,
-        max_match_threshold=max_similarity
+        min_pass_length=min_pass_length,
+        max_unsafe_similarity=max_unsafe_similarity,
+        config=config,
     )
 
     if not passok:
@@ -1184,7 +1220,7 @@ def verify_password_reset(payload,
                           raiseonfail=False,
                           override_authdb_path=None,
                           min_pass_length=12,
-                          max_similarity=30,
+                          max_unsafe_similarity=30,
                           config=None):
     '''
     Verifies a password reset request.
@@ -1215,7 +1251,7 @@ def verify_password_reset(payload,
     min_pass_length : int
         The minimum required character length of the password.
 
-    max_similarity : int
+    max_unsafe_similarity : int
         The maximum ratio required to fuzzy-match the input password against
         the server's domain name, the user's email, or their name.
 
@@ -1382,8 +1418,9 @@ def verify_password_reset(payload,
         new_password,
         payload['pii_salt'],
         payload['reqid'],
-        min_length=min_pass_length,
-        max_match_threshold=max_similarity
+        min_pass_length=min_pass_length,
+        max_unsafe_similarity=max_unsafe_similarity,
+        config=config,
     )
 
     if not passok:

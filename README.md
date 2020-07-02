@@ -110,7 +110,7 @@ services:
       AUTHNZERVER_SESSIONEXPIRY: 30
       AUTHNZERVER_USERLOCKTRIES: 10
       AUTHNZERVER_USERLOCKTIME: 3600
-      AUTHNZERVER_PASSPOLICY: "min_length:12;max_unsafe_similarity:50"
+      AUTHNZERVER_PASSPOLICY: "min_pass_length:12;max_unsafe_similarity:50"
       AUTHNZERVER_WORKERS: 4
       AUTHNZERVER_EMAILSERVER: "localhost"
       AUTHNZERVER_EMAILPORT: 25
@@ -260,7 +260,7 @@ AUTHNZERVER_USERLOCKTIME=3600
 # max_unsafe_similarity is the max allowed string similarity
 # between the password and unsafe items like the user's own name,
 # the server's domain name, or the user's email address
-AUTHNZERVER_PASSPOLICY: "min_length:12;max_unsafe_similarity:50"
+AUTHNZERVER_PASSPOLICY: "min_pass_length:12;max_unsafe_similarity:50"
 
 # permissions model JSON
 AUTHNZERVER_PERMISSIONS=path/to/default-permissions-model.json
