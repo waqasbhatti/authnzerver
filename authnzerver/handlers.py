@@ -209,6 +209,7 @@ class AuthHandler(tornado.web.RequestHandler):
             # run the function associated with the request type
             loop = tornado.ioloop.IOLoop.current()
             response = await loop.run_in_executor(
+                self.executor,
                 backend_func,
             )
 
@@ -329,12 +330,18 @@ class AuthHandler(tornado.web.RequestHandler):
 
         # look up the user ID using the email address
         loop = tornado.ioloop.IOLoop.current()
-        user_info = await loop.run_in_executor(
-            self.executor,
+
+        backend_func = partial(
             actions.get_user_by_email,
             {'email':payload['body']['email'],
              'reqid':payload['body']['reqid'],
-             'pii_salt':payload['body']['pii_salt']}
+             'pii_salt':payload['body']['pii_salt']},
+            config=self.config
+        )
+
+        user_info = await loop.run_in_executor(
+            self.executor,
+            backend_func
         )
 
         if not user_info['success']:
@@ -348,13 +355,19 @@ class AuthHandler(tornado.web.RequestHandler):
         else:
 
             # attempt to lock the user using actions.internal_toggle_user_lock
-            locked_info = await loop.run_in_executor(
-                self.executor,
+
+            backend_func = partial(
                 actions.internal_toggle_user_lock,
                 {'target_userid':user_info['user_info']['user_id'],
                  'action':'lock',
                  'reqid':payload['body']['reqid'],
-                 'pii_salt':payload['body']['pii_salt']}
+                 'pii_salt':payload['body']['pii_salt']},
+                config=self.config
+            )
+
+            locked_info = await loop.run_in_executor(
+                self.executor,
+                backend_func
             )
 
             if locked_info['success']:
@@ -409,12 +422,18 @@ class AuthHandler(tornado.web.RequestHandler):
         )
 
         loop = tornado.ioloop.IOLoop.current()
-        locked_info = await loop.run_in_executor(
-            self.executor,
+
+        backend_func = partial(
             actions.internal_toggle_user_lock,
             {'target_userid':user_id,
              'action':'unlock',
              'reqid':reqid,
-             'pii_salt':pii_salt}
+             'pii_salt':pii_salt},
+            config=self.config
+        )
+
+        locked_info = await loop.run_in_executor(
+            self.executor,
+            backend_func
         )
         return locked_info
