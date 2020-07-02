@@ -27,8 +27,8 @@ At a minimum, you must provide:
 
 - an SQLAlchemy database URL to indicate where the local authentication DB
   is. This should be in the form discussed in the `SQLAlchemy docs
-  <https://docs.sqlalchemy.org/en/latest/core/engines.html#database-urls>_ as an
-  environmental variable: ``AUTHNZERVER_AUTHDB`` or as a command-line option:
+  <https://docs.sqlalchemy.org/en/latest/core/engines.html#database-urls>`_ as
+  an environmental variable: ``AUTHNZERVER_AUTHDB`` or as a command-line option:
   ``--authdb``.
 
 If none of these required items are set, the authnzerver will not start.
