@@ -83,7 +83,7 @@ authnzrv --autosetup --basedir=$(PWD)
 If you're running it as a Docker container:
 
 ```bash
-docker run -p 13431:1341 -v $(PWD):/home/authnzerver/basedir \
+docker run -p 13431:13431 -v $(PWD):/home/authnzerver/basedir \
   --rm -it waqasbhatti/authnzerver:latest \
   --autosetup --basedir=/home/authnzerver/basedir
 ```
