@@ -440,8 +440,6 @@ def send_signup_verification_email(payload,
         emailport = payload['emailport']
 
     if (emailsender is None or
-        emailuser is None or
-        emailpass is None or
         emailserver is None or
         emailport is None):
 
@@ -992,8 +990,6 @@ def send_forgotpass_verification_email(payload,
         emailport = payload['emailport']
 
     if (emailsender is None or
-        emailuser is None or
-        emailpass is None or
         emailserver is None or
         emailport is None):
 

@@ -11,6 +11,7 @@ import ssl
 import time
 import textwrap
 import re
+from types import SimpleNamespace
 
 import py.path
 
@@ -269,6 +270,8 @@ def test_create_user_with_email(tmpdir):
         token_key
     )
 
+    # this uses the payload method of sending SMTP settings to the backend
+    # function
     verification_email_info = actions.send_signup_verification_email(
         {'email_address':'testuser@test.org',
          'session_token':session_token_info['session_token'],
@@ -278,11 +281,11 @@ def test_create_user_with_email(tmpdir):
          'account_verify_url':'/users/verify',
          'verification_token':verify_token,
          'verification_expiry':900,
-         'smtp_user':None,
-         'smtp_pass':None,
-         'smtp_server':'localhost',
-         'smtp_port':2587,
-         'smtp_sender':'Authnzerver <authnzerver@test.org>',
+         'emailuser':None,
+         'emailpass':None,
+         'emailserver':'localhost',
+         'emailport':2587,
+         'emailsender':'Authnzerver <authnzerver@test.org>',
          'reqid':1337,
          'pii_salt':'super-secret-salt'},
         raiseonfail=True,
@@ -371,6 +374,15 @@ def test_create_user_with_email(tmpdir):
         token_key
     )
 
+    # this uses the config object method of sending SMTP settings to the backend
+    # function
+    config_obj = SimpleNamespace()
+    config_obj.emailuser = None
+    config_obj.emailpass = None
+    config_obj.emailserver = 'localhost'
+    config_obj.emailport = 2587
+    config_obj.emailsender = 'Authnzerver <authnzerver@test.org>'
+
     forgotpass_email_info = actions.send_forgotpass_verification_email(
         {'email_address':'testuser@test.org',
          'session_token':session_token_info['session_token'],
@@ -379,15 +391,11 @@ def test_create_user_with_email(tmpdir):
          'password_forgot_url':'/password/reset-step1',
          'verification_token':forgotpass_token,
          'verification_expiry':900,
-         'smtp_user':None,
-         'smtp_pass':None,
-         'smtp_server':'localhost',
-         'smtp_port':2587,
-         'smtp_sender':'Authnzerver <authnzerver@test.org>',
          'reqid':1337,
          'pii_salt':'super-secret-salt'},
         raiseonfail=True,
-        override_authdb_path=test_authdb_url
+        override_authdb_path=test_authdb_url,
+        config=config_obj
     )
     assert forgotpass_email_info['success'] is True
     assert forgotpass_email_info['email_address'] == 'testuser@test.org'
