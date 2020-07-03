@@ -54,6 +54,7 @@ from .admin import (
 from .email import (
     send_signup_verification_email,
     set_user_emailaddr_verified,
+    set_user_email_sent,
     send_forgotpass_verification_email,
     send_email,
 )
@@ -97,6 +98,7 @@ __all__ = [
     'internal_toggle_user_lock',
     'send_signup_verification_email',
     'set_user_emailaddr_verified',
+    'set_user_email_sent',
     'send_forgotpass_verification_email',
     'send_email',
     'auth_session_new',

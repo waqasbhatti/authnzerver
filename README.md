@@ -9,10 +9,10 @@ authorization (authz) to other HTTP servers. It's built using
 [python-diskcache](http://www.grantjenks.com/docs/diskcache/), and
 [uvloop](https://github.com/MagicStack/uvloop).
 
-I wrote it to help with the login/logout/signup flows for the
-[LCC-Server](https://github.com/waqasbhatti/lcc-server) and extracted much of
-the code from there. It builds on the auth bits there and is eventually meant to
-replace them. It can do the following things:
+I wrote it to help with the login/logout/signup flows for the [Light Curve
+Collection Server](https://github.com/waqasbhatti/lcc-server) and extracted much
+of the code from there. It builds on the auth bits there and is eventually meant
+to replace them. It can do the following things:
 
 - Handle user sign-ups, logins, logouts, and locks/unlocks.
 - Handle user email verification, password changes, forgotten password
@@ -24,12 +24,6 @@ replace them. It can do the following things:
   of permissions and user roles, originally from the LCC-Server where this code
   was extracted from. A custom permissions policy can be specified as JSON.
 
-See
-[TODO.md](https://github.com/waqasbhatti/authnzerver/blob/master/docs/TODO.md) for
-features that are planned for the future. See
-[CHANGELOG.md](https://github.com/waqasbhatti/authnzerver/blob/master/CHANGELOG.md)
-for a version history.
-
 Authnzerver talks to a frontend server over HTTP. Communications are secured
 with symmetric encryption using the [cryptography](https://cryptography.io)
 package's [Fernet scheme](https://cryptography.io/en/latest/fernet/), so you'll
@@ -38,7 +32,13 @@ need a pre-shared key that both Authnzerver and your frontend server know.
 See [the HTTP API docs](https://authnzerver.readthedocs.io/en/latest/api.html)
 for details on how to call Authnzerver from a frontend service.
 
-More docs will be available at Authnzerver's (in-progress) [Read The
+See
+[TODO.md](https://github.com/waqasbhatti/authnzerver/blob/master/docs/TODO.md) for
+features that are planned for the future. See
+[CHANGELOG.md](https://github.com/waqasbhatti/authnzerver/blob/master/CHANGELOG.md)
+for a version history.
+
+More docs are available at Authnzerver's (in-progress) [Read The
 Docs](https://authnzerver.readthedocs.io/en/latest/) site.
 
 

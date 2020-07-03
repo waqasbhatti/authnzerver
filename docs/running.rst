@@ -19,7 +19,7 @@ provide its location with ``--envfile`` command-line parameter.
 At a minimum, you must provide:
 
 - a random pre-shared secret key as an environmental variable:
-  ``AUTHNZERVER_SECRETKEY`` or as an command-line option: ``--secret``.
+  ``AUTHNZERVER_SECRETKEY`` or as a command-line option: ``--secret``.
 
 - a random salt value for hashing personally identifiable information in the
   authnzerver logs as an environmental variable: ``AUTHNZERVER_PIISALT`` or as a
@@ -198,10 +198,9 @@ this file will be copied to the base directory you specify. Running the
 authnzerver with a ``--confvars=/path/to/authnzerver/basedir/confvars.py`` can
 be used to override the default config retrieval methods used by authnzerver.
 
-Please note, **YOU MUST NOT STORE ANY SECRETS IN THIS FILE**. It only defines
-which variables in the environment or the command-line parameters to use when
-retrieving secrets and other config items, as well as methods of retrieving
-them.
+**YOU MUST NOT STORE ANY SECRETS IN THIS FILE**. It only defines which variables
+in the environment or command-line parameters to use when retrieving secrets and
+other config items, as well as methods of retrieving them.
 
 Let's walk through some examples of customizing retrieval of a config parameter:
 the secret shared key that secures communications between authnzerver and a
