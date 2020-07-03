@@ -698,6 +698,7 @@ def create_new_user(
                 'user_email':None,
                 'user_id':None,
                 'send_verification':False,
+                'failure_reason':"invalid request",
                 'messages':["Invalid user creation request."],
             }
 
@@ -717,6 +718,7 @@ def create_new_user(
                 'user_email':None,
                 'user_id':None,
                 'send_verification':False,
+                'failure_reason':"invalid request",
                 'messages':["Invalid user creation request."]
             }
 
@@ -764,6 +766,7 @@ def create_new_user(
             'user_email':None,
             'user_id':None,
             'send_verification':False,
+            'failure_reason':"invalid email",
             'messages':["The email address provided doesn't "
                         "seem to be a valid email address and cannot be used "
                         "to sign up for an account on this server."]
@@ -824,6 +827,7 @@ def create_new_user(
             'user_email':email,
             'user_id':None,
             'send_verification':False,
+            'failure_reason':"invalid password",
             'messages':messages
         }
 
@@ -939,6 +943,7 @@ def create_new_user(
             'user_email':rows['email'],
             'user_id':rows['user_id'],
             'send_verification':resend_verification,
+            'failure_reason':"user exists",
             'messages':messages
         }
 
@@ -961,6 +966,7 @@ def create_new_user(
             'user_email':None,
             'user_id':None,
             'send_verification':False,
+            'failure_reason':"DB issue with user creation",
             'messages':messages
         }
 
@@ -972,6 +978,10 @@ def delete_user(payload,
     '''Deletes a user.
 
     This can only be called by the user themselves or the superuser.
+
+    FIXME: does this actually check if it's called by the right user?
+
+    FIXME: add check_permissions to this to make more robust
 
     This will also immediately invalidate all sessions corresponding to the
     target user.
