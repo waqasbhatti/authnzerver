@@ -98,8 +98,9 @@ request_functions = {
     'user-lock':actions.toggle_user_lock,
     # email actions
     'user-sendemail-signup':actions.send_signup_verification_email,
-    'user-set-emailverified':actions.set_user_emailaddr_verified,
     'user-sendemail-forgotpass':actions.send_forgotpass_verification_email,
+    'user-set-emailverified':actions.set_user_emailaddr_verified,
+    'user-set-emailsent':actions.set_user_email_sent,
     # apikey actions
     'apikey-new':actions.issue_apikey,
     'apikey-verify':actions.verify_apikey,

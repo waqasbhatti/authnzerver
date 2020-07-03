@@ -497,7 +497,7 @@ Returns a ``response`` with the following items if successful:
 
 - ``email_address`` (str): the email address the email was sent to
 
-- ``verifyemail_sent_datetime`` (str): the UTC datetime the email was sent on in
+- ``emailverify_sent_datetime`` (str): the UTC datetime the email was sent on in
   ISO format
 
 ``user-sendemail-forgotpass``: Send a verification email to a user who forgot their password
@@ -534,7 +534,7 @@ Returns a ``response`` with the following items if successful:
 
 - ``email_address`` (str): the email address the email was sent to
 
-- ``forgotemail_sent_datetime`` (str): the UTC datetime the email was sent on in
+- ``emailforgotpass_sent_datetime`` (str): the UTC datetime the email was sent on in
   ISO format
 
 ``user-set-emailverified``: Set the "verified" flag for a user completing sign-up
@@ -554,8 +554,39 @@ Returns a ``response`` with the following items if successful:
 
 - ``is_active`` (bool): True if the user is successfully tagged as verified.
 
-- ``forgotemail_sent_datetime`` (str): the UTC datetime the email was sent on in
-  ISO format
+- ``emailverify_sent_datetime`` (str): the UTC datetime the email was sent
+  on in ISO format
+
+``user-set-emailsent``: Set the sent datetime for a user sign-up or forgot-pass email
+-------------------------------------------------------------------------------------
+
+When some other way of emailing the user, external to authnzerver, is used to
+notify them about a signup verification or a forgot-password challenge, use this
+API call to set the corresponding time at which the emails were sent. This lets
+it do the right thing if someone tries to sign up for an account with the same
+email address later.
+
+Requires the following ``body`` items in a request:
+
+- ``email`` (str): the email address of the new user that has completed sign-up
+  and the verification token challenge.
+
+- ``email_type`` (str): either "signup" or "forgotpass".
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_id`` (int): the user ID of the newly signed-up user the email was sent
+  to
+
+- ``user_role`` (str): the user role of the newly signed-up user
+
+- ``is_active`` (bool): True if the user is successfully tagged as verified.
+
+- ``emailverify_sent_datetime`` (str): the UTC datetime the email was sent
+  on in ISO format
+
+- ``emailforgotpass_sent_datetime`` (str): the UTC datetime the email was sent
+  on in ISO format
 
 
 API key actions

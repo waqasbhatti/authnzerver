@@ -375,7 +375,7 @@ def send_signup_verification_email(payload,
 
     dict
         Returns a dict containing the user_id, email_address, and the
-        verifyemail_sent_datetime value if email was sent successfully.
+        emailverify_sent_datetime value if email was sent successfully.
 
     '''
 
@@ -388,7 +388,7 @@ def send_signup_verification_email(payload,
                 'success':False,
                 'user_id':None,
                 'email_address':None,
-                'verifyemail_sent_datetime':None,
+                'emailverify_sent_datetime':None,
                 'messages':["Invalid verify email request."],
             }
 
@@ -412,7 +412,7 @@ def send_signup_verification_email(payload,
                 'success':False,
                 'user_id':None,
                 'email_address':None,
-                'verifyemail_sent_datetime':None,
+                'emailverify_sent_datetime':None,
                 'messages':([
                     "Invalid verify email request."
                 ])
@@ -452,7 +452,7 @@ def send_signup_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'verifyemail_sent_datetime':None,
+            'emailverify_sent_datetime':None,
             'messages':([
                 "Invalid email server settings provided. Can't send an email."
             ])
@@ -475,7 +475,7 @@ def send_signup_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'verifyemail_sent_datetime':None,
+            'emailverify_sent_datetime':None,
             'messages':([
                 "Not allowed to send an email verification request."
             ])
@@ -533,7 +533,7 @@ def send_signup_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'verifyemail_sent_datetime':None,
+            'emailverify_sent_datetime':None,
             'messages':([
                 "Invalid verify email request."
             ])
@@ -556,7 +556,7 @@ def send_signup_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'verifyemail_sent_datetime':None,
+            'emailverify_sent_datetime':None,
             'messages':([
                 "Not sending an verify email request to an existing user."
             ])
@@ -587,7 +587,7 @@ def send_signup_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'verifyemail_sent_datetime':None,
+            'emailverify_sent_datetime':None,
             'messages':([
                 "Invalid verify email request."
             ])
@@ -652,7 +652,7 @@ def send_signup_verification_email(payload,
         emailverify_sent_datetime = datetime.utcnow()
 
         # finally, we'll update the users table with the actual
-        # verifyemail_sent_datetime if sending succeeded.
+        # emailverify_sent_datetime if sending succeeded.
         upd = users.update(
         ).where(
             users.c.user_id == payload['created_info']['user_id']
@@ -681,7 +681,7 @@ def send_signup_verification_email(payload,
             'success':True,
             'user_id':user_info['user_id'],
             'email_address':user_info['email'],
-            'verifyemail_sent_datetime':emailverify_sent_datetime,
+            'emailverify_sent_datetime':emailverify_sent_datetime,
             'messages':([
                 "Verify email sent successfully."
             ])
@@ -704,7 +704,7 @@ def send_signup_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'verifyemail_sent_datetime':None,
+            'emailverify_sent_datetime':None,
             'messages':([
                 "Could not send email for the verify email request."
             ])
@@ -864,6 +864,166 @@ def set_user_emailaddr_verified(payload,
         }
 
 
+def set_user_email_sent(payload,
+                        raiseonfail=False,
+                        override_authdb_path=None,
+                        config=None):
+    '''Sets the verify/forgot-password email sent time of the newly created user.
+
+    This is useful when some other way of emailing the user to verify their sign
+    up or their password forgot request is used, external to authnzerver. Use
+    this function to let the authnzerver know that an email has been sent so it
+    knows the correct move if someone tries to sign up for an account with the
+    same email address later.
+
+    Parameters
+    ----------
+
+    payload : dict
+        This is a dict with the following key:
+
+        - email, str
+        - email_type, str: one of "signup", "forgotpass"
+
+        Finally, the payload must also include the following keys (usually added
+        in by a wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing the email address and
+        email*_sent_datetime values if the sent-email notification was
+        successfully set.
+
+    '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'messages':["Invalid email sent notification request."],
+            }
+
+    for key in ('email','email_type'):
+        if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid email sent notification request, missing %s.' %
+                (payload['reqid'], key)
+            )
+
+            return {
+                'success':False,
+                'messages':["Invalid email sent notification request."]
+            }
+
+    # this checks if the database connection is live
+    currproc = mp.current_process()
+    engine = getattr(currproc, 'authdb_engine', None)
+
+    if override_authdb_path:
+        currproc.auth_db_path = override_authdb_path
+
+    if not engine:
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            authdb.get_auth_db(
+                currproc.auth_db_path,
+                echo=raiseonfail
+            )
+        )
+
+    users = currproc.authdb_meta.tables['users']
+
+    email_sent_datetime = datetime.utcnow()
+
+    if payload["email_type"] == "signup":
+        update_col = "emailverify_sent_datetime"
+    elif payload["email_type"] == "forgotpass":
+        update_col = "emailforgotpass_sent_datetime"
+
+    # update the table for this user
+    upd = users.update(
+    ).where(
+        users.c.email == payload['email']
+    ).values({
+        update_col:email_sent_datetime,
+    })
+    result = currproc.authdb_conn.execute(upd)
+
+    sel = select([
+        users.c.user_id,
+        users.c.is_active,
+        users.c.user_role,
+        users.c.email,
+        users.c.emailverify_sent_datetime,
+        users.c.emailforgotpass_sent_datetime,
+    ]).select_from(users).where(
+        (users.c.email == payload['email'])
+    )
+    result = currproc.authdb_conn.execute(sel)
+    rows = result.fetchone()
+    result.close()
+
+    if rows:
+
+        LOGGER.info(
+            '[%s] Email sent notification request succeeded for '
+            'user_id: %s, email: %s, role: %s, is_active: %s.' %
+            (payload['reqid'],
+             pii_hash(rows['user_id'], payload['pii_salt']),
+             pii_hash(payload['email'], payload['pii_salt']),
+             pii_hash(rows['user_role'], payload['pii_salt']),
+             rows['is_active'])
+        )
+
+        return {
+            'success':True,
+            'email':rows['email'],
+            'emailverify_sent_datetime':rows['emailverify_sent_datetime'],
+            'emailforgotpass_sent_datetime':(
+                rows['emailforgotpass_sent_datetime']
+            ),
+            'user_id':rows['user_id'],
+            'is_active':rows['is_active'],
+            'user_role':rows['user_role'],
+            'messages':["Email sent notification request succeeded."]
+        }
+
+    else:
+
+        LOGGER.error(
+            '[%s] Email sent notification request failed for '
+            'email: %s.'
+            'The database rows corresponding to '
+            'the user could not be updated.' %
+            (payload['reqid'],
+             pii_hash(rows['user_id'], payload['pii_salt']))
+        )
+
+        return {
+            'success':False,
+            'messages':["Email sent notification request failed."]
+        }
+
+
 ##############################
 ## FORGOT PASSWORD HANDLING ##
 ##############################
@@ -926,7 +1086,7 @@ def send_forgotpass_verification_email(payload,
 
     dict
         Returns a dict containing the user_id, email_address, and the
-        forgotemail_sent_datetime value if email was sent successfully.
+        emailforgotpass_sent_datetime value if email was sent successfully.
 
     '''
 
@@ -939,7 +1099,7 @@ def send_forgotpass_verification_email(payload,
                 'success':False,
                 'user_id':None,
                 'email_address':None,
-                'forgotemail_sent_datetime':None,
+                'emailforgotpass_sent_datetime':None,
                 'messages':["Invalid forgot-password email request."],
             }
 
@@ -962,7 +1122,7 @@ def send_forgotpass_verification_email(payload,
                 'success':False,
                 'user_id':None,
                 'email_address':None,
-                'forgotemail_sent_datetime':None,
+                'emailforgotpass_sent_datetime':None,
                 'messages':([
                     "Invalid forgot-password email request."
                 ])
@@ -1002,7 +1162,7 @@ def send_forgotpass_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'verifyemail_sent_datetime':None,
+            'emailforgotpass_sent_datetime':None,
             'messages':([
                 "Invalid email server settings provided. Can't send an email."
             ])
@@ -1059,7 +1219,7 @@ def send_forgotpass_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'forgotemail_sent_datetime':None,
+            'emailforgotpass_sent_datetime':None,
             'messages':([
                 "Invalid password reset email request."
             ])
@@ -1097,7 +1257,7 @@ def send_forgotpass_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'forgotemail_sent_datetime':None,
+            'emailforgotpass_sent_datetime':None,
             'messages':([
                 "Invalid password reset email request."
             ])
@@ -1127,7 +1287,7 @@ def send_forgotpass_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'verifyemail_sent_datetime':None,
+            'emailforgotpass_sent_datetime':None,
             'messages':([
                 "Invalid verification email request."
             ])
@@ -1196,7 +1356,7 @@ def send_forgotpass_verification_email(payload,
         emailforgotpass_sent_datetime = datetime.utcnow()
 
         # finally, we'll update the users table with the actual
-        # verifyemail_sent_datetime if sending succeeded.
+        # emailforgotpass_sent_datetime if sending succeeded.
         upd = users.update(
         ).where(
             users.c.is_active.is_(True)
@@ -1222,7 +1382,7 @@ def send_forgotpass_verification_email(payload,
             'success':True,
             'user_id':user_info['user_id'],
             'email_address':user_info['email'],
-            'forgotemail_sent_datetime':emailforgotpass_sent_datetime,
+            'emailforgotpass_sent_datetime':emailforgotpass_sent_datetime,
             'messages':([
                 "Password reset request sent successfully to %s"
                 % recipients
@@ -1245,7 +1405,7 @@ def send_forgotpass_verification_email(payload,
             'success':False,
             'user_id':None,
             'email_address':None,
-            'verifyemail_sent_datetime':None,
+            'emailforgotpass_sent_datetime':None,
             'messages':([
                 "Could not send email to %s for "
                 "the user password reset request."
