@@ -301,7 +301,8 @@ def main():
     # get any additional hosts to allow from the config
     config_allowed_hosts = loaded_config.allowedhosts.split(';')
     for h in config_allowed_hosts:
-        allowed_hosts.add(r"%s" % h.replace('.',r'\.'))
+        if len(h) > 0:
+            allowed_hosts.add(r"%s" % h.replace('.',r'\.'))
 
     allowed_hosts_regex = r"(%s)" % '|'.join(allowed_hosts)
     loaded_config.allowed_hosts_regex = re.compile(allowed_hosts_regex)
