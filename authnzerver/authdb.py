@@ -109,6 +109,10 @@ Users = Table(
     # FIXME: can we use this for throttling login attempts without leaking info?
     Column('failed_login_tries', Integer(), default=0),
 
+    # this contains any extra information required for the user like their
+    # address, URL of their avatar PNG, etc, as JSON
+    Column('extra_info', JSON(none_as_null=True)),
+
     Column('created_on', DateTime(),
            default=datetime.utcnow,
            nullable=False,index=True),
