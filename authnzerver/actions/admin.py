@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 
 import multiprocessing as mp
 
-from sqlalchemy import select, asc
+from sqlalchemy import select, asc, column
 
 from .. import authdb
 from .session import auth_session_exists
@@ -38,8 +38,9 @@ def list_users(payload,
                raiseonfail=False,
                override_authdb_path=None,
                config=None):
-    '''
-    This lists users.
+    '''This lists users.
+
+    FIXME: this should have permissions enabled
 
     Parameters
     ----------
@@ -48,7 +49,6 @@ def list_users(payload,
         This is the input payload dict. Required items:
 
         - user_id: int or None. If None, all users will be returned
-
         In addition to these items received from an authnzerver client, the
         payload must also include the following keys (usually added in by a
         wrapping function):
@@ -144,6 +144,7 @@ def list_users(payload,
                 users.c.last_login_success,
                 users.c.created_on,
                 users.c.user_role,
+                users.c.extra_info,
             ]).order_by(
                 asc(users.c.user_id)
             ).select_from(users)
@@ -160,6 +161,7 @@ def list_users(payload,
                 users.c.last_login_success,
                 users.c.created_on,
                 users.c.user_role,
+                users.c.extra_info,
             ]).order_by(
                 asc(users.c.user_id)
             ).select_from(users).where(
@@ -292,7 +294,7 @@ def get_user_by_email(payload,
 
         LOGGER.error(
             '[%s] Invalid user lookup request, missing %s.' %
-            (payload['reqid'], 'user_id')
+            (payload['reqid'], 'email')
         )
 
         return {
@@ -334,6 +336,7 @@ def get_user_by_email(payload,
             users.c.last_login_success,
             users.c.created_on,
             users.c.user_role,
+            users.c.extra_info,
         ]).order_by(
             asc(users.c.user_id)
         ).select_from(users).where(
@@ -388,6 +391,222 @@ def get_user_by_email(payload,
             (payload['reqid'],
              pii_hash(payload['email'],
                       payload['pii_salt']), e)
+        )
+
+        if raiseonfail:
+            raise
+
+        return {
+            'success':False,
+            'user_info':None,
+            'messages':["User look up failed."],
+        }
+
+
+def lookup_users(payload,
+                 raiseonfail=False,
+                 override_authdb_path=None,
+                 config=None):
+    '''This looks up users by a given property.
+
+    FIXME: this should have permissions enabled.
+
+    Valid properties are all the columns in the users table, except for the
+    password column.
+
+    Parameters
+    ----------
+
+    payload : dict
+        This is the input payload dict. Required items:
+
+        - by (str): the property column to use to look up the user by
+
+        - match (object): the required value of the property. Note that in most
+          cases, this will be coerced to a string to compare it to the database
+          value.
+
+        If by == 'extra_info', then match must be a dict of the form:
+
+            {'extra_info_key': extra_info_value}
+
+        to match one or more keys inside the extra_info JSON column to the
+        specified value.
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
+
+    Returns
+    -------
+
+    dict
+        The dict returned is of the form::
+
+            {'success': True or False,
+             'user_info': a user info dict,
+             'messages': list of str messages if any}
+
+        The user info dict will contain the following items::
+
+            {'user_id','system_id', 'full_name', 'email',
+             'is_active','created_on','user_role',
+             'last_login_try','last_login_success'}
+
+    '''
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["Invalid user info request."],
+            }
+
+    for key in ("by", "match"):
+        if key not in payload:
+            LOGGER.error(
+                '[%s] Invalid user lookup request, missing %s.' %
+                (payload['reqid'], key)
+            )
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["invalid match condition provided."],
+            }
+
+    lookup_by = payload['by']
+    lookup_column = column(lookup_by)
+    lookup_match = payload['match']
+
+    if isinstance(lookup_match, dict) and lookup_by != "extra_info":
+        LOGGER.error(
+            '[%s] Invalid user lookup request, '
+            'extra_info selector must provide a dict.' %
+            (payload['reqid'],)
+        )
+        return {
+            'success':False,
+            'user_info':None,
+            'messages':["invalid match condition provided."],
+        }
+
+    try:
+
+        # this checks if the database connection is live
+        currproc = mp.current_process()
+        engine = getattr(currproc, 'authdb_engine', None)
+
+        if override_authdb_path:
+            currproc.auth_db_path = override_authdb_path
+
+        if not engine:
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
+                authdb.get_auth_db(
+                    currproc.auth_db_path,
+                    echo=raiseonfail
+                )
+            )
+
+        users = currproc.authdb_meta.tables['users']
+
+        sel = select([
+            users.c.user_id,
+            users.c.system_id,
+            users.c.full_name,
+            users.c.email,
+            users.c.email_verified,
+            users.c.is_active,
+            users.c.last_login_try,
+            users.c.last_login_success,
+            users.c.failed_login_tries,
+            users.c.created_on,
+            users.c.last_updated,
+            users.c.user_role,
+            users.c.extra_info,
+            users.c.emailverify_sent_datetime,
+            users.c.emailforgotpass_sent_datetime,
+            users.c.emailchangepass_sent_datetime,
+        ]).order_by(
+            asc(users.c.user_id)
+        ).select_from(users)
+
+        if isinstance(lookup_match, dict) and lookup_by == "extra_info":
+            for key, val in lookup_match.items():
+                # FIXME: check if this is required in Postgres
+                # FIXME: this appears to be required in SQLite
+                if 'sqlite:///' in currproc.auth_db_path:
+                    sel = sel.where(
+                        users.c.extra_info[key].as_string() == str(val)
+                    )
+                else:
+                    sel = sel.where(
+                        users.c.extra_info[key] == val
+                    )
+
+        else:
+            sel = sel.where(
+                lookup_column == lookup_match
+            )
+
+        result = currproc.authdb_conn.execute(sel)
+        rows = result.fetchall()
+        result.close()
+
+        try:
+
+            serialized_result = [dict(x) for x in rows]
+
+            LOGGER.info(
+                "[%s] User lookup request succeeded." %
+                payload['reqid']
+            )
+            return {
+                'success':True,
+                'user_info':serialized_result,
+                'messages':["User look up successful."],
+            }
+
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] User lookup request failed because of %s." %
+                (payload['reqid'], str(e))
+            )
+
+            if raiseonfail:
+                raise
+
+            return {
+                'success':False,
+                'user_info':None,
+                'messages':["User look up failed."],
+            }
+
+    except Exception as e:
+
+        LOGGER.error(
+            "[%s] User lookup request failed because of %s." %
+            (payload['reqid'], str(e))
         )
 
         if raiseonfail:

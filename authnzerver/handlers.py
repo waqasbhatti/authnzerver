@@ -93,6 +93,7 @@ request_functions = {
     'user-delete':actions.delete_user,
     'user-list':actions.list_users,
     'user-lookup-email':actions.get_user_by_email,
+    'user-lookup-match':actions.lookup_users,
     'user-edit':actions.edit_user,
     'user-resetpass':actions.verify_password_reset,
     'user-lock':actions.toggle_user_lock,

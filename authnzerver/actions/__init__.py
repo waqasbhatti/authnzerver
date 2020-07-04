@@ -47,6 +47,7 @@ from .admin import (
     list_users,
     edit_user,
     get_user_by_email,
+    lookup_users,
     toggle_user_lock,
     internal_toggle_user_lock,
 )
@@ -94,6 +95,7 @@ __all__ = [
     'list_users',
     'edit_user',
     'get_user_by_email',
+    'lookup_users',
     'toggle_user_lock',
     'internal_toggle_user_lock',
     'send_signup_verification_email',

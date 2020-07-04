@@ -326,7 +326,8 @@ Requires the following ``body`` items in a request:
 - ``user_info`` (list of dicts): a list containing all user info as a dict per
   user. Each dict has the following items of information as dict keys:
   ``user_id``, ``system_id``, ``full_name``, ``email``, ``is_active``,
-  ``created_on``, ``user_role``, ``last_login_try``, ``last_login_success``.
+  ``created_on``, ``user_role``, ``last_login_try``, ``last_login_success``,
+  ``extra_info``.
 
 ``user-lookup-email``: Look up a user's info given their email address
 ----------------------------------------------------------------------
@@ -340,7 +341,29 @@ Requires the following ``body`` items in a request:
 - ``user_info`` (dict): a dict with the following items of information for the
   user as dict keys: ``user_id``, ``system_id``, ``full_name``, ``email``,
   ``is_active``, ``created_on``, ``user_role``, ``last_login_try``,
-  ``last_login_success``.
+  ``last_login_success``, ``extra_info``.
+
+``user-lookup-match``: Look up users by matching on a property
+--------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``by`` (str): the property to look up users by. This must be one of the
+  following: ``user_id``, ``system_id``, ``full_name``, ``email``,
+  ``is_active``, ``created_on``, ``user_role``, ``last_login_try``,
+  ``last_login_success``, ``extra_info``.
+
+- ``match`` (str or dict): the value to match against the stored value of the
+  property. If this is a dict, then ``by`` must be equal to ``extra_info``. The
+  dict must be of the form ``{'key':'value'}`` to match one of the JSON items in
+  the ``extra_info`` column of the ``users`` table.
+
+ Returns a ``response`` with the following items if successful:
+
+- ``user_info`` (dict): a list of dicts with the following items of information
+  for each user as dict keys: ``user_id``, ``system_id``, ``full_name``,
+  ``email``, ``is_active``, ``created_on``, ``user_role``, ``last_login_try``,
+  ``last_login_success``, ``extra_info``.
 
 ``user-edit``: Edit a user's properties
 ---------------------------------------
