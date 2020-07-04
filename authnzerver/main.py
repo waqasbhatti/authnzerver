@@ -395,13 +395,28 @@ def main():
     # running these again won't do anything if they're set up already
     try:
 
-        authdb_module.initial_authdb_inserts(
+        admin_user, admin_pass = authdb_module.initial_authdb_inserts(
             auth_database_url,
             permissions_json=permissions
         )
         LOGGER.warning("Auth DB at the provided URL was not previously "
                        "set up for use with authnzerver and has "
                        "been (re)initialized.")
+        creds = os.path.join(basedir,
+                             '.authnzerver-admin-credentials')
+        if os.path.exists(creds):
+            LOGGER.warning("Admin credentials file already exists. "
+                           "Writing to a new file...")
+            creds = os.path.join(basedir,
+                                 '.authnzerver-admin-credentials-%s'
+                                 % int(time.time()))
+        with open(creds,'w') as outfd:
+            outfd.write('%s %s\n' % (admin_user, admin_pass))
+            os.chmod(creds, 0o100400)
+
+        LOGGER.warning('Generated random admin password, '
+                       'credentials written to: %s\n' %
+                       creds)
 
     except IntegrityError:
 

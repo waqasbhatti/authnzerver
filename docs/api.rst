@@ -358,9 +358,9 @@ Requires the following ``body`` items in a request:
   dict must be of the form ``{'key':'value'}`` to match one of the JSON items in
   the ``extra_info`` column of the ``users`` table.
 
- Returns a ``response`` with the following items if successful:
+Returns a ``response`` with the following items if successful:
 
-- ``user_info`` (dict): a list of dicts with the following items of information
+- ``user_info`` (list): a list of dicts with the following items of information
   for each user as dict keys: ``user_id``, ``system_id``, ``full_name``,
   ``email``, ``is_active``, ``created_on``, ``user_role``, ``last_login_try``,
   ``last_login_success``, ``extra_info``.
