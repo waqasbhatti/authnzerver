@@ -5,8 +5,9 @@ This page describes the API of the Authnzerver.
 
 All requests are composed of a Python dict containing request parameters. This
 is encoded to JSON, encrypted with the pre-shared key, base64-encoded, and then
-POSTed to the Authnzerver. The response is a base64-encoded string that must be
-base64-decoded, decrypted, and deserialized from JSON into a dict.
+POSTed to the Authnzerver's ``/`` endpoint. The response is a base64-encoded
+string that must be base64-decoded, decrypted, and deserialized from JSON into a
+dict.
 
 A request is of the form::
 
@@ -22,7 +23,29 @@ A response, when decrypted and deserialized to a dict, is of the form::
    'messages': a list of str containing informative/warning/error messages,
    'reqid': returns the same request ID provided to the authnzerver}
 
-The sections below describe the various available request types, how to
+If the 'reqid' item in the authnzervr response dict doesn't match what you sent
+to the authnzerver, the response from the authnzerver MUST be rejected. A good
+way to populate 'reqid' in the authnzerver request dict is to generate one right
+at the beginning of the frontend server's HTTP response cycle, so it can remain
+the same between several authnzerver action requests. This allows you to track
+all authnzerver actions pertaining to a single response processing cycle of the
+frontend server.
+
+The 'messages' item contains a list of messages that MAY be shared with a client
+of the frontend user to inform them about the state of the action request.
+
+If the requested action failed, a 'failure_response' item will be present in the
+response dict. This SHOULD NOT be shared with a client of the frontend server
+because it likely contains the exact reason why something went wrong. Use these
+only to decide what to do on the frontend server.
+
+If you share the 'failure_reason' item with a client of the frontend user, this
+may lead to an information leak when ambiguity is better, e.g. in the case of a
+password check, you usually don't want to disclose if the user account doesn't
+exist or the password was incorrect, instead responding with something like
+"Sorry, that username/password combination didn't work. Please try again."
+
+The sections below describe the various available action request types, how to
 construct the ``body`` dict, and what to expect in the ``response`` dict.
 
 API Examples
@@ -628,7 +651,7 @@ Requires the following ``body`` items in a request:
 - ``subject`` (list of str or str): the specific API endpoint(s) this API key is
   being issued for (usually a list of URIs for specific service endpoints)
 
--``apiversion`` (int): the version of the API this key is valid for
+- ``apiversion`` (int): the version of the API this key is valid for
 
 - ``expires_days`` (int): the number of days that the API key will be valid for
 

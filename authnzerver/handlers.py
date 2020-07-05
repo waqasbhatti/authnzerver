@@ -273,6 +273,11 @@ class AuthHandler(tornado.web.RequestHandler):
                              "messages": response['messages'],
                              "reqid":reqid}
 
+            # add the failure reason as a top level item in the response dict
+            # if the action failed
+            if not response['success'] and 'failure_reason' in response:
+                response_dict['failure_reason'] = response['failure_reason']
+
             encrypted_base64 = encrypt_message(
                 response_dict,
                 self.fernet_secret
