@@ -328,7 +328,7 @@ def auth_user_login(payload,
 
                     pass_ok = pass_hasher.verify(
                         user_info['password'],
-                        payload['password'][:1024],
+                        payload['password'][:256],
                     )
 
                 except Exception as e:
@@ -400,7 +400,7 @@ def auth_user_login(payload,
 
                     # rehash and store the new password
                     rehashed_password = pass_hasher.hash(
-                        payload['password'][:1024]
+                        payload['password'][:256]
                     )
 
                     # update the table for this user

@@ -122,22 +122,25 @@ def auth_session_new(payload,
                 'messages':["Invalid session initiation request."],
             }
 
-    # fail immediately if the required payload items are not present
-    for item in ('ip_address',
-                 'user_agent',
-                 'user_id',
-                 'expires',
-                 'extra_info_json'):
+    # fail immediately if the required payload keys are not present
+    for key in ('ip_address',
+                'user_agent',
+                'user_id',
+                'expires',
+                'extra_info_json'):
 
-        if item not in payload:
+        if key not in payload:
 
             LOGGER.error(
                 '[%s] Invalid session initiation request, missing %s.' %
-                (payload['reqid'], item)
+                (payload['reqid'], key)
             )
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'session_token':None,
                 'expires':None,
                 'messages':["Invalid session initiation request. "
@@ -234,6 +237,9 @@ def auth_session_new(payload,
             raise
 
         return {
+            'failure_reason':(
+                "DB error when making new session"
+            ),
             'success':False,
             'session_token':None,
             'expires':None,
@@ -289,6 +295,9 @@ def auth_session_set_extrainfo(payload,
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'success':False,
                 'session_token':None,
                 'expires':None,
@@ -307,6 +316,9 @@ def auth_session_set_extrainfo(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'session_info':None,
                 'messages':["Invalid session set_extrainfo request: "
                             "missing or invalid parameters."],
@@ -398,6 +410,9 @@ def auth_session_set_extrainfo(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "session requested for update doesn't exist or expired"
+                ),
                 'session_info':None,
                 'messages':["Session extra_info update failed."],
             }
@@ -415,6 +430,9 @@ def auth_session_set_extrainfo(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "DB error when updating session info"
+            ),
             'session_info':None,
             'messages':["Session extra_info update failed."],
         }
@@ -471,6 +489,9 @@ def auth_session_exists(
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'session_info':None,
                 'messages':["Invalid session info request."],
             }
@@ -483,6 +504,9 @@ def auth_session_exists(
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid request: missing 'session_token' in request"
+            ),
             'session_info':None,
             'messages':["No session token provided."],
         }
@@ -515,6 +539,7 @@ def auth_session_exists(
             users.c.system_id,
             users.c.full_name,
             users.c.email,
+            users.c.extra_info,
             users.c.email_verified,
             users.c.emailverify_sent_datetime,
             users.c.is_active,
@@ -576,6 +601,9 @@ def auth_session_exists(
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "session does not exist or expired"
+                ),
                 'session_info':None,
                 'messages':["Session look up failed."],
             }
@@ -593,6 +621,9 @@ def auth_session_exists(
 
         return {
             'success':False,
+            'failure_reason':(
+                "DB error when retrieving session info"
+            ),
             'session_info':None,
             'messages':["Session look up failed."],
         }
@@ -649,6 +680,9 @@ def auth_session_delete(
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid session delete request."],
             }
 
@@ -661,6 +695,9 @@ def auth_session_delete(
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid request: missing 'session_token' in request"
+            ),
             'messages':["Invalid session delete request. "
                         "No session token provided."],
         }
@@ -721,6 +758,9 @@ def auth_session_delete(
 
         return {
             'success':False,
+            'failure_reason':(
+                "DB error when deleting session"
+            ),
             'messages':["Session could not be deleted."],
         }
 
@@ -780,6 +820,9 @@ def auth_delete_sessions_userid(
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid session delete request."],
             }
 
@@ -796,6 +839,9 @@ def auth_delete_sessions_userid(
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Missing or invalid parameters "
                             "auth_delete_sessions_userid."],
             }
@@ -870,6 +916,9 @@ def auth_delete_sessions_userid(
 
         return {
             'success':False,
+            'failure_reason':(
+                "DB error when updating session info"
+            ),
             'messages':["Sessions could not be deleted."],
         }
 
@@ -968,6 +1017,9 @@ def auth_kill_old_sessions(
         )
         return {
             'success':False,
+            'failure_reason':(
+                "no sessions found to delete"
+            ),
             'messages':['No sessions older than %sZ found to delete' %
                         earliest_date.isoformat()]
         }

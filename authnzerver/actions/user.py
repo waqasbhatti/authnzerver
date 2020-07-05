@@ -345,6 +345,9 @@ def change_user_password(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'email':None,
                 'messages':["Invalid password change request."],
@@ -366,6 +369,9 @@ def change_user_password(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'email':None,
                 'messages':['Invalid password change request. '
@@ -421,6 +427,9 @@ def change_user_password(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "user does not exist"
+            ),
             'user_id':payload['user_id'],
             'email':payload['email'],
             'messages':['Your current password did '
@@ -430,8 +439,8 @@ def change_user_password(payload,
     #
     # proceed with hashing
     #
-    current_password = payload['current_password'][:1024]
-    new_password = payload['new_password'][:1024]
+    current_password = payload['current_password'][:256]
+    new_password = payload['new_password'][:256]
 
     try:
         pass_check = pass_hasher.verify(rows['password'],
@@ -454,6 +463,9 @@ def change_user_password(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "user password does not match"
+            ),
             'user_id':payload['user_id'],
             'email':payload['email'],
             'messages':['Your current password did '
@@ -482,6 +494,9 @@ def change_user_password(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "password did not change"
+            ),
             'user_id':payload['user_id'],
             'email':payload['email'],
             'messages':['Your new password cannot '
@@ -579,6 +594,9 @@ def change_user_password(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "DB error when updating password"
+                ),
                 'user_id':payload['user_id'],
                 'email':payload['email'],
                 'messages':messages
@@ -602,6 +620,9 @@ def change_user_password(payload,
                         "be sufficiently complex.")
         return {
             'success':False,
+            'failure_reason':(
+                "new password is insecure"
+            ),
             'user_id':payload['user_id'],
             'email':payload['email'],
             'messages': messages
@@ -628,9 +649,14 @@ def create_new_user(
     payload : dict
         This is a dict with the following required keys:
 
-        - full_name: str
-        - email: str
-        - password: str
+        - full_name: str. Full name for the user
+
+        - email: str. User's email address
+
+        - password: str. User's password.
+
+        - extra_info: dict or None. optional dict to add any extra info for this
+          user, will be stored as JSON in the DB
 
         In addition to these items received from an authnzerver client, the
         payload must also include the following keys (usually added in by a
@@ -667,13 +693,6 @@ def create_new_user(
     Notes
     -----
 
-    The emailverify_sent_datetime is set to the current time. The initial
-    account's is_active is set to False and user_role is set to 'locked'.
-
-    The email verification token sent by the frontend expires in 2 hours. If the
-    user doesn't get to it by then, they'll have to wait at least 24 hours until
-    another one can be sent.
-
     If the email address already exists in the database, then either the user
     has forgotten that they have an account or someone else is being
     annoying. In this case, if is_active is True, we'll tell the user that we've
@@ -698,7 +717,9 @@ def create_new_user(
                 'user_email':None,
                 'user_id':None,
                 'send_verification':False,
-                'failure_reason':"invalid request",
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid user creation request."],
             }
 
@@ -718,7 +739,9 @@ def create_new_user(
                 'user_email':None,
                 'user_id':None,
                 'send_verification':False,
-                'failure_reason':"invalid request",
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid user creation request."]
             }
 
@@ -775,6 +798,7 @@ def create_new_user(
     email = validators.normalize_value(payload['email'])
     full_name = validators.normalize_value(payload['full_name'])
     password = payload['password']
+    extra_info = payload.get("extra_info", None)
 
     # this checks if the database connection is live
     currproc = mp.current_process()
@@ -793,7 +817,7 @@ def create_new_user(
 
     users = currproc.authdb_meta.tables['users']
 
-    input_password = password[:1024]
+    input_password = password[:256]
 
     # hash the user's password
     hashed_password = pass_hasher.hash(input_password)
@@ -839,6 +863,17 @@ def create_new_user(
         # create a system_id for this user
         system_id = str(uuid.uuid4())
 
+        if not extra_info:
+            extra_info = {
+                "provenance":"request-created",
+                "type":"normal-user",
+            }
+        else:
+            extra_info.update({
+                "provenance":"request-created",
+                "type":"normal-user",
+            })
+
         new_user_dict = {
             'full_name':full_name,
             'system_id':system_id,
@@ -850,6 +885,7 @@ def create_new_user(
             'created_on':datetime.utcnow(),
             'user_role':'locked',
             'last_updated':datetime.utcnow(),
+            'extra_info':extra_info,
         }
         ins = users.insert(new_user_dict)
         result = currproc.authdb_conn.execute(ins)
@@ -1031,6 +1067,9 @@ def delete_user(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'email':None,
                 'user_id':None,
                 'messages':["Invalid user deletion request."],
@@ -1049,6 +1088,9 @@ def delete_user(payload,
 
             return {
                 'success': False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'email':None,
                 'messages':["Invalid user deletion request."],
@@ -1104,6 +1146,9 @@ def delete_user(payload,
 
         return {
             'success': False,
+            'failure_reason':(
+                "invalid email"
+            ),
             'user_id':payload['user_id'],
             'email':payload['email'],
             'messages':["We could not verify your email address or password."]
@@ -1112,7 +1157,7 @@ def delete_user(payload,
     # check if the user's password is valid and matches the one on record
     try:
         pass_ok = pass_hasher.verify(row['password'],
-                                     payload['password'][:1024])
+                                     payload['password'][:256])
     except Exception as e:
 
         LOGGER.error(
@@ -1131,6 +1176,9 @@ def delete_user(payload,
     if not pass_ok:
         return {
             'success': False,
+            'failure_reason':(
+                "invalid password"
+            ),
             'user_id':payload['user_id'],
             'email':payload['email'],
             'messages':["We could not verify your email address or password."]
@@ -1151,6 +1199,9 @@ def delete_user(payload,
 
         return {
             'success': False,
+            'failure_reason':(
+                "can't delete superusers"
+            ),
             'user_id':payload['user_id'],
             'email':payload['email'],
             'messages':["Can't delete superusers."]
@@ -1202,6 +1253,9 @@ def delete_user(payload,
 
         return {
             'success': False,
+            'failure_reason':(
+                "user deletion failed in DB"
+            ),
             'user_id':payload['user_id'],
             'email':payload['email'],
             'messages':["Could not delete user from DB."]
@@ -1286,6 +1340,9 @@ def verify_password_reset(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid password reset request."],
             }
 
@@ -1302,6 +1359,9 @@ def verify_password_reset(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid password reset request. "
                             "Some required parameters are missing."]
             }
@@ -1347,6 +1407,9 @@ def verify_password_reset(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "session does not exist"
+            ),
             'messages':([
                 "Invalid session token for password reset request."
             ])
@@ -1384,13 +1447,16 @@ def verify_password_reset(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "user does not exist"
+            ),
             'messages':([
                 "Invalid user for password reset request."
             ])
         }
 
     # let's hash the new password against the current password
-    new_password = payload['new_password'][:1024]
+    new_password = payload['new_password'][:256]
 
     try:
         pass_same = pass_hasher.verify(
@@ -1450,6 +1516,9 @@ def verify_password_reset(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid password"
+            ),
             'messages':([
                 "Insecure password for password reset request."
             ] + messages)
@@ -1518,5 +1587,8 @@ def verify_password_reset(payload,
             messages.append('Password could not be changed.')
             return {
                 'success':False,
+                'failure_reason':(
+                    "password update failed in DB"
+                ),
                 'messages':messages
             }
