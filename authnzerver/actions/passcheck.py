@@ -118,6 +118,9 @@ def auth_password_check(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'messages':["Invalid password check request."],
             }
@@ -199,6 +202,9 @@ def auth_password_check(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid request: missing either 'password' or 'session_token'"
+            ),
             'user_id':None,
             'messages':['Invalid password verification request.']
         }
@@ -251,6 +257,9 @@ def auth_password_check(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "session does not exist"
+                ),
                 'user_id':None,
                 'messages':['No session token provided.']
             }
@@ -291,7 +300,7 @@ def auth_password_check(payload,
 
                     pass_ok = pass_hasher.verify(
                         user_info['password'],
-                        payload['password'][:1024],
+                        payload['password'][:256],
                     )
 
                 except Exception as e:
@@ -322,6 +331,9 @@ def auth_password_check(payload,
 
                 return {
                     'success':False,
+                    'failure_reason':(
+                        "user does not exist or password doesn't match"
+                    ),
                     'user_id':None,
                     'messages':["Sorry, that user ID and "
                                 "password combination didn't work."]
@@ -370,6 +382,9 @@ def auth_password_check(payload,
 
                     return {
                         'success':False,
+                        'failure_reason':(
+                            "user exists but is inactive"
+                        ),
                         'user_id': user_info['user_id'],
                         'messages':["Sorry, that user ID and "
                                     "password combination didn't work."]
@@ -430,6 +445,9 @@ def auth_password_check_nosession(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'messages':["Invalid password check request."],
             }
@@ -502,6 +520,9 @@ def auth_password_check_nosession(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid request: missing 'email' or 'password' in request"
+            ),
             'user_id':None,
             'messages':['Invalid password verification request.']
         }
@@ -541,7 +562,7 @@ def auth_password_check_nosession(payload,
 
                 pass_ok = pass_hasher.verify(
                     user_info['password'],
-                    payload['password'][:1024],
+                    payload['password'][:256],
                 )
 
             except Exception as e:
@@ -573,6 +594,9 @@ def auth_password_check_nosession(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "user does not exist or password doesn't match"
+                ),
                 'user_id':None,
                 'messages':["Sorry, that user ID and "
                             "password combination didn't work."]
@@ -621,6 +645,9 @@ def auth_password_check_nosession(payload,
 
                 return {
                     'success':False,
+                    'failure_reason':(
+                        "user exists but is inactive"
+                    ),
                     'user_id': user_info['user_id'],
                     'messages':["Sorry, that user ID and "
                                 "password combination didn't work."]

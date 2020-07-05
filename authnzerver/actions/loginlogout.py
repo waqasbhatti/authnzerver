@@ -131,6 +131,9 @@ def auth_user_login(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'messages':["Invalid user login request."],
             }
@@ -220,6 +223,10 @@ def auth_user_login(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid request: missing "
+                "'session_token', 'email', or 'password' in request"
+            ),
             'user_id':None,
             'messages':['No session token provided.']
         }
@@ -284,6 +291,9 @@ def auth_user_login(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "session does not exist"
+                ),
                 'user_id':None,
                 'messages':['No session token provided.']
             }
@@ -373,6 +383,9 @@ def auth_user_login(payload,
 
                 return {
                     'success':False,
+                    'failure_reason':(
+                        "user does not exist or password doesn't match"
+                    ),
                     'user_id':None,
                     'messages':["Sorry, that user ID and "
                                 "password combination didn't work."]
@@ -474,6 +487,9 @@ def auth_user_login(payload,
 
                     return {
                         'success':False,
+                        'failure_reason':(
+                            "user exists but is inactive"
+                        ),
                         'user_id': user_info['user_id'],
                         'messages':["Sorry, that user ID and "
                                     "password combination didn't work."]
@@ -535,6 +551,9 @@ def auth_user_logout(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'messages':["Invalid user logout request."],
             }
@@ -548,6 +567,9 @@ def auth_user_logout(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid user logout request. "
                             "No %s provided." % key],
             }
@@ -606,6 +628,9 @@ def auth_user_logout(payload,
                 )
                 return {
                     'success':False,
+                    'failure_reason':(
+                        "delete session failed"
+                    ),
                     'user_id':payload['user_id'],
                     'messages':["Logout failed. Invalid "
                                 "session_token for user_id."]
@@ -625,6 +650,9 @@ def auth_user_logout(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "user does not exist"
+                ),
                 'user_id':payload['user_id'],
                 'messages':["Logout failed. Invalid session_token for user_id."]
             }
@@ -644,6 +672,9 @@ def auth_user_logout(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "session does not exist"
+            ),
             'user_id':payload['user_id'],
             'messages':["Logout failed. Invalid "
                         "session_token for user_id."]
