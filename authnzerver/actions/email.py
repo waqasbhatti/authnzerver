@@ -137,7 +137,7 @@ def send_email(
     Returns
     -------
 
-    bool
+    sent_ok : bool
         Returns True if email sending succeeded. False otherwise.
 
     '''
@@ -386,6 +386,9 @@ def send_signup_verification_email(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'email_address':None,
                 'emailverify_sent_datetime':None,
@@ -410,6 +413,9 @@ def send_signup_verification_email(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'email_address':None,
                 'emailverify_sent_datetime':None,
@@ -450,6 +456,10 @@ def send_signup_verification_email(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "invalid request: missing 'emailsender', "
+                "'emailserver', or 'emailport' in request"
+            ),
             'user_id':None,
             'email_address':None,
             'emailverify_sent_datetime':None,
@@ -473,6 +483,10 @@ def send_signup_verification_email(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "not allowed to send verification email to target user, "
+                "send_verification = False"
+            ),
             'user_id':None,
             'email_address':None,
             'emailverify_sent_datetime':None,
@@ -531,6 +545,9 @@ def send_signup_verification_email(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "target user for verification email does not exist"
+            ),
             'user_id':None,
             'email_address':None,
             'emailverify_sent_datetime':None,
@@ -554,6 +571,9 @@ def send_signup_verification_email(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "target user for verification email already active and verified"
+            ),
             'user_id':None,
             'email_address':None,
             'emailverify_sent_datetime':None,
@@ -585,6 +605,9 @@ def send_signup_verification_email(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid session for requesting a verification email"
+            ),
             'user_id':None,
             'email_address':None,
             'emailverify_sent_datetime':None,
@@ -702,6 +725,10 @@ def send_signup_verification_email(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "verification email could not be sent "
+                "because of an email server problem"
+            ),
             'user_id':None,
             'email_address':None,
             'emailverify_sent_datetime':None,
@@ -762,6 +789,9 @@ def set_user_emailaddr_verified(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'is_active':False,
                 'user_role':'locked',
@@ -777,6 +807,9 @@ def set_user_emailaddr_verified(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid request: missing '%s' in request" % 'email'
+            ),
             'user_id':None,
             'is_active': False,
             'user_role':'locked',
@@ -857,6 +890,9 @@ def set_user_emailaddr_verified(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "could not update user verified status in DB"
+            ),
             'user_id':None,
             'is_active':False,
             'user_role':'locked',
@@ -919,6 +955,9 @@ def set_user_email_sent(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid email sent notification request."],
             }
 
@@ -932,6 +971,9 @@ def set_user_email_sent(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid email sent notification request."]
             }
 
@@ -1020,6 +1062,9 @@ def set_user_email_sent(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "could not update the email sent status in DB"
+            ),
             'messages':["Email sent notification request failed."]
         }
 
@@ -1097,6 +1142,9 @@ def send_forgotpass_verification_email(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'email_address':None,
                 'emailforgotpass_sent_datetime':None,
@@ -1120,6 +1168,9 @@ def send_forgotpass_verification_email(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_id':None,
                 'email_address':None,
                 'emailforgotpass_sent_datetime':None,
@@ -1160,6 +1211,9 @@ def send_forgotpass_verification_email(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "missing 'emailserver', 'emailsender', 'emailport' in request"
+            ),
             'user_id':None,
             'email_address':None,
             'emailforgotpass_sent_datetime':None,
@@ -1217,6 +1271,9 @@ def send_forgotpass_verification_email(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid user for forgot-pass email request"
+            ),
             'user_id':None,
             'email_address':None,
             'emailforgotpass_sent_datetime':None,
@@ -1255,6 +1312,9 @@ def send_forgotpass_verification_email(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "forgot-pass verification email sent less than 24 hours ago"
+            ),
             'user_id':None,
             'email_address':None,
             'emailforgotpass_sent_datetime':None,
@@ -1285,6 +1345,9 @@ def send_forgotpass_verification_email(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid session for forgot-pass request"
+            ),
             'user_id':None,
             'email_address':None,
             'emailforgotpass_sent_datetime':None,
@@ -1403,6 +1466,10 @@ def send_forgotpass_verification_email(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "forgot-pass verification email "
+                "could not be sent because email server issue"
+            ),
             'user_id':None,
             'email_address':None,
             'emailforgotpass_sent_datetime':None,

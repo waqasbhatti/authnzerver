@@ -65,12 +65,18 @@ from .session import (
     auth_session_exists,
     auth_session_set_extrainfo,
     auth_session_delete,
-    auth_password_check,
-    auth_password_check_nosession,
-    auth_user_login,
-    auth_user_logout,
     auth_kill_old_sessions,
     auth_delete_sessions_userid,
+)
+
+from .loginlogout import (
+    auth_user_login,
+    auth_user_logout,
+)
+
+from .passcheck import (
+    auth_password_check,
+    auth_password_check_nosession,
 )
 
 from .user import (
