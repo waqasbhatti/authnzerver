@@ -80,7 +80,8 @@
         "max_requests": {"type": "max", "limit": 5000000},
         "max_requests_per_minute": {"type": "max", "limit": 60000}
       },
-      "can_own_items": ["dataset", "object", "collection", "apikey", "preference"],
+      "can_own_items": ["dataset", "object", "collection",
+                        "apikey", "preference"],
       "allowed_actions_for_owned": ["list", "view", "create", "delete", "edit",
                                     "change_owner","change_visibility"],
       "allowed_actions_for_other": {
@@ -99,7 +100,8 @@
         "max_requests": {"type": "max", "limit": 1000000},
         "max_requests_per_minute": {"type": "max", "limit": 60000}
       },
-      "can_own_items": ["dataset", "object", "collection", "apikey", "preference"],
+      "can_own_items": ["dataset", "object", "collection",
+                        "apikey", "preference"],
       "allowed_actions_for_owned": ["list", "view", "create", "delete", "edit",
                                     "change_visibility","change_owner"],
       "allowed_actions_for_other": {

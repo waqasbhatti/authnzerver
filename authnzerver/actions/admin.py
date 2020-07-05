@@ -37,10 +37,12 @@ from ..permissions import pii_hash, load_permissions_json
 def list_users(payload,
                raiseonfail=False,
                override_authdb_path=None,
+               override_permissions_json=None,
                config=None):
     '''This lists users.
 
-    FIXME: this should have permissions enabled
+    FIXME: add permissions checks to this instead of relying on a frontend to
+    filter out users who aren't allowed to perform this action.
 
     Parameters
     ----------
@@ -49,6 +51,7 @@ def list_users(payload,
         This is the input payload dict. Required items:
 
         - user_id: int or None. If None, all users will be returned
+
         In addition to these items received from an authnzerver client, the
         payload must also include the following keys (usually added in by a
         wrapping function):
@@ -92,6 +95,9 @@ def list_users(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'user_info':None,
                 'messages':["Invalid user info request."],
             }
@@ -105,6 +111,9 @@ def list_users(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "invalid request: missing 'user_id' in request"
+            ),
             'user_info':None,
             'messages':["No user_id provided."],
         }
@@ -204,6 +213,7 @@ def list_users(payload,
 
             return {
                 'success':False,
+                'failure_reason':'target user not found in DB',
                 'user_info':None,
                 'messages':["User look up failed."],
             }
@@ -234,6 +244,9 @@ def get_user_by_email(payload,
                       config=None):
     '''
     This gets a user's information using their email address.
+
+    FIXME: add permissions checks to this instead of relying on a frontend to
+    filter out users who aren't allowed to perform this action.
 
     Parameters
     ----------
@@ -287,6 +300,9 @@ def get_user_by_email(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid user info request."],
             }
 
@@ -300,6 +316,7 @@ def get_user_by_email(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':"invalid request: missing 'email' in request",
             'messages':["email provided."],
         }
 
@@ -380,6 +397,7 @@ def get_user_by_email(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':'user email not found in DB',
                 'messages':["User look up failed."],
             }
 
@@ -399,6 +417,7 @@ def get_user_by_email(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':'exception when checking the DB',
             'messages':["User look up failed."],
         }
 
@@ -409,7 +428,8 @@ def lookup_users(payload,
                  config=None):
     '''This looks up users by a given property.
 
-    FIXME: this should have permissions enabled.
+    FIXME: add permissions checks to this instead of relying on a frontend to
+    filter out users who aren't allowed to perform this action.
 
     Valid properties are all the columns in the users table, except for the
     password column.
@@ -477,6 +497,9 @@ def lookup_users(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid user info request."],
             }
 
@@ -489,23 +512,34 @@ def lookup_users(payload,
             return {
                 'success':False,
                 'user_info':None,
-                'messages':["invalid match condition provided."],
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
+                'messages':["Invalid match condition provided."],
             }
 
     lookup_by = payload['by']
     lookup_column = column(lookup_by)
     lookup_match = payload['match']
 
-    if isinstance(lookup_match, dict) and lookup_by != "extra_info":
+    if ( (isinstance(lookup_match, dict) and lookup_by != "extra_info") or
+         (lookup_by == "extra_info" and not isinstance(lookup_match, dict)) ):
+
         LOGGER.error(
             '[%s] Invalid user lookup request, '
             'extra_info selector must provide a dict.' %
             (payload['reqid'],)
         )
+
         return {
             'success':False,
             'user_info':None,
-            'messages':["invalid match condition provided."],
+            'failure_reason':(
+                "invalid request: 'by' is 'extra_info' but "
+                "'match' is not a dict or "
+                "'match' is a dict and 'by' is not 'extra_info'"
+            ),
+            'messages':["Invalid match condition provided."],
         }
 
     try:
@@ -599,6 +633,7 @@ def lookup_users(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':'user not found in DB',
                 'messages':["User look up failed."],
             }
 
@@ -615,6 +650,7 @@ def lookup_users(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':'exception in DB access',
             'messages':["User look up failed."],
         }
 
@@ -629,6 +665,9 @@ def edit_user(payload,
               override_authdb_path=None,
               config=None):
     '''This edits users.
+
+    FIXME: add permissions checks to this instead of relying on a frontend to
+    filter out users who aren't allowed to perform this action.
 
     Parameters
     ----------
@@ -700,6 +739,9 @@ def edit_user(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid user edit request."],
             }
 
@@ -718,6 +760,9 @@ def edit_user(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["No %s provided." % key],
             }
 
@@ -731,7 +776,7 @@ def edit_user(payload,
 
         LOGGER.error(
             "[%s] User edit request failed for "
-            "user_id: %s, role: %s, session_token: %s, target_userid: %s. "
+            "user_id: %s, role: '%s', session_token: %s, target_userid: %s. "
             "An update dict was not provided." %
             (payload['reqid'],
              pii_hash(payload['user_id'],
@@ -746,6 +791,7 @@ def edit_user(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':'invalid request: no update dict was provided',
             'messages':["No update_dict provided."],
         }
 
@@ -753,7 +799,7 @@ def edit_user(payload,
 
         LOGGER.error(
             "[%s] User edit request failed for "
-            "user_id: %s, role: %s, session_token: %s, target_userid: %s. "
+            "user_id: %s, role: '%s', session_token: %s, target_userid: %s. "
             "Editing systemwide anonymous or locked accounts is not allowed." %
             (payload['reqid'],
              pii_hash(payload['user_id'],
@@ -767,6 +813,9 @@ def edit_user(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "invalid request: can't edit anonymous/locked users"
+            ),
             'messages':["Editing anonymous/locked user accounts not allowed."],
         }
 
@@ -822,7 +871,7 @@ def edit_user(payload,
 
                     LOGGER.error(
                         "[%s] User edit request failed for "
-                        "user_id: %s, role: %s, "
+                        "user_id: %s, role: '%s', "
                         "session_token: %s, target_userid: %s. "
                         "User updating their own info can only"
                         "do so for full_name, email." %
@@ -839,6 +888,10 @@ def edit_user(payload,
                     return {
                         'success':False,
                         'user_info':None,
+                        'failure_reason':(
+                            "role '%s' can't edit anything other "
+                            "than 'full_name', 'email'" % payload['user_role']
+                        ),
                         'messages':["extra elements in "
                                     "update_dict not allowed"],
                     }
@@ -861,6 +914,9 @@ def edit_user(payload,
                 )
                 return {
                     'success':False,
+                    'failure_reason':(
+                        "no valid session found for originating user_id"
+                    ),
                     'user_info':None,
                     'messages':["User session info not available "
                                 "for this user edit attempt."],
@@ -913,6 +969,10 @@ def edit_user(payload,
                     return {
                         'success':False,
                         'user_info':None,
+                        'failure_reason':(
+                            "role: '%s' is not allowed to edit items: '%s'" %
+                            (payload['user_role'], list(update_dict.keys()))
+                        ),
                         'messages':["extra elements in "
                                     "update_dict not allowed"],
                     }
@@ -945,6 +1005,9 @@ def edit_user(payload,
                     return {
                         'success':False,
                         'user_info':None,
+                        'failure_reason':(
+                            "role change requested is not valid"
+                        ),
                         'messages':["unknown role change "
                                     "request in update_dict"],
                     }
@@ -969,6 +1032,9 @@ def edit_user(payload,
                 return {
                     'success':False,
                     'user_info':None,
+                    'failure_reason':(
+                        "invalid session for edit attempt"
+                    ),
                     'messages':["Superuser session info not available "
                                 "for this user edit attempt."],
                 }
@@ -994,6 +1060,9 @@ def edit_user(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid session for edit attempt"
+                ),
                 'messages':["user_id or session info not available "
                             "for this user edit attempt."],
             }
@@ -1072,6 +1141,9 @@ def edit_user(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "exception when trying to update user"
+                ),
                 'messages':["User update failed."],
             }
 
@@ -1097,6 +1169,9 @@ def edit_user(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "exception when trying to update user"
+            ),
             'messages':["User update failed."],
         }
 
@@ -1159,6 +1234,9 @@ def internal_toggle_user_lock(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid user lock toggle request."],
             }
 
@@ -1176,6 +1254,9 @@ def internal_toggle_user_lock(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["No %s provided for toggle_user_lock" % key],
             }
 
@@ -1196,6 +1277,9 @@ def internal_toggle_user_lock(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "action must be either 'lock' or 'unlock'"
+            ),
             'messages':["Unknown action requested for toggle_user_lock."],
         }
 
@@ -1212,6 +1296,9 @@ def internal_toggle_user_lock(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "can't edit anonymous/locked users"
+            ),
             'messages':["Editing anonymous/locked user accounts not allowed."],
         }
 
@@ -1304,7 +1391,7 @@ def internal_toggle_user_lock(payload,
 
             LOGGER.error(
                 "[%s] User lock toggle request failed for user_id: %s. "
-                "Exception was: %s" %
+                "Exception was: %r" %
                 (payload['reqid'],
                  pii_hash(payload['target_userid'],
                           payload['pii_salt']), e)
@@ -1316,6 +1403,9 @@ def internal_toggle_user_lock(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "exception encountered when trying lock toggle action"
+                ),
                 'messages':["User lock toggle failed."],
             }
 
@@ -1323,7 +1413,7 @@ def internal_toggle_user_lock(payload,
 
         LOGGER.error(
             "[%s] User lock toggle request failed for user_id: %s. "
-            "Exception was: %s" %
+            "Exception was: %r" %
             (payload['reqid'],
              pii_hash(payload['target_userid'],
                       payload['pii_salt']), e)
@@ -1335,6 +1425,9 @@ def internal_toggle_user_lock(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "exception encountered when trying lock toggle action"
+            ),
             'messages':["User lock toggle failed."],
         }
 
@@ -1398,6 +1491,9 @@ def toggle_user_lock(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid user lock toggle request."],
             }
 
@@ -1416,6 +1512,9 @@ def toggle_user_lock(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["No %s provided for toggle_user_lock" % key],
             }
 
@@ -1447,6 +1546,9 @@ def toggle_user_lock(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "user role is not 'superuser', required to toggle locks"
+            ),
             'messages':["You don't have lock/unlock privileges."],
         }
 
@@ -1472,6 +1574,9 @@ def toggle_user_lock(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "can't toggle a lock state on self"
+            ),
             'messages':["You can't lock/unlock your own user account."],
         }
 
@@ -1497,6 +1602,9 @@ def toggle_user_lock(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "action must be one of 'lock', 'unlock'"
+            ),
             'messages':["Unknown action requested for toggle_user_lock."],
         }
 
@@ -1522,6 +1630,9 @@ def toggle_user_lock(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "can't toggle lock state for system anonymous/locked accounts"
+            ),
             'messages':["Editing anonymous/locked user accounts not allowed."],
         }
 
@@ -1584,6 +1695,9 @@ def toggle_user_lock(payload,
             return {
                 'success':False,
                 'user_info':None,
+                'failure_reason':(
+                    "invalid session for user attempting lock toggle"
+                ),
                 'messages':["Superuser session info not available "
                             "for this user edit attempt."],
             }
@@ -1622,5 +1736,8 @@ def toggle_user_lock(payload,
         return {
             'success':False,
             'user_info':None,
+            'failure_reason':(
+                "exception when trying to toggle lock state"
+            ),
             'messages':["User lock toggle failed."],
         }

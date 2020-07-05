@@ -104,6 +104,9 @@ def check_user_access(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid access grant request."],
             }
 
@@ -119,6 +122,9 @@ def check_user_access(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid access grant request."],
             }
 
@@ -196,8 +202,8 @@ def check_user_access(payload,
 
             LOGGER.warning(
                 "[%s] Access check failed. "
-                "user_id: %s with role: %s attempted %s on %s, "
-                "which was owned by %s and had visibility: %s. " %
+                "user_id: %s with role: '%s' attempted '%s' on '%s', "
+                "which was owned by user_id: %s and had visibility: '%s'. " %
                 (payload['reqid'],
                  pii_hash(originating_userid, payload['pii_salt']),
                  payload['user_role'],
@@ -209,6 +215,7 @@ def check_user_access(payload,
 
             return {
                 'success': False,
+                'failure_reason':'user initiating request is not valid',
                 'messages':['Access request check successful. '
                             'Access granted: False.']
             }
@@ -236,8 +243,9 @@ def check_user_access(payload,
 
                     LOGGER.info(
                         "[%s] Access check success: %s. "
-                        "user_id: %s with role: %s attempted %s on %s, "
-                        "which was owned by %s and had visibility: %s. " %
+                        "user_id: %s with role: '%s' attempted '%s' on '%s', "
+                        "which was owned by user_id: %s "
+                        "and had visibility: '%s'. " %
                         (payload['reqid'], access_granted,
                          pii_hash(originating_userid, payload['pii_salt']),
                          payload['user_role'],
@@ -246,18 +254,25 @@ def check_user_access(payload,
                          pii_hash(target_userid, payload['pii_salt']),
                          payload['target_visibility'])
                     )
-                    return {
+
+                    retdict = {
                         'success': access_granted,
                         'messages':['Access request check successful. '
                                     'Access granted: %s.' % access_granted]
                     }
 
+                    if not access_granted:
+                        retdict['failure_reason'] = 'action not permitted'
+
+                    return retdict
+
                 else:
 
                     LOGGER.warning(
                         "[%s] Access check failed. "
-                        "user_id: %s with role: %s attempted %s on %s, "
-                        "which was owned by %s and had visibility: %s. " %
+                        "user_id: %s with role: '%s' attempted '%s' on '%s', "
+                        "which was owned by user_id: %s "
+                        "and had visibility: '%s'. " %
                         (payload['reqid'],
                          pii_hash(originating_userid, payload['pii_salt']),
                          payload['user_role'],
@@ -269,6 +284,9 @@ def check_user_access(payload,
 
                     return {
                         'success': False,
+                        'failure_reason':(
+                            'users specified as owner or shared-with not found'
+                        ),
                         'messages':['Access request check successful. '
                                     'Access granted: False.']
                     }
@@ -277,8 +295,9 @@ def check_user_access(payload,
 
                 LOGGER.warning(
                     "[%s] Access check failed. "
-                    "user_id: %s with role: %s attempted %s on %s, "
-                    "which was owned by %s and had visibility: %s. " %
+                    "user_id: '%s' with role: '%s' attempted '%s' on '%s', "
+                    "which was owned by user_id: %s "
+                    "and had visibility: '%s'." %
                     (payload['reqid'],
                      pii_hash(originating_userid, payload['pii_salt']),
                      payload['user_role'],
@@ -290,6 +309,9 @@ def check_user_access(payload,
 
                 return {
                     'success': False,
+                    'failure_reason':(
+                        'none of the users specified in the request were found'
+                    ),
                     'messages':['Access request check successful. '
                                 'Access granted: False.']
                 }
@@ -298,8 +320,8 @@ def check_user_access(payload,
 
             LOGGER.error(
                 "[%s] Access check ran into an exception: %r. "
-                "user_id: %s with role: %s attempted %s on %s, "
-                "which was owned by %s and had visibility: %s. " %
+                "user_id: %s with role: '%s' attempted '%s' on '%s', "
+                "which was owned by user_id: '%s' and had visibility: '%s'." %
                 (payload['reqid'], e,
                  pii_hash(originating_userid, payload['pii_salt']),
                  payload['user_role'],
@@ -314,6 +336,7 @@ def check_user_access(payload,
 
             return {
                 'success':False,
+                'failure_reason':'exception when checking the DB',
                 'messages':["Access request check failed."],
             }
 
@@ -324,8 +347,8 @@ def check_user_access(payload,
 
         LOGGER.error(
             "[%s] Access check ran into an exception: %r. "
-            "user_id: %s with role: %s attempted %s on %s, "
-            "which was owned by %s and had visibility: %s. " %
+            "user_id: %s with role: '%s' attempted '%s' on '%s', "
+            "which was owned by user_id: %s and had visibility: '%s'." %
             (payload['reqid'], e,
              pii_hash(originating_userid, payload['pii_salt']),
              payload['user_role'],
@@ -337,6 +360,7 @@ def check_user_access(payload,
 
         return {
             'success':False,
+            'failure_reason':'exception when checking the DB',
             'messages':["Could not validate access to the requested item."],
         }
 
@@ -407,6 +431,9 @@ def check_user_limit(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' from request" % key
+                ),
                 'messages':["Invalid access grant request."],
             }
 
@@ -420,6 +447,9 @@ def check_user_limit(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' from request" % key
+                ),
                 'messages':["Invalid limit check request."],
             }
 
@@ -480,7 +510,7 @@ def check_user_limit(payload,
 
                 LOGGER.info(
                     "[%s] Limit check success: %s. "
-                    "user_id: %s with role: %s, limit name: %s, "
+                    "user_id: %s with role: '%s', limit name: '%s', "
                     "value checked against limit was: %s." %
                     (payload['reqid'],
                      limit_checked,
@@ -490,17 +520,24 @@ def check_user_limit(payload,
                      payload['value_to_check'])
                 )
 
-                return {
+                retdict = {
                     'success': limit_checked,
                     'messages':['Limit check successful. '
                                 'Limit check passed: %s.' % limit_checked]
                 }
+
+                if not limit_checked:
+                    retdict['failure_reason'] = (
+                        "user is over limit"
+                    )
+                return retdict
+
             else:
 
                 LOGGER.warning(
                     "[%s] Limit check failed. "
                     "Possibly unknown user_id: %s with "
-                    "role: %s, limit name: %s, "
+                    "role: '%s', limit name: '%s', "
                     "value checked against limit was: %s." %
                     (payload['reqid'],
                      pii_hash(originating_userid, payload['pii_salt']),
@@ -511,6 +548,7 @@ def check_user_limit(payload,
 
                 return {
                     'success': False,
+                    'failure_reason':'user attempting access not found',
                     'messages':['Limit check successful. '
                                 'Limit check passed: False.']
                 }
@@ -523,7 +561,7 @@ def check_user_limit(payload,
                 LOGGER.error(
                     "[%s] Limit check ran into an exception: %r. "
                     "Provided user_id: %s with "
-                    "role: %s, limit name: %s, "
+                    "role: '%s', limit name: '%s', "
                     "value checked against limit was: %s." %
                     (payload['reqid'],
                      e,
@@ -535,6 +573,7 @@ def check_user_limit(payload,
 
             return {
                 'success':False,
+                'failure_reason':'exception when checking the DB',
                 'messages':["Limit check failed."],
             }
 
@@ -546,7 +585,7 @@ def check_user_limit(payload,
         LOGGER.error(
             "[%s] Limit check ran into an exception: %r. "
             "Provided user_id: %s with "
-            "role: %s, limit name: %s, "
+            "role: '%s', limit name: '%s', "
             "value checked against limit was: %s." %
             (payload['reqid'],
              e,
@@ -558,6 +597,7 @@ def check_user_limit(payload,
 
         return {
             'success':False,
+            'failure_reason':'exception when checking the DB',
             'messages':["Could not validate limit "
                         "rule for the requested item."],
         }

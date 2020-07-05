@@ -217,6 +217,9 @@ def issue_apikey(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'apikey':None,
                 'expires':None,
                 'messages':["Invalid API key request."],
@@ -243,6 +246,9 @@ def issue_apikey(payload,
         if key not in payload:
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' from request" % key
+                ),
                 'apikey':None,
                 'expires':None,
                 'messages':["Some required keys are missing from payload."]
@@ -270,8 +276,8 @@ def issue_apikey(payload,
     if not apikey_creation_allowed['success']:
 
         LOGGER.error(
-            "[%s] Invalid API key issuance request. "
-            "from user_id: %s, role: %s. "
+            "[%s] Invalid no-session API key issuance request. "
+            "from user_id: %s, role: '%s'. "
             "The user is not allowed to create an API key." %
             (payload['reqid'],
              pii_hash(user_id, payload['pii_salt']),
@@ -279,6 +285,9 @@ def issue_apikey(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "originating user is not allowed to issue an API key"
+            ),
             'messages':["API key issuance failed. "
                         "You are not allowed to issue an API key."]
         }
@@ -369,11 +378,11 @@ def issue_apikey(payload,
 
     LOGGER.info(
         "[%s] No-session API key request successful. "
-        "user_id: %s, role: %s, "
+        "user_id: %s, role: '%s', "
         "ip_address: %s requested a no-session API key for "
-        "audience: %s, subject: %s, apiversion: %s."
+        "audience: '%s', subject: '%s', apiversion: %s. "
         "No-session API key not valid before: %s, expires on: %s. "
-        "refresh token for key expires on: %s. " %
+        "Refresh token for key expires on: %s." %
         (payload['reqid'],
          pii_hash(payload['user_id'],
                   payload['pii_salt']),
@@ -389,9 +398,7 @@ def issue_apikey(payload,
     )
 
     messages = (
-        "API key generated successfully for user_id = %s, expires: %s." %
-        (payload['user_id'],
-         expires.isoformat())
+        "API key generated successfully, expires: %s." % expires.isoformat()
     )
 
     return {
@@ -462,22 +469,27 @@ def verify_apikey(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'apikey':None,
                 'expires':None,
                 'messages':["Invalid API key request."],
             }
 
-    if 'apikey_dict' not in payload:
-
-        LOGGER.error(
-            '[%s] Invalid API key request, missing %s.' %
-            (payload['reqid'], 'apikey_dict')
-        )
-
-        return {
-            'success':False,
-            'messages':["Some required keys are missing from payload."]
-        }
+    for key in ('apikey_dict', 'user_id', 'user_role'):
+        if key not in payload:
+            LOGGER.error(
+                '[%s] Invalid API key request, missing %s.' %
+                (payload['reqid'], key)
+            )
+            return {
+                'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
+                'messages':["Some required keys are missing from payload."]
+            }
 
     apikey_dict = payload['apikey_dict']
     user_id = payload['user_id']
@@ -511,6 +523,9 @@ def verify_apikey(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "originating user is not allowed to operate on this API key"
+            ),
             'messages':["API key verification failed. "
                         "You are not allowed to operate on this API key."]
         }
@@ -563,9 +578,9 @@ def verify_apikey(payload,
     if row is not None and len(row) != 0:
 
         LOGGER.info(
-            '[%s] No-session API key verified successfully. '
-            'user_id: %s, role: %s, audience: %s, subject: %s, '
-            'apiversion: %s, expires on: %s' %
+            "[%s] No-session API key verified successfully. "
+            "user_id: %s, role: '%s', audience: '%s', subject: '%s', "
+            "apiversion: %s, expires on: %s" %
             (payload['reqid'],
              pii_hash(apikey_dict['uid'],
                       payload['pii_salt']),
@@ -587,9 +602,9 @@ def verify_apikey(payload,
     else:
 
         LOGGER.error(
-            '[%s] No-session API key verification failed. Failed key '
-            'user_id: %s, role: %s, audience: %s, subject: %s, '
-            'apiversion: %s, expires on: %s' %
+            "[%s] No-session API key verification failed. Failed key "
+            "user_id: %s, role: '%s', audience: '%s', subject: '%s', "
+            "apiversion: %s, expires on: %s" %
             (payload['reqid'],
              pii_hash(apikey_dict['uid'],
                       payload['pii_salt']),
@@ -602,6 +617,10 @@ def verify_apikey(payload,
 
         return {
             'success':False,
+            'failure_reason':(
+                "key validation failed, "
+                "provided key does not match stored key or has expired"
+            ),
             'messages':[(
                 "API key could not be verified."
             )]
@@ -666,6 +685,9 @@ def revoke_apikey(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid API key revocation request."],
             }
 
@@ -679,6 +701,9 @@ def revoke_apikey(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Some required keys are missing from payload."]
             }
 
@@ -714,6 +739,9 @@ def revoke_apikey(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "originating user is not allowed to operate on this API key"
+            ),
             'messages':["API key revocation failed. "
                         "You are not allowed to operate on this API key."]
         }
@@ -750,7 +778,7 @@ def revoke_apikey(payload,
 
     LOGGER.info(
         "[%s] API key revocation request succeeded. "
-        "User_id: %s, role: %s." %
+        "User_id: %s, role: '%s'." %
         (payload['reqid'],
          pii_hash(user_id, payload['pii_salt']),
          pii_hash(user_role, payload['pii_salt']))
@@ -769,8 +797,8 @@ def revoke_all_apikeys(payload,
                        config=None):
     '''Revokes an API key.
 
-    This does not require a session, but does require a current valid API key to
-    revoke all API keys belonging to the specified user.
+    This does not require a session, but does require a current valid and
+    unexpired API key to revoke all API keys belonging to the specified user.
 
     Parameters
     ----------
@@ -821,6 +849,9 @@ def revoke_all_apikeys(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid API key revocation request."],
             }
 
@@ -834,6 +865,9 @@ def revoke_all_apikeys(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Some required keys are missing from payload."]
             }
 
@@ -869,6 +903,9 @@ def revoke_all_apikeys(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "originating user is not allowed to delete API keys"
+            ),
             'messages':["All API keys revocation failed. "
                         "You are not allowed to delete API keys."]
         }
@@ -899,6 +936,10 @@ def revoke_all_apikeys(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "provided API key is invalid, "
+                "revoke-all operation requires a valid key to start with"
+            ),
             'messages':["All API keys revocation failed. "
                         "The API key presented is invalid."]
         }
@@ -1021,11 +1062,17 @@ def refresh_apikey(payload,
             )
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Invalid API key revocation request."],
             }
 
-    for key in ('apikey_dict', 'user_id', 'user_role', 'refresh_token'):
-        if 'apikey_dict' not in payload:
+    for key in ('apikey_dict', 'user_id', 'user_role', 'refresh_token',
+                'ip_address', 'expires_seconds', 'not_valid_before',
+                'refresh_expires', 'refresh_nbf'):
+
+        if key not in payload:
 
             LOGGER.error(
                 '[%s] Invalid no-session API key refresh request, missing %s.' %
@@ -1034,6 +1081,9 @@ def refresh_apikey(payload,
 
             return {
                 'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
                 'messages':["Some required keys are missing from payload."]
             }
 
@@ -1087,7 +1137,7 @@ def refresh_apikey(payload,
 
         LOGGER.error(
             "[%s] Invalid no-session API key refresh request. "
-            "from user_id: %s, role: %s. "
+            "from user_id: %s, role: '%s'. "
             "The API key presented does not have a valid refresh token." %
             (payload['reqid'],
              pii_hash(user_id, payload['pii_salt']),
@@ -1095,6 +1145,9 @@ def refresh_apikey(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "provided API key has no stored refresh token, probably invalid"
+            ),
             'messages':[
                 "API key refresh failed. "
                 "The API key presented does not have a valid refresh token. "
@@ -1109,7 +1162,7 @@ def refresh_apikey(payload,
 
         LOGGER.error(
             "[%s] Invalid no-session API key refresh request. "
-            "from user_id: %s, role: %s. "
+            "from user_id: %s, role: '%s'. "
             "The API key presented did not pass "
             "refresh-token hash verification." %
             (payload['reqid'],
@@ -1118,6 +1171,9 @@ def refresh_apikey(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "provided refresh token does not match stored refresh token"
+            ),
             'messages':[
                 "API key refresh failed. "
                 "The API key presented does not have a valid refresh token. "
@@ -1144,7 +1200,7 @@ def refresh_apikey(payload,
 
         LOGGER.error(
             "[%s] Invalid no-session API key refresh request. "
-            "from user_id: %s, role: %s. "
+            "from user_id: %s, role: '%s'. "
             "Could not delete the old API key." %
             (payload['reqid'],
              pii_hash(user_id, payload['pii_salt']),
@@ -1152,6 +1208,9 @@ def refresh_apikey(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "user from provided API key not allowed to revoke old key"
+            ),
             'messages':[
                 "API key refresh failed. "
                 "The API key presented does not have a valid refresh token."
@@ -1182,7 +1241,7 @@ def refresh_apikey(payload,
 
         LOGGER.error(
             "[%s] Invalid no-session API key refresh request. "
-            "from user_id: %s, role: %s. "
+            "from user_id: %s, role: '%s'. "
             "Could not generate a new API key." %
             (payload['reqid'],
              pii_hash(user_id, payload['pii_salt']),
@@ -1190,6 +1249,9 @@ def refresh_apikey(payload,
         )
         return {
             'success':False,
+            'failure_reason':(
+                "user from provided API key not allowed to issue new key"
+            ),
             'messages':[
                 "API key refresh failed. "
                 "The API key presented does not have a valid refresh token."
@@ -1203,7 +1265,7 @@ def refresh_apikey(payload,
 
     LOGGER.info(
         "[%s] API key refresh request succeeded. "
-        "User_id: %s, role: %s." %
+        "User_id: %s, role: '%s'." %
         (payload['reqid'],
          pii_hash(user_id, payload['pii_salt']),
          pii_hash(user_role, payload['pii_salt']))
