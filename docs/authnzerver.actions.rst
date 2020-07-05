@@ -16,5 +16,7 @@ Submodules
    authnzerver.actions.apikey
    authnzerver.actions.apikey_nosession
    authnzerver.actions.email
+   authnzerver.actions.loginlogout
+   authnzerver.actions.passcheck
    authnzerver.actions.session
    authnzerver.actions.user
