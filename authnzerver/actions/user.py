@@ -991,7 +991,7 @@ def create_new_user(
             '[%s] User creation request failed for email: %s. '
             'Could not add row to the DB.' %
             (payload['reqid'],
-             pii_hash(rows['user_id'],payload['pii_salt']))
+             pii_hash(payload['email'], payload['pii_salt']))
         )
 
         messages.append(
