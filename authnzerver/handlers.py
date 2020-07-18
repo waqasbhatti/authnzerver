@@ -189,10 +189,10 @@ class AuthHandler(tornado.web.RequestHandler):
                        f"because of invalid request parameters.")
         elif status_code == 401:
             self.write(f"HTTP {status_code}: Could not service this request "
-                       f"because of invalid request authentication token.")
+                       f"because of invalid request authentication token or "
+                       f"violation of host restriction.")
         else:
-            self.write(f"HTTP {status_code}: Could not service this request "
-                       f"because of an internal server error.")
+            self.write(f"HTTP {status_code}: Could not service this request.")
 
         if not self._finished:
             self.finish()
