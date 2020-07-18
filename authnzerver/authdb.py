@@ -130,7 +130,6 @@ Users = Table(
 Groups = Table(
     'groups', AUTHDB_META,
     Column('group_id', Integer, primary_key=True),
-    Column('system_id', String(length=50), index=True, nullable=False),
     Column('group_name',String(length=280), nullable=False),
     Column('visibility',String(length=100), nullable=False,
            default='public', index=True),
@@ -144,19 +143,9 @@ Groups = Table(
     Column('last_updated', DateTime(),
            onupdate=datetime.utcnow,
            nullable=False,index=True),
-    Column('group_role', String(length=100), ForeignKey("roles.name"),
-           nullable=False, index=True),
-    Column('extra_info', JSON(none_as_null=True)),
-)
-
-
-# groups-to-users many-to-many mapping
-UserGroups = Table(
-    "user_groups", AUTHDB_META,
-    Column("user_id", Integer, ForeignKey("users.user_id"),
-           primary_key=True, ondelete="CASCADE"),
-    Column("group_id", Integer, ForeignKey("groups.group_id"),
-           primary_key=True, ondelete="CASCADE"),
+    Column('user_role', String(length=100),
+           ForeignKey("roles.name"),
+           nullable=False, index=True)
 )
 
 
@@ -192,8 +181,6 @@ APIKeys = Table(
            nullable=False)
 )
 
-
-# No-session API keys
 APIKeysNoSession = Table(
     'apikeys_nosession',
     AUTHDB_META,
