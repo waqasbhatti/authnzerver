@@ -152,6 +152,51 @@ class AuthHandler(tornado.web.RequestHandler):
 
         self.allowed_hosts_regex = config.allowed_hosts_regex
 
+    async def send_response(self, response, reqid):
+        """
+        This handles the response generation.
+
+        """
+
+        response_dict = {"success": response['success'],
+                         "response":response,
+                         "messages": response['messages'],
+                         "reqid":reqid}
+
+        # add the failure reason as a top level item in the response dict
+        # if the action failed
+        if not response['success'] and 'failure_reason' in response:
+            response_dict['failure_reason'] = response['failure_reason']
+
+        encrypted_base64 = encrypt_message(
+            response_dict,
+            self.fernet_secret
+        )
+
+        self.set_header('content-type','text/plain; charset=UTF-8')
+        self.write(encrypted_base64)
+        self.finish()
+
+    def write_error(self, status_code, **kwargs):
+        """
+        This writes the error as a response.
+
+        """
+
+        self.set_header('content-type','text/plain; charset=UTF-8')
+        if status_code == 400:
+            self.write(f"HTTP {status_code}: Could not service this request "
+                       f"because of invalid request parameters.")
+        elif status_code == 401:
+            self.write(f"HTTP {status_code}: Could not service this request "
+                       f"because of invalid request authentication token.")
+        else:
+            self.write(f"HTTP {status_code}: Could not service this request "
+                       f"because of an internal server error.")
+
+        if not self._finished:
+            self.finish()
+
     async def post(self):
         '''
         Handles the incoming POST request.
@@ -265,27 +310,9 @@ class AuthHandler(tornado.web.RequestHandler):
                 )
 
             #
-            # form the response
+            # form and send the the response
             #
-
-            response_dict = {"success": response['success'],
-                             "response":response,
-                             "messages": response['messages'],
-                             "reqid":reqid}
-
-            # add the failure reason as a top level item in the response dict
-            # if the action failed
-            if not response['success'] and 'failure_reason' in response:
-                response_dict['failure_reason'] = response['failure_reason']
-
-            encrypted_base64 = encrypt_message(
-                response_dict,
-                self.fernet_secret
-            )
-
-            self.set_header('content-type','text/plain; charset=UTF-8')
-            self.write(encrypted_base64)
-            self.finish()
+            await self.send_response(response, reqid)
 
         except Exception:
 
