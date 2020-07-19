@@ -292,17 +292,14 @@ def main():
     ## SET UP ALLOWED HOSTS ##
     ##########################
 
-    # initially restrict to localhost only
-    allowed_hosts = {
-        r"localhost",
-        r"127\.0\.0\.1",
-    }
+    # empty set to start with
+    allowed_hosts = set({})
 
     # get any additional hosts to allow from the config
     config_allowed_hosts = loaded_config.allowedhosts.split(';')
     for h in config_allowed_hosts:
-        if len(h) > 0:
-            allowed_hosts.add(r"%s" % h.replace('.',r'\.'))
+        if len(h.strip()) > 0:
+            allowed_hosts.add(re.escape(h.strip()))
 
     allowed_hosts_regex = r"(%s)" % '|'.join(allowed_hosts)
     loaded_config.allowed_hosts_regex = re.compile(allowed_hosts_regex)

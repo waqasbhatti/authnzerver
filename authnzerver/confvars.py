@@ -132,12 +132,11 @@ CONF = {
         'env':'%s_ALLOWEDHOSTS' % ENVPREFIX,
         'cmdline':'allowedhosts',
         'type':str,
-        'default':'',
+        'default':'localhost;127.0.0.1',
         'help':('The allowed HTTP request header "Host" values '
-                'that the server will respond to, '
-                'other than "localhost" and "127.0.0.1". '
+                'that the server will respond to. '
                 'Separate values with semicolons. Specifying '
-                'these helps prevent DNS-rebinding attacks.'),
+                'these explicitly helps prevent DNS-rebinding attacks.'),
         'readable_from_file':False,
         'postprocess_value':None,
     },
