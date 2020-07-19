@@ -153,10 +153,12 @@ Groups = Table(
 # groups-to-users many-to-many mapping
 UserGroups = Table(
     "user_groups", AUTHDB_META,
-    Column("user_id", Integer, ForeignKey("users.user_id"),
-           primary_key=True, ondelete="CASCADE"),
-    Column("group_id", Integer, ForeignKey("groups.group_id"),
-           primary_key=True, ondelete="CASCADE"),
+    Column("user_id", Integer,
+           ForeignKey("users.user_id", ondelete="CASCADE"),
+           primary_key=True),
+    Column("group_id", Integer,
+           ForeignKey("groups.group_id", ondelete="CASCADE"),
+           primary_key=True),
 )
 
 
