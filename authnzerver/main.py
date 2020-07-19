@@ -32,6 +32,7 @@ import time
 import re
 from functools import partial
 
+from diskcache import FanoutCache
 from sqlalchemy.exc import IntegrityError
 
 
@@ -306,6 +307,42 @@ def main():
     LOGGER.info("Allowed host regex for incoming HTTP requests is: '%s'" %
                 allowed_hosts_regex)
 
+    ########################
+    ## SET UP RATE LIMITS ##
+    ########################
+
+    # can disable rate limiting by passing none to the ratelimits conf item
+    if loaded_config.ratelimits.strip().casefold() == 'none':
+        loaded_config.ratelimits = False
+        LOGGER.warning(
+            "HTTP request rate-limiting "
+            "has been disabled by setting 'none' for "
+            "AUTHNZERVER_RATELIMITS or --ratelimits."
+        )
+
+    else:
+        ratelimits = [x.strip().split(':')
+                      for x in loaded_config.ratelimits.split(';')]
+        ratelimits = {x[0]:int(x[1]) for x in ratelimits}
+        loaded_config.ratelimits = ratelimits
+        LOGGER.info(
+            "HTTP request rate-limiting (requests/minute) "
+            "config set to: %s" %
+            ratelimits
+        )
+
+    ###########################################
+    ## SET UP CACHE OBJECT FOR RATE-LIMITING ##
+    ###########################################
+
+    # clear cache
+    cacheobj = FanoutCache(cachedir, timeout=0.3)
+    removed_items = cache.cache_flush(
+        cacheobj=cacheobj
+    )
+    LOGGER.info('Removed %s stale items from authnzerver cache.' %
+                removed_items)
+
     ###################
     ## HANDLER SETUP ##
     ###################
@@ -314,6 +351,7 @@ def main():
     handlers = [
         (r'/', AuthHandler,
          {'config':loaded_config,
+          'cacheobj':cacheobj,
           'executor':executor,
           'failed_passchecks':{}}),
     ]
@@ -361,16 +399,9 @@ def main():
     # start up the HTTP server and our application
     http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
 
-    #####################################################################
-    ## CLEAR THE CACHE, CHECK THE DB, AND REAP OLD SESSIONS ON STARTUP ##
-    #####################################################################
-
-    # clear cache
-    removed_items = cache.cache_flush(
-        cache_dirname=cachedir
-    )
-    LOGGER.info('Removed %s stale items from authnzerver cache.' %
-                removed_items)
+    ##################
+    ## CHECK THE DB ##
+    ##################
 
     # check the authdb is set up with the correct tables
     # running these after the DB is already set up doesn't do anything
@@ -427,9 +458,6 @@ def main():
                      "database at the provided URL.")
         raise
 
-    finally:
-        executor.shutdown()
-
     # set up periodic session-killer function and kill old sessions
     session_killer = partial(actions.auth_kill_old_sessions,
                              session_expiry_days=sessionexpiry,
@@ -451,8 +479,6 @@ def main():
                      "in use by another process, "
                      "bailing out..." % (listen, port))
         sys.exit(1)
-    finally:
-        executor.shutdown()
 
     # start the IOLoop and begin serving requests
     try:
@@ -470,7 +496,7 @@ def main():
 
         LOGGER.info(
             "Starting authnzerver. "
-            "Listening on htt{%s}://%s:%s." %
+            "Listening on htt%s://%s:%s." %
             ("ps" if loaded_config.tls_enabled else "p",
              listen,
              port)
