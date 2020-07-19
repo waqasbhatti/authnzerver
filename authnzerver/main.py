@@ -427,6 +427,9 @@ def main():
                      "database at the provided URL.")
         raise
 
+    finally:
+        executor.shutdown()
+
     # set up periodic session-killer function and kill old sessions
     session_killer = partial(actions.auth_kill_old_sessions,
                              session_expiry_days=sessionexpiry,
@@ -441,25 +444,15 @@ def main():
     signal.signal(signal.SIGINT, _recv_sigint)
     signal.signal(signal.SIGTERM, _recv_sigint)
 
-    # make sure the port we're going to listen on is ok
-    # inspired by how Jupyter notebook does this
-    portok = False
-    serverport = port
-    maxtries = 10
-    thistry = 0
-    while not portok and thistry < maxtries:
-        try:
-            http_server.listen(serverport, listen)
-            portok = True
-        except socket.error:
-            LOGGER.warning('%s:%s is already in use, trying port %s' %
-                           (listen, serverport, serverport + 1))
-            serverport = serverport + 1
-
-    if not portok:
-        LOGGER.error('Could not find a free port after %s tries, giving up' %
-                     maxtries)
+    try:
+        http_server.listen(port, listen)
+    except socket.error:
+        LOGGER.error("Listen address TCP port: '%s:%s' is already "
+                     "in use by another process, "
+                     "bailing out..." % (listen, port))
         sys.exit(1)
+    finally:
+        executor.shutdown()
 
     # start the IOLoop and begin serving requests
     try:
@@ -475,8 +468,13 @@ def main():
         )
         periodic_session_kill.start()
 
-        LOGGER.info('Starting authnzerver. Listening on http://%s:%s.' %
-                    (listen, serverport))
+        LOGGER.info(
+            "Starting authnzerver. "
+            "Listening on htt{%s}://%s:%s." %
+            ("ps" if loaded_config.tls_enabled else "p",
+             listen,
+             port)
+        )
         LOGGER.info("The server is starting with TLS %s." %
                     ('enabled' if loaded_config.tls_enabled else 'disabled'))
         LOGGER.info('Background worker processes: %s. IOLoop in use: %s.' %
