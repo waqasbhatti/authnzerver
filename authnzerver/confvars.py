@@ -272,6 +272,22 @@ CONF = {
         'readable_from_file':False,
         'postprocess_value':None,
     },
+    'ratelimits':{
+        'env':'%s_RATELIMITS' % ENVPREFIX,
+        'cmdline':'ratelimits',
+        'type':str,
+        'default':"all:15000;user:360;session:600;apikey:720;burst:20",
+        'help':("This sets the rate limit policy for authnzerver actions. "
+                "You can specify values for all actions, user-tied actions "
+                "(based on email/user_id/IP address), session-tied actions "
+                "(based on session token/IP address), and apikey-tied actions "
+                "(based on session token/IP address). The values are in units "
+                "of max requests allowed per minute. The burst value "
+                "indicates how many requests will be allowed to come "
+                "in before rate-limits start being enforced."),
+        'readable_from_file':False,
+        'postprocess_value':None,
+    },
     'workers':{
         'env':'%s_WORKERS' % ENVPREFIX,
         'cmdline':'workers',
