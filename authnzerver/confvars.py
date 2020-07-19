@@ -284,7 +284,8 @@ CONF = {
                 "(based on session token/IP address). The values are in units "
                 "of max requests allowed per minute. The burst value "
                 "indicates how many requests will be allowed to come "
-                "in before rate-limits start being enforced."),
+                "in before rate-limits start being enforced. "
+                "Set this to 'none' to turn off rate-limiting entirely."),
         'readable_from_file':False,
         'postprocess_value':None,
     },
