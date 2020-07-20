@@ -21,17 +21,45 @@ LOGGER = logging.getLogger(__name__)
 #############
 
 import json
-from hashlib import sha256
+from hashlib import sha256, blake2b
 
 
-###################################
-## FUNCTION TO HASH PII FOR LOGS ##
-###################################
+####################################
+## FUNCTIONS TO HASH PII FOR LOGS ##
+####################################
 
-def pii_hash(item, salt):
+def pii_sha256_hash(item, salt):
+    """This generates a SHA256 hash for a PII-item that is concatenated with a
+    random 'salt' to add some security against attacks, but still allow
+    correlation of the PII item in logs.
+
+    """
+
     return sha256(
         ("%s%s" % (item, salt)).encode('utf-8')
-    ).hexdigest()[:16]
+    ).hexdigest()[:24]
+
+
+def pii_blake2b_hash(item, key):
+    """This generates a 12-byte digest for an item using the Blake-2b hash
+    function. This should be more secure than the pii_hash() function above.
+
+    """
+
+    hasher = blake2b(key=key.encode('utf-8'),
+                     digest_size=12,
+                     person=b'authnzrv-pii')
+    hasher.update(str(item).encode('utf-8'))
+    return hasher.hexdigest()
+
+
+def pii_hash(item, key):
+    """
+    This wraps one of the functions above.
+
+    """
+
+    return pii_blake2b_hash(item, key)
 
 
 #################################
