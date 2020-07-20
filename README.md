@@ -6,8 +6,9 @@ authorization (authz) to other HTTP servers. It's built using
 [Tornado](http://www.tornadoweb.org), [SQLAlchemy](https://www.sqlalchemy.org/),
 [cryptography](https://cryptography.io),
 [argon2-cffi](https://argon2-cffi.readthedocs.io/en/stable/),
-[python-diskcache](http://www.grantjenks.com/docs/diskcache/), and
-[uvloop](https://github.com/MagicStack/uvloop).
+[python-diskcache](http://www.grantjenks.com/docs/diskcache/),
+[sortedcontainers](http://www.grantjenks.com/docs/sortedcontainers/index.html),
+and [uvloop](https://github.com/MagicStack/uvloop).
 
 I wrote it to help with the login/logout/signup flows for the [Light Curve
 Collection Server](https://github.com/waqasbhatti/lcc-server) and extracted much
