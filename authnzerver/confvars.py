@@ -162,15 +162,6 @@ CONF = {
         'readable_from_file':False,
         'postprocess_value':None,
     },
-    'cachedir':{
-        'env':'%s_CACHEDIR' % ENVPREFIX,
-        'cmdline':'cachedir',
-        'type':str,
-        'default':'/tmp/authnzerver-cache',
-        'help':('Path to the cache directory to be used.'),
-        'readable_from_file':False,
-        'postprocess_value':None,
-    },
     'debugmode':{
         'env':'%s_DEBUGMODE' % ENVPREFIX,
         'cmdline':'debugmode',

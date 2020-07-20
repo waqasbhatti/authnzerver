@@ -263,10 +263,6 @@ def main():
     basedir = loaded_config.basedir
     LOGGER.info("The server's base directory is: %s" % os.path.abspath(basedir))
 
-    cachedir = loaded_config.cachedir
-    LOGGER.info("The server's cache directory is: %s" %
-                os.path.abspath(cachedir))
-
     port = loaded_config.port
     listen = loaded_config.listen
     sessionexpiry = loaded_config.sessionexpiry

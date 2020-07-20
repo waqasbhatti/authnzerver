@@ -48,7 +48,6 @@ def generate_envfile(
         filepath,
         authdb=None,
         basedir=None,
-        cachedir=None,
         debugmode=None,
         listen=None,
         permissions=None,
@@ -72,7 +71,6 @@ def generate_envfile(
                 f"""\
                 AUTHNZERVER_AUTHDB={authdb}
                 AUTHNZERVER_BASEDIR={basedir}
-                AUTHNZERVER_CACHEDIR={cachedir}
                 AUTHNZERVER_DEBUGMODE={debugmode}
                 AUTHNZERVER_LISTEN={listen}
                 AUTHNZERVER_PERMISSIONS={permissions}
@@ -146,8 +144,6 @@ def test_load_config_from_env_filesecret(monkeypatch, tmpdir):
                        "sqlite:///test/db/path")
     monkeypatch.setenv("AUTHNZERVER_BASEDIR",
                        "/test/base/dir")
-    monkeypatch.setenv("AUTHNZERVER_CACHEDIR",
-                       "/test/authnzerver/cachedir")
     monkeypatch.setenv("AUTHNZERVER_DEBUGMODE",
                        "0")
     monkeypatch.setenv("AUTHNZERVER_LISTEN",
@@ -180,7 +176,6 @@ def test_load_config_from_env_filesecret(monkeypatch, tmpdir):
 
     assert loaded_config.authdb == "sqlite:///test/db/path"
     assert loaded_config.basedir == "/test/base/dir"
-    assert loaded_config.cachedir == "/test/authnzerver/cachedir"
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '127.0.0.1'
 
@@ -219,8 +214,6 @@ def test_load_config_from_env_textsecret(monkeypatch, tmpdir):
                        "sqlite:///test/db/path")
     monkeypatch.setenv("AUTHNZERVER_BASEDIR",
                        "/test/base/dir")
-    monkeypatch.setenv("AUTHNZERVER_CACHEDIR",
-                       "/test/authnzerver/cachedir")
     monkeypatch.setenv("AUTHNZERVER_DEBUGMODE",
                        "0")
     monkeypatch.setenv("AUTHNZERVER_LISTEN",
@@ -253,7 +246,6 @@ def test_load_config_from_env_textsecret(monkeypatch, tmpdir):
 
     assert loaded_config.authdb == "sqlite:///test/db/path"
     assert loaded_config.basedir == "/test/base/dir"
-    assert loaded_config.cachedir == "/test/authnzerver/cachedir"
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '127.0.0.1'
 
@@ -315,7 +307,6 @@ def test_load_config_from_options(monkeypatch, tmpdir):
 
     assert loaded_config.authdb == 'sqlite:///path/to/auth-db-opt'
     assert loaded_config.basedir == '/path/to/basedir-opt'
-    assert loaded_config.cachedir == '/tmp/authnzerver-cache'
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '192.168.1.1'
 
@@ -359,7 +350,6 @@ def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
         tmpdir,
         authdb='sqlite:///path/to/authdb-envfile',
         basedir='/path/to/basedir-envfile',
-        cachedir='/tmp/authnzerver/cachedir-envfile',
         debugmode=0,
         listen='10.0.0.10',
         permissions=permissions_json,
@@ -381,7 +371,6 @@ def test_load_config_from_envfile_filesecret(monkeypatch, tmpdir):
 
     assert loaded_config.authdb == "sqlite:///path/to/authdb-envfile"
     assert loaded_config.basedir == "/path/to/basedir-envfile"
-    assert loaded_config.cachedir == "/tmp/authnzerver/cachedir-envfile"
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '10.0.0.10'
 
@@ -425,7 +414,6 @@ def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
         tmpdir,
         authdb='sqlite:///path/to/authdb-envfile',
         basedir='/path/to/basedir-envfile',
-        cachedir='/tmp/authnzerver/cachedir-envfile',
         debugmode=0,
         listen='10.0.0.10',
         permissions=permissions_json,
@@ -447,7 +435,6 @@ def test_load_config_from_envfile_textsecret(monkeypatch, tmpdir):
 
     assert loaded_config.authdb == "sqlite:///path/to/authdb-envfile"
     assert loaded_config.basedir == "/path/to/basedir-envfile"
-    assert loaded_config.cachedir == "/tmp/authnzerver/cachedir-envfile"
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '10.0.0.10'
 
@@ -500,7 +487,6 @@ def test_load_config_env_and_defaults(monkeypatch, tmpdir):
 
     assert loaded_config.authdb == "sqlite:///test/db/path"
     assert loaded_config.basedir == os.getcwd()
-    assert loaded_config.cachedir == '/tmp/authnzerver-cache'
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '127.0.0.1'
 
@@ -555,7 +541,6 @@ def test_load_config_options_and_defaults(monkeypatch, tmpdir):
 
     assert loaded_config.authdb == 'sqlite:///path/to/auth-db-opt'
     assert loaded_config.basedir == os.getcwd()
-    assert loaded_config.cachedir == '/tmp/authnzerver-cache'
     assert loaded_config.debugmode == 0
     assert loaded_config.listen == '192.168.1.1'
 

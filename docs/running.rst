@@ -68,11 +68,6 @@ cmdline: ``--basedir``, env: ``AUTHNZERVER_BASEDIR``
 The base directory containing secret files and the auth DB. (*default:*
 directory the server is launched in)
 
-cmdline: ``--cachedir``, env: ``AUTHNZERVER_CACHEDIR``
-------------------------------------------------------
-
-Path to the cache directory to be used.(*default:* ``/tmp/authnzerver-cache``)
-
 cmdline: ``--confvars``, env: None
 ----------------------------------
 
@@ -354,7 +349,6 @@ service.
           AUTHNZERVER_ALLOWEDHOSTS: authnzerver
           AUTHNZERVER_AUTHDB: "sqlite:////home/authnzerver/basedir/.authdb.sqlite"
           AUTHNZERVER_BASEDIR: "/home/authnzerver/basedir"
-          AUTHNZERVER_CACHEDIR: "/tmp/authnzerver-cache"
           AUTHNZERVER_DEBUGMODE: 0
           AUTHNZERVER_LISTEN: "0.0.0.0"
           AUTHNZERVER_PORT: 13431
