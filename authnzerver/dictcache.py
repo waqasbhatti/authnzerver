@@ -41,7 +41,6 @@ class DictCache:
 
         self.container = {}
         self.capacity = capacity
-
         self.sortedkeys = SortedSet()
 
     def _trim(self):
@@ -239,7 +238,7 @@ class DictCache:
         """
 
         self.container = {}
-        self.sortedkeys = set({})
+        self.sortedkeys = SortedSet()
 
     def save(self, outfile, protocol=pickle.HIGHEST_PROTOCOL):
         """
@@ -251,7 +250,8 @@ class DictCache:
 
         serialized = {
             "sortedkeys":self.sortedkeys,
-            "container":self.container
+            "container":self.container,
+            "capacity":self.capacity
         }
 
         with open(outfile,'wb') as outfd:
@@ -268,3 +268,4 @@ class DictCache:
 
         self.sortedkeys = deserialized['sortedkeys']
         self.container = deserialized['container']
+        self.capacity = deserialized['capacity']
