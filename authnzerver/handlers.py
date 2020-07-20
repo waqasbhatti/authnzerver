@@ -130,6 +130,7 @@ class AuthHandler(tornado.web.RequestHandler):
     def initialize(self,
                    config,
                    executor,
+                   cacheobj,
                    failed_passchecks):
         '''
         This sets up stuff.
@@ -148,9 +149,199 @@ class AuthHandler(tornado.web.RequestHandler):
         self.emailpass = self.config.emailpass
 
         self.executor = executor
+        self.cacheobj = cacheobj
         self.failed_passchecks = failed_passchecks
 
         self.allowed_hosts_regex = config.allowed_hosts_regex
+        self.ratelimits = config.ratelimits
+
+    def ratelimit_request(self, reqid, request_type, request_body):
+        """
+        This rate-limits the request based on the request type and the
+        set ratelimits passed in the config object.
+
+        """
+
+        # increment the global request each time
+        all_reqcount = self.cacheobj.increment(
+            "all_request_count",
+        )
+
+        # check the global request rate
+        if all_reqcount > self.ratelimits['burst']:
+
+            all_reqrate, all_reqcount, all_req_t0, all_req_tnow = (
+                self.cacheobj.getrate(
+                    "all_request_count",
+                    60.0,
+                )
+            )
+
+            if all_reqrate > self.ratelimits['all']:
+                LOGGER.error(
+                    "[%s] request '%s' is being rate-limited. "
+                    "Cache token: 'all_request_count', count: %s. "
+                    "Rate: %.3f > limit specified for '%s': %s"
+                    % (reqid,
+                       request_type,
+                       all_reqcount,
+                       all_reqrate,
+                       'all',
+                       self.ratelimits['all'])
+                )
+                raise tornado.web.HTTPError(status_code=429)
+
+        # check the user- prefixed request
+        if request_type.startswith("user-"):
+
+            user_cache_token = (
+                request_body.get("email", None) or
+                request_body.get("user_id", None) or
+                request_body.get("session_token", None) or
+                request_body.get("ip_address", None) or
+                request_body.get("email_address", None)
+            )
+
+            # drop all requests that try to get around rate-limiting
+            if not user_cache_token:
+                LOGGER.error(
+                    "[%s] request: '%s' is missing a payload value "
+                    "needed to calculate rate, dropping this request."
+                    % (self.reqid, request_type)
+                )
+                raise tornado.web.HTTPError(status_code=400)
+
+            user_cache_key = f"user-request-{user_cache_token}"
+
+            user_reqcount = self.cacheobj.increment(
+                user_cache_key,
+            )
+
+            if user_reqcount > self.ratelimits["user"]:
+
+                user_reqrate, user_reqcount, user_req_t0, user_req_tnow = (
+                    self.cacheobj.getrate(
+                        user_cache_key,
+                        60.0,
+                    )
+                )
+
+                if user_reqrate > self.ratelimits['user']:
+                    LOGGER.error(
+                        "[%s] request '%s' is being rate-limited. "
+                        "Cache token: '%s', count: %s. "
+                        "Rate: %.3f > limit specified for '%s': %s"
+                        % (reqid,
+                           request_type,
+                           pii_hash(user_cache_key, self.pii_salt),
+                           user_reqcount,
+                           user_reqrate,
+                           'user',
+                           self.ratelimits['user'])
+                    )
+                    raise tornado.web.HTTPError(status_code=429)
+
+        # check the session- prefixed request
+        if request_type.startswith("session-"):
+
+            session_cache_token = (
+                request_body.get("user_id", None) or
+                request_body.get("session_token", None) or
+                request_body.get("ip_address", None)
+            )
+            if not session_cache_token:
+                LOGGER.error(
+                    "[%s] request: '%s' is missing a payload value "
+                    "needed to calculate rate, dropping this request."
+                    % (self.reqid, request_type)
+                )
+                raise tornado.web.HTTPError(status_code=400)
+
+            session_cache_key = f"session-request-{session_cache_token}"
+
+            session_reqcount = self.cacheobj.increment(
+                session_cache_key,
+            )
+
+            if session_reqcount > self.ratelimits["session"]:
+
+                (session_reqrate,
+                 session_reqcount,
+                 session_req_t0,
+                 session_req_tnow) = (
+                    self.cacheobj.getrate(
+                        session_cache_key,
+                        60.0,
+                    )
+                )
+
+                if session_reqrate > self.ratelimits['session']:
+                    LOGGER.error(
+                        "[%s] request '%s' is being rate-limited. "
+                        "Cache token: '%s', count: %s. "
+                        "Rate: %.3f > limit specified for '%s': %s"
+                        % (reqid,
+                           request_type,
+                           pii_hash(session_cache_key, self.pii_salt),
+                           session_reqcount,
+                           session_reqrate,
+                           'session',
+                           self.ratelimits['session'])
+                    )
+                    raise tornado.web.HTTPError(status_code=429)
+
+        # check the apikey- prefixed request
+        if request_type.startswith("apikey-"):
+
+            # handle API key issuance
+            apikey_cache_token = (
+                request_body.get("ip_address", None)
+            )
+            # handle all other API key actions
+            if not apikey_cache_token and request_body.get("apikey_dict"):
+                apikey_cache_token = request_body["apikey_dict"].get("user_id",
+                                                                     None)
+
+            if not apikey_cache_token:
+                LOGGER.error(
+                    "[%s] request: '%s' is missing a payload value "
+                    "needed to calculate rate, dropping this request."
+                    % (self.reqid, request_type)
+                )
+                raise tornado.web.HTTPError(status_code=400)
+
+            apikey_cache_key = f"apikey-request-{apikey_cache_token}"
+
+            apikey_reqcount = self.cacheobj.increment(
+                apikey_cache_key,
+            )
+
+            if apikey_reqcount > self.ratelimits["apikey"]:
+
+                (apikey_reqrate,
+                 apikey_reqcount,
+                 apikey_req_t0,
+                 apikey_req_tnow) = (
+                    self.cacheobj.getrate(
+                        apikey_cache_key,
+                        60.0,
+                    )
+                )
+
+                if apikey_reqrate > self.ratelimits['apikey']:
+                    LOGGER.error(
+                        "[%s] request '%s' is being rate-limited. "
+                        "Cache token: '%s', count: %s. "
+                        "Rate: %.3f > limit specified for '%s': %s"
+                        % (reqid,
+                           request_type,
+                           pii_hash(apikey_cache_key, self.pii_salt),
+                           apikey_reqcount,
+                           apikey_reqrate,
+                           'apikey',
+                           self.ratelimits['apikey'])
+                    )
+                    raise tornado.web.HTTPError(status_code=429)
 
     async def send_response(self, response, reqid):
         """
@@ -191,6 +382,10 @@ class AuthHandler(tornado.web.RequestHandler):
             self.write(f"HTTP {status_code}: Could not service this request "
                        f"because of invalid request authentication token or "
                        f"violation of host restriction.")
+        elif status_code == 429:
+            self.set_header("Retry-After", "180")
+            self.write(f"HTTP {status_code}: Could not service this request "
+                       f"because the set rate limit has been exceeded.")
         else:
             self.write(f"HTTP {status_code}: Could not service this request.")
 
@@ -203,9 +398,9 @@ class AuthHandler(tornado.web.RequestHandler):
 
         '''
 
+        # check the host
         ipcheck = check_header_host(self.allowed_hosts_regex,
                                     self.request.host)
-
         if not ipcheck:
             LOGGER.warning(
                 "Invalid host in request header: '%s' "
@@ -214,24 +409,29 @@ class AuthHandler(tornado.web.RequestHandler):
             )
             raise tornado.web.HTTPError(status_code=401)
 
+        # decrypt the request
         payload = decrypt_message(self.request.body, self.fernet_secret)
         if not payload:
             raise tornado.web.HTTPError(status_code=401)
 
+        # ignore all requests for echo to this handler
         if payload['request'] == 'echo':
             LOGGER.error("This handler can't echo things.")
             raise tornado.web.HTTPError(status_code=400)
 
-        # if we successfully got past host and decryption validation, then
-        # process the request
-        try:
+        # get the request ID
+        reqid = payload.get('reqid')
+        if reqid is None:
+            raise ValueError("No request ID provided. "
+                             "Ignoring this request.")
 
-            # get the request ID
-            # this is an integer
-            reqid = payload.get('reqid')
-            if reqid is None:
-                raise ValueError("No request ID provided. "
-                                 "Ignoring this request.")
+        # rate limit the request
+        if self.ratelimits:
+            self.ratelimit_request(reqid, payload['request'], payload['body'])
+
+        # if we successfully got past host, decryption, rate-limit validation,
+        # then process the request
+        try:
 
             #
             # dispatch the action handler function
@@ -265,8 +465,7 @@ class AuthHandler(tornado.web.RequestHandler):
             # this case, we'll apply backoff to slow down repeated failed
             # passwords
             #
-            passcheck_requests = {'user-login',
-                                  'user-passcheck-nosession'}
+            passcheck_requests = {'user-login', 'user-passcheck-nosession'}
 
             if (payload['request'] in passcheck_requests and
                 response['success'] is False):

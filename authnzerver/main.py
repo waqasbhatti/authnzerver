@@ -34,6 +34,8 @@ from functools import partial
 
 from sqlalchemy.exc import IntegrityError
 
+from . import dictcache
+
 
 # setup signal trapping on SIGINT
 def _recv_sigint(signum, stack):
@@ -192,7 +194,6 @@ def main():
 
     from .handlers import AuthHandler
     from .debughandler import EchoHandler
-    from . import cache
     from . import actions
 
     ###################
@@ -262,10 +263,6 @@ def main():
     basedir = loaded_config.basedir
     LOGGER.info("The server's base directory is: %s" % os.path.abspath(basedir))
 
-    cachedir = loaded_config.cachedir
-    LOGGER.info("The server's cache directory is: %s" %
-                os.path.abspath(cachedir))
-
     port = loaded_config.port
     listen = loaded_config.listen
     sessionexpiry = loaded_config.sessionexpiry
@@ -306,6 +303,37 @@ def main():
     LOGGER.info("Allowed host regex for incoming HTTP requests is: '%s'" %
                 allowed_hosts_regex)
 
+    ########################
+    ## SET UP RATE LIMITS ##
+    ########################
+
+    # can disable rate limiting by passing none to the ratelimits conf item
+    if loaded_config.ratelimits.strip().casefold() == 'none':
+        loaded_config.ratelimits = False
+        LOGGER.warning(
+            "HTTP request rate-limiting "
+            "has been disabled by setting 'none' for "
+            "AUTHNZERVER_RATELIMITS or --ratelimits."
+        )
+
+    else:
+        ratelimits = [x.strip().split(':')
+                      for x in loaded_config.ratelimits.split(';')]
+        ratelimits = {x[0]:int(x[1]) for x in ratelimits}
+        loaded_config.ratelimits = ratelimits
+        LOGGER.info(
+            "HTTP request rate-limiting (requests/minute) "
+            "config set to: %s" %
+            ratelimits
+        )
+
+    ###########################################
+    ## SET UP CACHE OBJECT FOR RATE-LIMITING ##
+    ###########################################
+
+    # initialize the cache
+    cacheobj = dictcache.DictCache()
+
     ###################
     ## HANDLER SETUP ##
     ###################
@@ -314,6 +342,7 @@ def main():
     handlers = [
         (r'/', AuthHandler,
          {'config':loaded_config,
+          'cacheobj':cacheobj,
           'executor':executor,
           'failed_passchecks':{}}),
     ]
@@ -361,16 +390,9 @@ def main():
     # start up the HTTP server and our application
     http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
 
-    #####################################################################
-    ## CLEAR THE CACHE, CHECK THE DB, AND REAP OLD SESSIONS ON STARTUP ##
-    #####################################################################
-
-    # clear cache
-    removed_items = cache.cache_flush(
-        cache_dirname=cachedir
-    )
-    LOGGER.info('Removed %s stale items from authnzerver cache.' %
-                removed_items)
+    ##################
+    ## CHECK THE DB ##
+    ##################
 
     # check the authdb is set up with the correct tables
     # running these after the DB is already set up doesn't do anything
@@ -441,24 +463,12 @@ def main():
     signal.signal(signal.SIGINT, _recv_sigint)
     signal.signal(signal.SIGTERM, _recv_sigint)
 
-    # make sure the port we're going to listen on is ok
-    # inspired by how Jupyter notebook does this
-    portok = False
-    serverport = port
-    maxtries = 10
-    thistry = 0
-    while not portok and thistry < maxtries:
-        try:
-            http_server.listen(serverport, listen)
-            portok = True
-        except socket.error:
-            LOGGER.warning('%s:%s is already in use, trying port %s' %
-                           (listen, serverport, serverport + 1))
-            serverport = serverport + 1
-
-    if not portok:
-        LOGGER.error('Could not find a free port after %s tries, giving up' %
-                     maxtries)
+    try:
+        http_server.listen(port, listen)
+    except socket.error:
+        LOGGER.error("Listen address TCP port: '%s:%s' is already "
+                     "in use by another process, "
+                     "bailing out..." % (listen, port))
         sys.exit(1)
 
     # start the IOLoop and begin serving requests
@@ -475,8 +485,13 @@ def main():
         )
         periodic_session_kill.start()
 
-        LOGGER.info('Starting authnzerver. Listening on http://%s:%s.' %
-                    (listen, serverport))
+        LOGGER.info(
+            "Starting authnzerver. "
+            "Listening on htt%s://%s:%s." %
+            ("ps" if loaded_config.tls_enabled else "p",
+             listen,
+             port)
+        )
         LOGGER.info("The server is starting with TLS %s." %
                     ('enabled' if loaded_config.tls_enabled else 'disabled'))
         LOGGER.info('Background worker processes: %s. IOLoop in use: %s.' %
