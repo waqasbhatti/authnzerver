@@ -32,8 +32,9 @@ import time
 import re
 from functools import partial
 
-from diskcache import FanoutCache
 from sqlalchemy.exc import IntegrityError
+
+from . import dictcache
 
 
 # setup signal trapping on SIGINT
@@ -193,7 +194,6 @@ def main():
 
     from .handlers import AuthHandler
     from .debughandler import EchoHandler
-    from . import cache
     from . import actions
 
     ###################
@@ -335,13 +335,8 @@ def main():
     ## SET UP CACHE OBJECT FOR RATE-LIMITING ##
     ###########################################
 
-    # clear cache
-    cacheobj = FanoutCache(cachedir, timeout=0.3)
-    removed_items = cache.cache_flush(
-        cacheobj=cacheobj
-    )
-    LOGGER.info('Removed %s stale items from authnzerver cache.' %
-                removed_items)
+    # initialize the cache
+    cacheobj = dictcache.DictCache()
 
     ###################
     ## HANDLER SETUP ##

@@ -51,7 +51,6 @@ import tornado.ioloop
 from . import actions
 from .messaging import encrypt_message, decrypt_message
 from .permissions import pii_hash
-from .cache import cache_getrate, cache_increment
 
 
 #########################
@@ -164,17 +163,18 @@ class AuthHandler(tornado.web.RequestHandler):
         """
 
         # increment the global request each time
-        all_reqcount = cache_increment(
+        all_reqcount = self.cacheobj.increment(
             "all_request_count",
-            cacheobj=self.cacheobj
         )
 
         # check the global request rate
         if all_reqcount > self.ratelimits['burst']:
 
-            all_reqrate, all_reqcount, all_req_t0 = cache_getrate(
-                "all_request_count",
-                cacheobj=self.cacheobj
+            all_reqrate, all_reqcount, all_req_t0, all_req_tnow = (
+                self.cacheobj.getrate(
+                    "all_request_count",
+                    60.0,
+                )
             )
 
             if all_reqrate > self.ratelimits['all']:
@@ -213,16 +213,17 @@ class AuthHandler(tornado.web.RequestHandler):
 
             user_cache_key = f"user-request-{user_cache_token}"
 
-            user_reqcount = cache_increment(
+            user_reqcount = self.cacheobj.increment(
                 user_cache_key,
-                cacheobj=self.cacheobj
             )
 
             if user_reqcount > self.ratelimits["user"]:
 
-                user_reqrate, user_reqcount, user_req_t0 = cache_getrate(
-                    user_cache_key,
-                    cacheobj=self.cacheobj
+                user_reqrate, user_reqcount, user_req_t0, user_req_tnow = (
+                    self.cacheobj.getrate(
+                        user_cache_key,
+                        60.0,
+                    )
                 )
 
                 if user_reqrate > self.ratelimits['user']:
@@ -258,17 +259,19 @@ class AuthHandler(tornado.web.RequestHandler):
 
             session_cache_key = f"session-request-{session_cache_token}"
 
-            session_reqcount = cache_increment(
+            session_reqcount = self.cacheobj.increment(
                 session_cache_key,
-                cacheobj=self.cacheobj
             )
 
             if session_reqcount > self.ratelimits["session"]:
 
-                session_reqrate, session_reqcount, session_req_t0 = (
-                    cache_getrate(
+                (session_reqrate,
+                 session_reqcount,
+                 session_req_t0,
+                 session_req_tnow) = (
+                    self.cacheobj.getrate(
                         session_cache_key,
-                        cacheobj=self.cacheobj
+                        60.0,
                     )
                 )
 
@@ -309,17 +312,19 @@ class AuthHandler(tornado.web.RequestHandler):
 
             apikey_cache_key = f"apikey-request-{apikey_cache_token}"
 
-            apikey_reqcount = cache_increment(
+            apikey_reqcount = self.cacheobj.increment(
                 apikey_cache_key,
-                cacheobj=self.cacheobj
             )
 
             if apikey_reqcount > self.ratelimits["apikey"]:
 
-                apikey_reqrate, apikey_reqcount, apikey_req_t0 = (
-                    cache_getrate(
+                (apikey_reqrate,
+                 apikey_reqcount,
+                 apikey_req_t0,
+                 apikey_req_tnow) = (
+                    self.cacheobj.getrate(
                         apikey_cache_key,
-                        cacheobj=self.cacheobj
+                        60.0,
                     )
                 )
 
