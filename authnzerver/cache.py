@@ -182,7 +182,7 @@ def cache_getrate(key,
     insertion inserted at key and the number of times it was incremented in
     key-counter. The rate is then:
 
-    key-counter_val/((time_now - time_insertion)/60.0)
+        key-counter_val/((time_now - time_insertion)/60.0)
 
     '''
 
