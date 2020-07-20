@@ -255,7 +255,7 @@ class DictCache:
         }
 
         with open(outfile,'wb') as outfd:
-            pickle.dumps(serialized, outfd, protocol=protocol)
+            pickle.dump(serialized, outfd, protocol=protocol)
 
     def load(self, infile):
         """
@@ -264,7 +264,7 @@ class DictCache:
         """
 
         with open(infile, 'rb') as infd:
-            deserialized = pickle.loads(infd)
+            deserialized = pickle.load(infd)
 
         self.sortedkeys = deserialized['sortedkeys']
         self.container = deserialized['container']
