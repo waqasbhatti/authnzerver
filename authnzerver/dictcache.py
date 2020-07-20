@@ -10,7 +10,6 @@
 #############
 
 import logging
-from typing import Any
 from time import monotonic
 import pickle
 from collections import namedtuple
@@ -42,6 +41,7 @@ class DictCache:
 
         self.container = {}
         self.capacity = capacity
+
         self.sortedkeys = SortedSet()
 
     def _trim(self):
@@ -96,15 +96,12 @@ class DictCache:
             return None
 
     def set(self, key, value,
-            add_ifnotexists=True,
-            update_insertedtime=False):
+            add_ifnotexists=True):
         """This sets the value of key to value and returns the new value.
 
         If the key doesn't exist and add_ifnotexists is False, returns None. If
         add_ifnotexists is True, adds the key to the cache and returns the
         value.
-
-        If update_insertedtime is True, will also update the inserted time.
 
         """
 
@@ -112,16 +109,7 @@ class DictCache:
             return self.add(key, value)
 
         elif key in self.container:
-
-            if update_insertedtime:
-                insert_time = monotonic()
-                sortedkey = SortedKey(insert_time, key)
-                self.sortedkeys.add(sortedkey)
-                self.container[key] = {'value':value,'inserted':insert_time}
-
-            else:
-                self.container[key]['value'] = value
-
+            self.container[key]['value'] = value
             return self.container[key]['value']
 
         else:
@@ -227,19 +215,22 @@ class DictCache:
         """This gets the rate of increment over period (in seconds) for
         a counter key that was incremented in the past.
 
+        If the counter key does not exist, returns None.
+
         """
 
         counter_key = f"{key}-cachecounterkey"
 
         if counter_key in self.container:
             key_item = self.container[counter_key]
-
+            tnow = monotonic()
             rate = ( key_item['value'] /
-                     ((monotonic() - key_item['inserted'])/period_seconds) )
-            return rate
+                     ((tnow - key_item['inserted'])/period_seconds) )
+
+            return rate, key_item['value'], key_item['inserted'], tnow
 
         else:
-            return 0.0
+            return None
 
     def flush(self):
         """
