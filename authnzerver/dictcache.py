@@ -13,6 +13,8 @@ import logging
 from time import monotonic
 import pickle
 from collections import namedtuple
+from hashlib import blake2b
+from hmac import compare_digest
 
 from sortedcontainers import SortedSet
 
@@ -240,11 +242,13 @@ class DictCache:
         self.container = {}
         self.sortedkeys = SortedSet()
 
-    def save(self, outfile, protocol=4):
-        """
-        This saves the current contents of the cache to disk.
+    def save(self, outfile, protocol=4, hmac_key=None):
+        """This saves the current contents of the cache to disk.
 
         The items stored must be pickleable.
+
+        If hmac_key is not None, the pickle will be signed before saving it to
+        disk.
 
         """
 
@@ -254,17 +258,50 @@ class DictCache:
             "capacity":self.capacity
         }
 
-        with open(outfile,'wb') as outfd:
-            pickle.dump(serialized, outfd, protocol=protocol)
+        if hmac_key is not None:
+            pickle_bytes = pickle.dumps(serialized, protocol=protocol)
+            hasher = blake2b(key=hmac_key.encode('utf-8'),
+                             digest_size=16,
+                             person=b'authnzrv-hmac')
+            hasher.update(pickle_bytes)
+            hmac_sig = hasher.hexdigest()
+            with open(outfile, 'wb') as outfd:
+                outfd.write(hmac_sig.encode('utf-8') + pickle_bytes)
+        else:
+            with open(outfile,'wb') as outfd:
+                pickle.dump(serialized, outfd, protocol=protocol)
 
-    def load(self, infile):
+    def load(self, infile, hmac_key=None):
+        """This loads contents of the cache from a pickle file on disk.
+
+        If hmac_key is not None, this function will assume it has to load a
+        signed pickle. If hmac_key is None but the saved pickle was signed,
+        loading will throw an exception.
+
         """
-        This loads contents of the cache from a pickle file on disk.
 
-        """
+        if not hmac_key:
 
-        with open(infile, 'rb') as infd:
-            deserialized = pickle.load(infd)
+            with open(infile, 'rb') as infd:
+                deserialized = pickle.load(infd)
+
+        else:
+
+            with open(infile, 'rb') as infd:
+                intermediate = infd.read()
+
+            hasher = blake2b(key=hmac_key.encode('utf-8'),
+                             digest_size=16,
+                             person=b'authnzrv-hmac')
+            signature, deserialized_bytes = intermediate[:32], intermediate[32:]
+            hasher.update(deserialized_bytes)
+            hmac_sig = hasher.hexdigest()
+            sig_ok = compare_digest(signature,
+                                    hmac_sig.encode('utf-8'))
+            if not sig_ok:
+                raise ValueError("Incorrect signature for loaded pickle.")
+            else:
+                deserialized = pickle.loads(deserialized_bytes)
 
         self.sortedkeys = deserialized['sortedkeys']
         self.container = deserialized['container']
