@@ -299,7 +299,7 @@ class AuthHandler(tornado.web.RequestHandler):
             )
             # handle all other API key actions
             if not apikey_cache_token and request_body.get("apikey_dict"):
-                apikey_cache_token = request_body["apikey_dict"].get("user_id",
+                apikey_cache_token = request_body["apikey_dict"].get("uid",
                                                                      None)
 
             if not apikey_cache_token:
