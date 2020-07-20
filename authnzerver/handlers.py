@@ -207,7 +207,7 @@ class AuthHandler(tornado.web.RequestHandler):
                 LOGGER.error(
                     "[%s] request: '%s' is missing a payload value "
                     "needed to calculate rate, dropping this request."
-                    % (self.reqid, request_type)
+                    % (reqid, request_type)
                 )
                 raise tornado.web.HTTPError(status_code=400)
 
@@ -253,7 +253,7 @@ class AuthHandler(tornado.web.RequestHandler):
                 LOGGER.error(
                     "[%s] request: '%s' is missing a payload value "
                     "needed to calculate rate, dropping this request."
-                    % (self.reqid, request_type)
+                    % (reqid, request_type)
                 )
                 raise tornado.web.HTTPError(status_code=400)
 
@@ -306,7 +306,7 @@ class AuthHandler(tornado.web.RequestHandler):
                 LOGGER.error(
                     "[%s] request: '%s' is missing a payload value "
                     "needed to calculate rate, dropping this request."
-                    % (self.reqid, request_type)
+                    % (reqid, request_type)
                 )
                 raise tornado.web.HTTPError(status_code=400)
 
