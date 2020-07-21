@@ -87,6 +87,7 @@ from .user import (
 )
 
 from .access import check_user_access, check_user_limit
+from .healthcheck import database_health_check
 
 
 __all__ = [
@@ -125,5 +126,6 @@ __all__ = [
     'verify_password_reset',
     'check_user_access',
     'check_user_limit',
+    'database_health_check',
     'LOGGER',
 ]

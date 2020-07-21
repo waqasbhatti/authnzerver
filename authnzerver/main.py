@@ -193,7 +193,7 @@ def main():
     ##############
 
     from .handlers import AuthHandler
-    from .debughandler import EchoHandler
+    from .healthcheck import HealthCheckHandler
     from . import actions
 
     ###################
@@ -345,10 +345,15 @@ def main():
           'cacheobj':cacheobj,
           'executor':executor,
           'failed_passchecks':{}}),
+        (r'/health', HealthCheckHandler,
+         {'config':loaded_config,
+          'executor':executor,
+          'cacheobj':cacheobj}),
     ]
 
     if DEBUG:
         # put in the echo handler for debugging
+        from .debughandler import EchoHandler
         handlers.append(
             (r'/echo', EchoHandler,
              {'authdb':auth_database_url,
