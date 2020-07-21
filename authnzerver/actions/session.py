@@ -268,8 +268,8 @@ def internal_edit_session(
           of the sessions table for the target session token.
 
         The *extra_info_json* field in the database will be updated with the
-        info in *extra_info*. To delete an item from *extra_info_json*, pass in
-        the special value of "__delete__" in *extra_info* for that item.
+        info in *update_dict*. To delete an item from *extra_info_json*, pass in
+        the special value of "__delete__" in *update_dict* for that item.
 
         In addition to these items received from an authnzerver client, the
         payload must also include the following keys (usually added in by a
@@ -334,6 +334,16 @@ def internal_edit_session(
 
     target_session_token = payload['target_session_token']
     update_dict = payload['update_dict']
+    if update_dict is None or len(update_dict) == 0:
+        return {
+            'success':False,
+            'failure_reason':(
+                "invalid request: missing 'update_dict' in request"
+            ),
+            'session_info':None,
+            'messages':["Invalid session edit request: "
+                        "missing or invalid parameters."],
+        }
 
     try:
 
@@ -357,6 +367,7 @@ def internal_edit_session(
         sessions = currproc.authdb_meta.tables['sessions']
 
         sel = select([
+            sessions.c.session_token,
             sessions.c.extra_info_json
         ]).select_from(sessions).where(
             sessions.c.session_token == target_session_token
@@ -364,9 +375,9 @@ def internal_edit_session(
             sessions.c.expires > datetime.utcnow()
         )
         result = currproc.authdb_conn.execute(sel)
-        session_extra_info = result.scalar()
+        sessiontoken_extrainfo = result.first()
 
-        if not session_extra_info:
+        if not sessiontoken_extrainfo or len(sessiontoken_extrainfo) == 0:
             return {
                 'success':False,
                 "failure_reason":"no such session",
@@ -377,10 +388,15 @@ def internal_edit_session(
         #
         # update the extra_info_json dict
         #
-        session_extra_info.update(update_dict)
+        session_extra_info = sessiontoken_extrainfo[-1]
+        if not session_extra_info:
+            session_extra_info = {}
+
         for key, val in update_dict.items():
             if val == "__delete__" and key in session_extra_info:
                 del session_extra_info[key]
+            else:
+                session_extra_info[key] = val
 
         # write it back to the session column
         # get back the new version
