@@ -136,9 +136,6 @@ class HealthCheckHandler(tornado.web.RequestHandler,
             "Health-Ok":all_workers_ok
         }
 
-        LOGGER.info("Health check request received. Response: %s"
-                    % retdict)
-
         if all_workers_ok:
             self.set_status(200)
         else:
