@@ -247,6 +247,230 @@ def auth_session_new(payload,
         }
 
 
+def internal_edit_session(
+        payload,
+        raiseonfail=False,
+        override_authdb_path=None,
+        config=None
+):
+    """Handles editing the *extra_info_json* field for an existing user session.
+
+    Meant for use internally in a frontend server.
+
+    Parameters
+    ----------
+
+    payload : dict
+        The input payload dict. Required items:
+
+        - target_session_token: int, the session to edit
+        - update_dict: dict, the changes to make to the *extra_info_json* column
+          of the sessions table for the target session token.
+
+        The *extra_info_json* field in the database will be updated with the
+        info in *extra_info*. To delete an item from *extra_info_json*, pass in
+        the special value of "__delete__" in *extra_info* for that item.
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    raiseonfail : bool
+        If True, and something goes wrong, this will raise an Exception instead
+        of returning normally with a failure condition.
+
+    override_authdb_path : str or None
+        The SQLAlchemy database URL to use if not using the default auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing the new session information.
+
+    """
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
+                'success':False,
+                'session_token':None,
+                'expires':None,
+                'messages':["Invalid session edit request."],
+            }
+
+    for key in ('target_session_token', 'update_dict'):
+
+        if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid session edit request, missing %s.' %
+                (payload['reqid'], key)
+            )
+
+            return {
+                'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
+                'session_info':None,
+                'messages':["Invalid session edit request: "
+                            "missing or invalid parameters."],
+            }
+
+    target_session_token = payload['target_session_token']
+    update_dict = payload['update_dict']
+
+    try:
+
+        # this checks if the database connection is live
+        currproc = mp.current_process()
+        engine = getattr(currproc, 'authdb_engine', None)
+
+        if override_authdb_path:
+            currproc.auth_db_path = override_authdb_path
+
+        if not engine:
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
+                authdb.get_auth_db(
+                    currproc.auth_db_path,
+                    echo=raiseonfail
+                )
+            )
+
+        sessions = currproc.authdb_meta.tables['sessions']
+
+        sel = select([
+            sessions.c.extra_info_json
+        ]).select_from(sessions).where(
+            sessions.c.session_token == target_session_token
+        ).where(
+            sessions.c.expires > datetime.utcnow()
+        )
+        result = currproc.authdb_conn.execute(sel)
+        session_extra_info = result.scalar()
+
+        if not session_extra_info:
+            return {
+                'success':False,
+                "failure_reason":"no such session",
+                'session_info':None,
+                'messages':["Session extra_info update failed."],
+            }
+
+        #
+        # update the extra_info_json dict
+        #
+        session_extra_info.update(update_dict)
+        for key, val in update_dict.items():
+            if val == "__delete__" and key in session_extra_info:
+                del session_extra_info[key]
+
+        # write it back to the session column
+        # get back the new version
+        upd = sessions.update().where(
+            sessions.c.session_token == target_session_token
+        ).values({"extra_info_json":session_extra_info})
+        currproc.authdb_conn.execute(upd)
+
+        s = select([
+            sessions.c.user_id,
+            sessions.c.session_token,
+            sessions.c.ip_address,
+            sessions.c.user_agent,
+            sessions.c.created,
+            sessions.c.expires,
+            sessions.c.extra_info_json
+        ]).select_from(sessions).where(
+            (sessions.c.session_token == target_session_token) &
+            (sessions.c.expires > datetime.utcnow())
+        )
+        result = currproc.authdb_conn.execute(s)
+        row = result.first()
+
+        try:
+
+            serialized_result = dict(row)
+            LOGGER.info(
+                "[%s] Session info updated for "
+                "user_id: %s with IP address: %s, "
+                "user agent: %s, session_token: %s. "
+                "Session expires on: %s" %
+                (payload['reqid'],
+                 pii_hash(serialized_result['user_id'],
+                          payload['pii_salt']),
+                 pii_hash(serialized_result['ip_address'],
+                          payload['pii_salt']),
+                 pii_hash(serialized_result['user_agent'],
+                          payload['pii_salt']),
+                 pii_hash(serialized_result['session_token'],
+                          payload['pii_salt']),
+                 serialized_result['expires'])
+            )
+
+            return {
+                'success':True,
+                'session_info':serialized_result,
+                'messages':["Session extra_info update successful."],
+            }
+
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] Session info update failed for session token: %s. "
+                "Exception was: %r." %
+                (payload['reqid'],
+                 pii_hash(payload['session_token'],
+                          payload['pii_salt']),
+                 e)
+            )
+
+            return {
+                'success':False,
+                'failure_reason':(
+                    "session requested for update doesn't exist or expired"
+                ),
+                'session_info':None,
+                'messages':["Session extra_info update failed."],
+            }
+
+    except Exception as e:
+
+        LOGGER.error(
+            "[%s] Session edit failed for user_id: %s. "
+            "Exception was: %r." %
+            (payload['reqid'],
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']),
+             e)
+        )
+
+        return {
+            'success':False,
+            'failure_reason':(
+                "DB error when updating session info"
+            ),
+            'session_info':None,
+            'messages':["Session info update failed."],
+        }
+
+
 def auth_session_set_extrainfo(payload,
                                raiseonfail=False,
                                override_authdb_path=None,

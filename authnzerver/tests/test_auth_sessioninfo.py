@@ -1,7 +1,8 @@
-'''test_auth_actions.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Sep 2018
+'''test_internal_session_edit.py -
+   Waqas Bhatti (wbhatti@astro.princeton.edu) - Sep 2018
 License: MIT. See the LICENSE file for details.
 
-This contains tests for the auth functions in authnzerver.actions.
+This contains a test for actions.internal_session_edit().
 
 '''
 
@@ -21,7 +22,7 @@ def get_test_authdb():
     authdb.initial_authdb_inserts('sqlite:///test-sessioninfo.authdb.sqlite')
 
 
-def test_sessioninfo():
+def test_internal_session_edit():
     '''
     This tests if we can add session info to a session dict.
 
@@ -98,7 +99,8 @@ def test_sessioninfo():
         'user_agent':'Mozzarella Killerwhale',
         'expires':datetime.utcnow()+timedelta(hours=1),
         'ip_address': '1.1.1.1',
-        'extra_info_json':{'pref_datasets_always_private':True},
+        'extra_info_json':{'pref_datasets_always_private':True,
+                           'pref_advancedbits':'so-advanced-much-progress'},
         'pii_salt':'super-secret-salt',
         'reqid':1
     }
@@ -115,22 +117,30 @@ def test_sessioninfo():
     # now try to add info to the session
     #
 
-    session_info_added = actions.auth_session_set_extrainfo(
-        {'session_token':session_token2['session_token'],
-         'extra_info':{'this':'is','a':'test'},
+    session_info_added = actions.internal_edit_session(
+        {'target_session_token':session_token2['session_token'],
+         'update_dict':{'this':'is','a':'test',
+                        'pref_datasets_always_private':False,
+                        'pref_advancedbits':'__delete__'},
          'pii_salt':'super-secret-salt',
          'reqid':1},
         override_authdb_path='sqlite:///test-sessioninfo.authdb.sqlite',
         raiseonfail=True
     )
 
+    new_session_info = session_info_added["session_info"]
+
     assert session_info_added['success'] is True
     assert isinstance(
-        session_info_added['session_info']['extra_info_json'],
+        new_session_info['extra_info_json'],
         dict
     )
-    assert session_info_added['session_info']['extra_info_json']['this'] == 'is'
-    assert session_info_added['session_info']['extra_info_json']['a'] == 'test'
+    assert new_session_info['extra_info_json']['this'] == 'is'
+    assert new_session_info['extra_info_json']['a'] == 'test'
+    assert new_session_info['extra_info_json'][
+        'pref_datasets_always_private'
+    ] is False
+    assert new_session_info.get('pref_advancedbits', None) is None
 
     # get back the new session info
     info_check = actions.auth_session_exists(
@@ -147,6 +157,10 @@ def test_sessioninfo():
     )
     assert info_check['session_info']['extra_info_json']['this'] == 'is'
     assert info_check['session_info']['extra_info_json']['a'] == 'test'
+    assert new_session_info['extra_info_json'][
+        'pref_datasets_always_private'
+    ] is False
+    assert new_session_info.get('pref_advancedbits', None) is None
 
     currproc = mp.current_process()
     if getattr(currproc, 'authdb_meta', None):
