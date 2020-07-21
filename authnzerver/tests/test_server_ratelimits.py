@@ -77,7 +77,7 @@ def test_ratelimits(monkeypatch, tmpdir):
 
     # set the session request rate-limit to 120 per 60 seconds
     monkeypatch.setenv("AUTHNZERVER_RATELIMITS",
-                       "all:15000;user:360;session:120;apikey:720;burst:20")
+                       "all:15000;user:360;session:120;apikey:720;burst:150")
 
     # launch the server subprocess
     p = subprocess.Popen("authnzrv", shell=True)
@@ -119,10 +119,10 @@ def test_ratelimits(monkeypatch, tmpdir):
             resplist.append(resp.status_code)
 
         # now check if we have about the right number of successful requests
-        # should be around 120 after which we get all 429s
+        # should be around 150 (max burst allowed) after which we get all 429s
         respcounter = Counter(resplist)
-        assert respcounter[200]/nreqs == approx(120/nreqs, rel=0.01)
-        assert respcounter[429]/nreqs == approx(180/nreqs, rel=0.01)
+        assert respcounter[200]/nreqs == approx(150/nreqs, rel=0.01)
+        assert respcounter[429]/nreqs == approx(150/nreqs, rel=0.01)
 
         #
         # kill the server at the end

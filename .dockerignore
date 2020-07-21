@@ -111,3 +111,4 @@ sandbox
 .idea/
 
 TODO-local.md
+**/htmlcov
