@@ -138,7 +138,7 @@ session_token/IP address) in the ``apikey`` key. The ``burst`` key indicates how
 many requests will be allowed to come in before rate-limits start being
 enforced. All values are in units of max requests allowed per minute. Set this
 parameter to the string 'none' to turn off rate-limiting entirely. (*default:*
-``all:15000;user:360;session:600;apikey:720;burst:20``).
+``all:15000;user:360;session:600;apikey:720;burst:150``).
 
 cmdline: ``--permissions``, env: ``AUTHNZERVER_PERMISSIONS``
 ------------------------------------------------------------
@@ -366,7 +366,7 @@ service.
           AUTHNZERVER_EMAILSENDER: "Authnzerver <authnzerver@localhost>"
           AUTHNZERVER_TLSCERTFILE:
           AUTHNZERVER_TLSCERTKEY:
-          AUTHNZERVER_RATELIMITS: "all:15000;user:360;session:600;apikey:720;burst:20"
+          AUTHNZERVER_RATELIMITS: "all:15000;user:360;session:600;apikey:720;burst:150"
 
 Some things to note about the snippet:
 
