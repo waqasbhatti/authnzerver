@@ -50,6 +50,7 @@ from .admin import (
     lookup_users,
     toggle_user_lock,
     internal_toggle_user_lock,
+    internal_edit_user,
 )
 
 from .email import (
@@ -61,9 +62,9 @@ from .email import (
 )
 
 from .session import (
+    internal_edit_session,
     auth_session_new,
     auth_session_exists,
-    auth_session_set_extrainfo,
     auth_session_delete,
     auth_kill_old_sessions,
     auth_delete_sessions_userid,
@@ -105,14 +106,15 @@ __all__ = [
     'lookup_users',
     'toggle_user_lock',
     'internal_toggle_user_lock',
+    'internal_edit_user',
     'send_signup_verification_email',
     'set_user_emailaddr_verified',
     'set_user_email_sent',
     'send_forgotpass_verification_email',
     'send_email',
+    'internal_edit_session',
     'auth_session_new',
     'auth_session_exists',
-    'auth_session_set_extrainfo',
     'auth_session_delete',
     'auth_password_check',
     'auth_password_check_nosession',
