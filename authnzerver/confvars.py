@@ -267,7 +267,7 @@ CONF = {
         'env':'%s_RATELIMITS' % ENVPREFIX,
         'cmdline':'ratelimits',
         'type':str,
-        'default':"all:15000;user:360;session:600;apikey:720;burst:20",
+        'default':"all:15000;user:480;session:600;apikey:720;burst:150",
         'help':("This sets the rate limit policy for authnzerver actions. "
                 "You can specify values for all actions, user-tied actions "
                 "(based on email/user_id/IP address), session-tied actions "
