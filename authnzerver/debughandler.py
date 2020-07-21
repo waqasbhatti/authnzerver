@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# handlers.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# debughandler.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''These are handlers for the authnzerver.
+'''This is the deprecated and soon-to-be-removed debug handler for authnzerver.
 
 '''
 
@@ -21,26 +21,11 @@ LOGGER = logging.getLogger(__name__)
 #############
 
 import json
-from datetime import datetime
-
-
-class FrontendEncoder(json.JSONEncoder):
-
-    def default(self, obj):
-
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        elif isinstance(obj, bytes):
-            return obj.decode()
-        elif isinstance(obj, complex):
-            return (obj.real, obj.imag)
-        else:
-            return json.JSONEncoder.default(self, obj)
-
 
 # this replaces the default encoder and makes it so Tornado will do the right
 # thing when it converts dicts to JSON when a
 # tornado.web.RequestHandler.write(dict) is called.
+from .jsonencoder import FrontendEncoder
 json._default_encoder = FrontendEncoder()
 
 import ipaddress
