@@ -429,8 +429,8 @@ Requires the following ``body`` items in a request:
 
 Returns a ``response`` with the following items if successful:
 
-- ``user_info`` (dict): a dict with user info related to current lock and account
-  status.
+- ``user_info`` (dict): a dict with user info related to current lock and
+  account status.
 
 This request can only be initiated by users with the ``superuser`` role.
 
@@ -848,8 +848,9 @@ Returns a ``response`` with the following items:
 Internal actions
 ================
 
-These are actions that are meant for internal use of a frontend server. These
-should never take in any end-user input or pass it on to the authnzerver.
+These are actions that are meant only for internal use of a frontend
+server. Invoking these actions MUST NOT accept any direct end-user input or pass
+it on to the authnzerver because no permissions are checked.
 
 ``internal-user-edit``: Edit a user's information
 -------------------------------------------------
