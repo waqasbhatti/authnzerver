@@ -19,7 +19,7 @@ RUN . /home/authnzerver/.env/bin/activate \
 VOLUME ["/home/authnzerver/basedir"]
 
 # define the health-check
-HEALTHCHECK --interval=30s --timeout=5s CMD curl --silent --fail http://localhost:13431/health || exit 1
+HEALTHCHECK --interval=5s --timeout=5s CMD curl --silent --fail http://localhost:13431/health || exit 1
 
 EXPOSE 13431
 ENTRYPOINT ["/home/authnzerver/docker_entrypoint.sh"]
