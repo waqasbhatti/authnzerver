@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-# actions_admin.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# admin.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
 '''This contains functions to drive admin related actions (listing users,
 editing users, change user roles).
-
 '''
 
 #############
@@ -22,7 +21,6 @@ LOGGER = logging.getLogger(__name__)
 #############
 
 import multiprocessing as mp
-from datetime import datetime
 
 from sqlalchemy import select, asc, column
 
@@ -31,7 +29,40 @@ from .session import auth_session_exists
 from ..permissions import pii_hash, load_permissions_json
 
 
-##################
+######################################################
+## user info columns returned by all functions here ##
+######################################################
+
+def user_info_columns(table):
+    """Returns the column expression for all required info retrieved by
+    a user lookup.
+
+    *table* is the users SQLAlchemy table object. Required to preserve type
+    information for the columns.
+
+    """
+
+    return [
+        table.c.user_id,
+        table.c.system_id,
+        table.c.full_name,
+        table.c.email,
+        table.c.email_verified,
+        table.c.is_active,
+        table.c.last_login_try,
+        table.c.last_login_success,
+        table.c.failed_login_tries,
+        table.c.created_on,
+        table.c.last_updated,
+        table.c.user_role,
+        table.c.extra_info,
+        table.c.emailverify_sent_datetime,
+        table.c.emailforgotpass_sent_datetime,
+        table.c.emailchangepass_sent_datetime
+    ]
+
+
+###################
 ## LISTING USERS ##
 ###################
 
@@ -144,35 +175,13 @@ def list_users(payload,
 
         if user_id is None:
 
-            s = select([
-                users.c.user_id,
-                users.c.system_id,
-                users.c.full_name,
-                users.c.email,
-                users.c.is_active,
-                users.c.last_login_try,
-                users.c.last_login_success,
-                users.c.created_on,
-                users.c.user_role,
-                users.c.extra_info,
-            ]).order_by(
+            s = select(user_info_columns(users)).order_by(
                 asc(users.c.user_id)
             ).select_from(users)
 
         else:
 
-            s = select([
-                users.c.user_id,
-                users.c.system_id,
-                users.c.full_name,
-                users.c.email,
-                users.c.is_active,
-                users.c.last_login_try,
-                users.c.last_login_success,
-                users.c.created_on,
-                users.c.user_role,
-                users.c.extra_info,
-            ]).order_by(
+            s = select(user_info_columns(users)).order_by(
                 asc(users.c.user_id)
             ).select_from(users).where(
                 users.c.user_id == user_id
@@ -344,18 +353,7 @@ def get_user_by_email(payload,
 
         users = currproc.authdb_meta.tables['users']
 
-        s = select([
-            users.c.user_id,
-            users.c.system_id,
-            users.c.full_name,
-            users.c.email,
-            users.c.is_active,
-            users.c.last_login_try,
-            users.c.last_login_success,
-            users.c.created_on,
-            users.c.user_role,
-            users.c.extra_info,
-        ]).order_by(
+        s = select(user_info_columns(users)).order_by(
             asc(users.c.user_id)
         ).select_from(users).where(
             users.c.email == email
@@ -564,24 +562,7 @@ def lookup_users(payload,
 
         users = currproc.authdb_meta.tables['users']
 
-        sel = select([
-            users.c.user_id,
-            users.c.system_id,
-            users.c.full_name,
-            users.c.email,
-            users.c.email_verified,
-            users.c.is_active,
-            users.c.last_login_try,
-            users.c.last_login_success,
-            users.c.failed_login_tries,
-            users.c.created_on,
-            users.c.last_updated,
-            users.c.user_role,
-            users.c.extra_info,
-            users.c.emailverify_sent_datetime,
-            users.c.emailforgotpass_sent_datetime,
-            users.c.emailchangepass_sent_datetime,
-        ]).order_by(
+        sel = select(user_info_columns(users)).order_by(
             asc(users.c.user_id)
         ).select_from(users)
 
@@ -1069,7 +1050,7 @@ def edit_user(payload,
             }
 
         #
-        # all update checks, passed, do the update
+        # all update checks passed, do the update
         #
 
         users = currproc.authdb_meta.tables['users']
@@ -1083,13 +1064,7 @@ def edit_user(payload,
         result = currproc.authdb_conn.execute(upd)
 
         # check the update and return new values
-        sel = select([
-            users.c.user_id,
-            users.c.user_role,
-            users.c.full_name,
-            users.c.email,
-            users.c.is_active
-        ]).select_from(users).where(
+        sel = select(user_info_columns(users)).select_from(users).where(
             users.c.user_id == target_userid
         )
         result = currproc.authdb_conn.execute(sel)
@@ -1374,24 +1349,7 @@ def internal_edit_user(
         ).values(update_dict)
         currproc.authdb_conn.execute(upd)
 
-        s = select([
-            users.c.user_id,
-            users.c.system_id,
-            users.c.full_name,
-            users.c.email,
-            users.c.email_verified,
-            users.c.is_active,
-            users.c.last_login_try,
-            users.c.last_login_success,
-            users.c.failed_login_tries,
-            users.c.created_on,
-            users.c.last_updated,
-            users.c.user_role,
-            users.c.extra_info,
-            users.c.emailverify_sent_datetime,
-            users.c.emailforgotpass_sent_datetime,
-            users.c.emailchangepass_sent_datetime,
-        ]).select_from(users).where(
+        s = select(user_info_columns(users)).select_from(users).where(
             users.c.user_id == target_userid
         )
 
@@ -1622,14 +1580,7 @@ def internal_toggle_user_lock(payload,
         result = currproc.authdb_conn.execute(upd)
 
         # check the update and return new values
-        sel = select([
-            users.c.user_id,
-            users.c.system_id,
-            users.c.user_role,
-            users.c.full_name,
-            users.c.email,
-            users.c.is_active
-        ]).select_from(users).where(
+        sel = select(user_info_columns(users)).select_from(users).where(
             users.c.user_id == target_userid
         )
         result = currproc.authdb_conn.execute(sel)
