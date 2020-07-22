@@ -18,8 +18,5 @@ RUN . /home/authnzerver/.env/bin/activate \
   && mkdir basedir && chown -R authnzerver:authnzerver basedir
 VOLUME ["/home/authnzerver/basedir"]
 
-# define the health-check
-HEALTHCHECK --interval=30s --timeout=5s CMD curl --silent --fail http://localhost:13431/health || exit 1
-
 EXPOSE 13431
 ENTRYPOINT ["/home/authnzerver/docker_entrypoint.sh"]

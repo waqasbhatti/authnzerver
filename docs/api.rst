@@ -197,20 +197,6 @@ Returns a ``response`` with the following items:
 
 - None. Check the ``success`` item in the returned dict.
 
-``session-setinfo``: Save extra info for an existing session
-------------------------------------------------------------
-
-Requires the following ``body`` items in a request:
-
-- ``session_token`` (str): the session token to update
-
-- ``extra_info_json`` (dict): a dict containing arbitrary session associated
-  information
-
-Returns a ``response`` with the following items if successful:
-
-- ``session_info`` (dict): all session related information
-
 ``user-login``: Perform a user login action
 -------------------------------------------
 
@@ -443,8 +429,8 @@ Requires the following ``body`` items in a request:
 
 Returns a ``response`` with the following items if successful:
 
-- ``user_info`` (dict): a dict with user info related to current lock and account
-  status.
+- ``user_info`` (dict): a dict with user info related to current lock and
+  account status.
 
 This request can only be initiated by users with the ``superuser`` role.
 
@@ -857,3 +843,70 @@ Returns a ``response`` with the following items:
 
 - ``refresh_token_expires`` (str): a UTC datetime in ISO format indicating when
   the refresh token expires
+
+
+Internal actions
+================
+
+These are actions that are meant only for internal use of a frontend
+server. Invoking these actions MUST NOT accept any direct end-user input or pass
+it on to the authnzerver because no permissions are checked.
+
+``internal-user-edit``: Edit a user's information
+-------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``target_userid`` (int): the user ID to update
+
+- ``update_dict`` (dict): a dict containing arbitrary user associated
+  information to edit existing values in the columns of the users table.
+
+  The ``update_dict`` cannot contain the following fields: user_id, system_id,
+  password, emailverify_sent_datetime, emailforgotpass_sent_datetime,
+  emailchangepass_sent_datetime, last_login_success, last_login_try,
+  failed_login_tries, created_on. These are tracked in other action functions
+  and should not be changed directly. This helps keep the user database
+  consistent.
+
+  If ``extra_info`` is one of the items in ``update_dict``, the ``extra_info``
+  JSON field in the database will be updated with the dict in
+  ``update_dict['extra_info']``. To delete an item from the database
+  ``extra_info`` JSON field, pass in the special value of ``"__delete__"`` in
+  ``update_dict['extra_info']`` for that item.
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_info`` (dict): all user information with the updates included.
+
+``internal-session-edit``: Edit an existing user session
+--------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``target_session_token`` (str): the session token to update
+
+- ``update_dict`` (dict): a dict containing arbitrary session associated
+  information to add to, edit existing items, or delete items from the
+  ``extra_info_json`` column of the sessions table. The ``extra_info_json``
+  field in the database will be updated with the info in ``update_dict``. To
+  delete an item from ``extra_info_json``, pass in the special value of
+  ``"__delete__"`` in ``update_dict`` for that item.
+
+Returns a ``response`` with the following items if successful:
+
+- ``session_info`` (dict): all session related information with the updates
+  included.
+
+``internal-user-lock``: Lock/unlock a user
+------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``target_userid`` (int): the user ID to lock/unlock
+- ``action`` (str): the action to perform, one of: {'unlock','lock'}
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_info`` (dict): user information including the current state of the
+  ``is_active`` database column

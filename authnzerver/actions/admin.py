@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-# actions_admin.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
+# admin.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
 '''This contains functions to drive admin related actions (listing users,
 editing users, change user roles).
-
 '''
 
 #############
@@ -30,7 +29,40 @@ from .session import auth_session_exists
 from ..permissions import pii_hash, load_permissions_json
 
 
-##################
+######################################################
+## user info columns returned by all functions here ##
+######################################################
+
+def user_info_columns(table):
+    """Returns the column expression for all required info retrieved by
+    a user lookup.
+
+    *table* is the users SQLAlchemy table object. Required to preserve type
+    information for the columns.
+
+    """
+
+    return [
+        table.c.user_id,
+        table.c.system_id,
+        table.c.full_name,
+        table.c.email,
+        table.c.email_verified,
+        table.c.is_active,
+        table.c.last_login_try,
+        table.c.last_login_success,
+        table.c.failed_login_tries,
+        table.c.created_on,
+        table.c.last_updated,
+        table.c.user_role,
+        table.c.extra_info,
+        table.c.emailverify_sent_datetime,
+        table.c.emailforgotpass_sent_datetime,
+        table.c.emailchangepass_sent_datetime
+    ]
+
+
+###################
 ## LISTING USERS ##
 ###################
 
@@ -143,35 +175,13 @@ def list_users(payload,
 
         if user_id is None:
 
-            s = select([
-                users.c.user_id,
-                users.c.system_id,
-                users.c.full_name,
-                users.c.email,
-                users.c.is_active,
-                users.c.last_login_try,
-                users.c.last_login_success,
-                users.c.created_on,
-                users.c.user_role,
-                users.c.extra_info,
-            ]).order_by(
+            s = select(user_info_columns(users)).order_by(
                 asc(users.c.user_id)
             ).select_from(users)
 
         else:
 
-            s = select([
-                users.c.user_id,
-                users.c.system_id,
-                users.c.full_name,
-                users.c.email,
-                users.c.is_active,
-                users.c.last_login_try,
-                users.c.last_login_success,
-                users.c.created_on,
-                users.c.user_role,
-                users.c.extra_info,
-            ]).order_by(
+            s = select(user_info_columns(users)).order_by(
                 asc(users.c.user_id)
             ).select_from(users).where(
                 users.c.user_id == user_id
@@ -343,18 +353,7 @@ def get_user_by_email(payload,
 
         users = currproc.authdb_meta.tables['users']
 
-        s = select([
-            users.c.user_id,
-            users.c.system_id,
-            users.c.full_name,
-            users.c.email,
-            users.c.is_active,
-            users.c.last_login_try,
-            users.c.last_login_success,
-            users.c.created_on,
-            users.c.user_role,
-            users.c.extra_info,
-        ]).order_by(
+        s = select(user_info_columns(users)).order_by(
             asc(users.c.user_id)
         ).select_from(users).where(
             users.c.email == email
@@ -563,24 +562,7 @@ def lookup_users(payload,
 
         users = currproc.authdb_meta.tables['users']
 
-        sel = select([
-            users.c.user_id,
-            users.c.system_id,
-            users.c.full_name,
-            users.c.email,
-            users.c.email_verified,
-            users.c.is_active,
-            users.c.last_login_try,
-            users.c.last_login_success,
-            users.c.failed_login_tries,
-            users.c.created_on,
-            users.c.last_updated,
-            users.c.user_role,
-            users.c.extra_info,
-            users.c.emailverify_sent_datetime,
-            users.c.emailforgotpass_sent_datetime,
-            users.c.emailchangepass_sent_datetime,
-        ]).order_by(
+        sel = select(user_info_columns(users)).order_by(
             asc(users.c.user_id)
         ).select_from(users)
 
@@ -1068,7 +1050,7 @@ def edit_user(payload,
             }
 
         #
-        # all update checks, passed, do the update
+        # all update checks passed, do the update
         #
 
         users = currproc.authdb_meta.tables['users']
@@ -1082,13 +1064,7 @@ def edit_user(payload,
         result = currproc.authdb_conn.execute(upd)
 
         # check the update and return new values
-        sel = select([
-            users.c.user_id,
-            users.c.user_role,
-            users.c.full_name,
-            users.c.email,
-            users.c.is_active
-        ]).select_from(users).where(
+        sel = select(user_info_columns(users)).select_from(users).where(
             users.c.user_id == target_userid
         )
         result = currproc.authdb_conn.execute(sel)
@@ -1173,6 +1149,268 @@ def edit_user(payload,
                 "exception when trying to update user"
             ),
             'messages':["User update failed."],
+        }
+
+
+def internal_edit_user(
+        payload,
+        raiseonfail=False,
+        override_authdb_path=None,
+        config=None
+):
+    """Handles editing users. Meant for use internally in a frontend server.
+
+    Parameters
+    ----------
+
+    payload : dict
+        The input payload dict. Required items:
+
+        - target_userid: int, the user to edit
+        - update_dict: dict, the changes to make, with each key being a column
+          value to change in the *users* table.
+
+        *update_dict* cannot contain the following fields: user_id, system_id,
+        password, emailverify_sent_datetime, emailforgotpass_sent_datetime,
+        emailchangepass_sent_datetime, last_login_success, last_login_try,
+        failed_login_tries, created_on, and last_updated. These are tracked in
+        other action functions and should not be changed directly.
+
+        If *update_dict* contains the *extra_info* field, this JSON field in the
+        database will be updated with the info in *extra_info*. To delete an
+        item from *extra_info*, pass in the special value of "__delete__" in
+        *extra_info* for that item.
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    raiseonfail : bool
+        If True, and something goes wrong, this will raise an Exception instead
+        of returning normally with a failure condition.
+
+    override_authdb_path : str or None
+        The SQLAlchemy database URL to use if not using the default auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing the new user information.
+
+    """
+
+    for key in ('reqid','pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
+                'success':False,
+                'session_token':None,
+                'expires':None,
+                'messages':["Invalid edit-user request."],
+            }
+
+    for key in ('target_userid', 'update_dict'):
+
+        if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid session edit-user request, missing %s.' %
+                (payload['reqid'], key)
+            )
+
+            return {
+                'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
+                'session_info':None,
+                'messages':["Invalid edit-user request: "
+                            "missing or invalid parameters."],
+            }
+
+    target_userid = payload['target_userid']
+    update_dict = payload['update_dict']
+    if update_dict is None or len(update_dict) == 0:
+        return {
+            'success':False,
+            'failure_reason':(
+                "invalid request: missing 'update_dict' in request"
+            ),
+            'session_info':None,
+            'messages':["Invalid user-edit request: "
+                        "missing or invalid parameters."],
+        }
+
+    update_dict_keys = set(update_dict.keys())
+    disallowed_keys = {
+        'user_id', 'system_id', 'password', 'emailverify_sent_datetime',
+        'emailforgotpass_sent_datetime', 'emailchangepass_sent_datetime',
+        'last_login_success', 'last_login_try',
+        'failed_login_tries', 'created_on', 'last_updated'
+    }
+    leftover_keys = update_dict_keys.intersection(disallowed_keys)
+
+    if len(leftover_keys) > 0:
+        LOGGER.error(
+            '[%s] Invalid edit-user request, '
+            'found disallowed update keys in update_dict: %s.' %
+            (payload['reqid'], leftover_keys)
+        )
+        return {
+            'success':False,
+            'failure_reason':(
+                "invalid request: disallowed keys in update_dict: %s" %
+                leftover_keys
+            ),
+            'session_info':None,
+            'messages':["Invalid edit-user request: "
+                        "invalid update parameters."],
+        }
+
+    #
+    # now, try to update
+    #
+    try:
+
+        # this checks if the database connection is live
+        currproc = mp.current_process()
+        engine = getattr(currproc, 'authdb_engine', None)
+
+        if override_authdb_path:
+            currproc.auth_db_path = override_authdb_path
+
+        if not engine:
+            (currproc.authdb_engine,
+             currproc.authdb_conn,
+             currproc.authdb_meta) = (
+                authdb.get_auth_db(
+                    currproc.auth_db_path,
+                    echo=raiseonfail
+                )
+            )
+
+        users = currproc.authdb_meta.tables['users']
+
+        sel = select([
+            users.c.user_id,
+            users.c.extra_info
+        ]).select_from(users).where(
+            users.c.user_id == target_userid
+        )
+        result = currproc.authdb_conn.execute(sel)
+        userid_and_extrainfo = result.first()
+
+        if not userid_and_extrainfo or len(userid_and_extrainfo) == 0:
+            return {
+                'success':False,
+                "failure_reason":"no such user",
+                'user_info':None,
+                'messages':["User info update failed."],
+            }
+
+        if ('extra_info' in update_dict and
+            update_dict['extra_info'] is not None):
+
+            user_extra_info = userid_and_extrainfo[-1]
+            if not user_extra_info:
+                user_extra_info = {}
+
+            for key, val in update_dict['extra_info'].items():
+                if val == "__delete__" and key in user_extra_info:
+                    del user_extra_info[key]
+                else:
+                    user_extra_info[key] = val
+
+        else:
+            user_extra_info = userid_and_extrainfo[-1]
+
+        # do the update
+
+        # replace the extra_info key in the update_dict since we update that
+        # separately
+        update_dict['extra_info'] = user_extra_info
+
+        upd = users.update().where(
+            users.c.user_id == target_userid,
+        ).values(update_dict)
+        currproc.authdb_conn.execute(upd)
+
+        s = select(user_info_columns(users)).select_from(users).where(
+            users.c.user_id == target_userid
+        )
+
+        result = currproc.authdb_conn.execute(s)
+        row = result.first()
+
+        try:
+
+            serialized_result = dict(row)
+            LOGGER.info(
+                "[%s] User info updated for "
+                "user_id: %s." %
+                (payload['reqid'],
+                 pii_hash(serialized_result['user_id'],
+                          payload['pii_salt']))
+            )
+
+            return {
+                'success':True,
+                'user_info':serialized_result,
+                'messages':["User-info update successful."],
+            }
+
+        except Exception as e:
+
+            LOGGER.error(
+                "[%s] User info update failed for session token: %s. "
+                "Exception was: %r." %
+                (payload['reqid'],
+                 pii_hash(payload['target_userid'],
+                          payload['pii_salt']),
+                 e)
+            )
+
+            return {
+                'success':False,
+                'failure_reason':(
+                    "user requested for update doesn't exist"
+                ),
+                'user_info':None,
+                'messages':["User info update failed."],
+            }
+
+    except Exception as e:
+
+        LOGGER.error(
+            "[%s] User info update failed for user_id: %s. "
+            "Exception was: %r." %
+            (payload['reqid'],
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']),
+             e)
+        )
+
+        return {
+            'success':False,
+            'failure_reason':(
+                "DB error when updating user info"
+            ),
+            'session_info':None,
+            'messages':["User info update failed."],
         }
 
 
@@ -1342,14 +1580,7 @@ def internal_toggle_user_lock(payload,
         result = currproc.authdb_conn.execute(upd)
 
         # check the update and return new values
-        sel = select([
-            users.c.user_id,
-            users.c.system_id,
-            users.c.user_role,
-            users.c.full_name,
-            users.c.email,
-            users.c.is_active
-        ]).select_from(users).where(
+        sel = select(user_info_columns(users)).select_from(users).where(
             users.c.user_id == target_userid
         )
         result = currproc.authdb_conn.execute(sel)

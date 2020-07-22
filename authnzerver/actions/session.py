@@ -247,20 +247,29 @@ def auth_session_new(payload,
         }
 
 
-def auth_session_set_extrainfo(payload,
-                               raiseonfail=False,
-                               override_authdb_path=None,
-                               config=None):
-    '''Adds info to the extra_info_json key of a session column.
+def internal_edit_session(
+        payload,
+        raiseonfail=False,
+        override_authdb_path=None,
+        config=None
+):
+    """Handles editing the *extra_info_json* field for an existing user session.
+
+    Meant for use internally in a frontend server.
 
     Parameters
     ----------
 
     payload : dict
-        This should contain the following items:
+        The input payload dict. Required items:
 
-        - session_token : str, the session token to update
-        - extra_info : dict, the update dict to put into the extra_info_json
+        - target_session_token: int, the session to edit
+        - update_dict: dict, the changes to make to the *extra_info_json* column
+          of the sessions table for the target session token.
+
+        The *extra_info_json* field in the database will be updated with the
+        info in *update_dict*. To delete an item from *extra_info_json*, pass in
+        the special value of "__delete__" in *update_dict* for that item.
 
         In addition to these items received from an authnzerver client, the
         payload must also include the following keys (usually added in by a
@@ -285,9 +294,9 @@ def auth_session_set_extrainfo(payload,
     -------
 
     dict
-        Returns a dict containing the new session info dict.
+        Returns a dict containing the new session information.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -301,16 +310,15 @@ def auth_session_set_extrainfo(payload,
                 'success':False,
                 'session_token':None,
                 'expires':None,
-                'messages':["Invalid session set_extrainfo request."],
+                'messages':["Invalid session edit request."],
             }
 
-    for key in ('session_token',
-                'extra_info'):
+    for key in ('target_session_token', 'update_dict'):
 
         if key not in payload:
 
             LOGGER.error(
-                '[%s] Invalid session set_extrainfo request, missing %s.' %
+                '[%s] Invalid session edit request, missing %s.' %
                 (payload['reqid'], key)
             )
 
@@ -320,12 +328,22 @@ def auth_session_set_extrainfo(payload,
                     "invalid request: missing '%s' in request" % key
                 ),
                 'session_info':None,
-                'messages':["Invalid session set_extrainfo request: "
+                'messages':["Invalid session edit request: "
                             "missing or invalid parameters."],
             }
 
-    session_token = payload['session_token']
-    extra_info = payload['extra_info']
+    target_session_token = payload['target_session_token']
+    update_dict = payload['update_dict']
+    if update_dict is None or len(update_dict) == 0:
+        return {
+            'success':False,
+            'failure_reason':(
+                "invalid request: missing 'update_dict' in request"
+            ),
+            'session_info':None,
+            'messages':["Invalid session edit request: "
+                        "missing or invalid parameters."],
+        }
 
     try:
 
@@ -348,11 +366,44 @@ def auth_session_set_extrainfo(payload,
 
         sessions = currproc.authdb_meta.tables['sessions']
 
-        upd = sessions.update(
+        sel = select([
+            sessions.c.session_token,
+            sessions.c.extra_info_json
+        ]).select_from(sessions).where(
+            sessions.c.session_token == target_session_token
         ).where(
-            sessions.c.session_token == session_token
-        ).values({'extra_info_json':extra_info})
-        result = currproc.authdb_conn.execute(upd)
+            sessions.c.expires > datetime.utcnow()
+        )
+        result = currproc.authdb_conn.execute(sel)
+        sessiontoken_extrainfo = result.first()
+
+        if not sessiontoken_extrainfo or len(sessiontoken_extrainfo) == 0:
+            return {
+                'success':False,
+                "failure_reason":"no such session",
+                'session_info':None,
+                'messages':["Session extra_info update failed."],
+            }
+
+        #
+        # update the extra_info_json dict
+        #
+        session_extra_info = sessiontoken_extrainfo[-1]
+        if not session_extra_info:
+            session_extra_info = {}
+
+        for key, val in update_dict.items():
+            if val == "__delete__" and key in session_extra_info:
+                del session_extra_info[key]
+            else:
+                session_extra_info[key] = val
+
+        # write it back to the session column
+        # get back the new version
+        upd = sessions.update().where(
+            sessions.c.session_token == target_session_token
+        ).values({"extra_info_json":session_extra_info})
+        currproc.authdb_conn.execute(upd)
 
         s = select([
             sessions.c.user_id,
@@ -363,17 +414,15 @@ def auth_session_set_extrainfo(payload,
             sessions.c.expires,
             sessions.c.extra_info_json
         ]).select_from(sessions).where(
-            (sessions.c.session_token == session_token) &
+            (sessions.c.session_token == target_session_token) &
             (sessions.c.expires > datetime.utcnow())
         )
         result = currproc.authdb_conn.execute(s)
-        rows = result.fetchone()
-        result.close()
+        row = result.first()
 
         try:
 
-            serialized_result = dict(rows)
-
+            serialized_result = dict(row)
             LOGGER.info(
                 "[%s] Session info updated for "
                 "user_id: %s with IP address: %s, "
@@ -420,10 +469,10 @@ def auth_session_set_extrainfo(payload,
     except Exception as e:
 
         LOGGER.error(
-            "[%s] Session info update failed for session token: %s. "
+            "[%s] Session edit failed for user_id: %s. "
             "Exception was: %r." %
             (payload['reqid'],
-             pii_hash(payload['session_token'],
+             pii_hash(payload['target_userid'],
                       payload['pii_salt']),
              e)
         )
@@ -434,7 +483,7 @@ def auth_session_set_extrainfo(payload,
                 "DB error when updating session info"
             ),
             'session_info':None,
-            'messages':["Session extra_info update failed."],
+            'messages':["Session info update failed."],
         }
 
 

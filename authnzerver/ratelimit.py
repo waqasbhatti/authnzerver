@@ -49,9 +49,10 @@ class RateLimitMixin:
 
     Requires:
 
-    - self.cacheobj
-    - self.ratelimits
-    - self.pii_salt
+    - self.cacheobj  (from AuthHandler)
+    - self.ratelimits (from AuthHandler)
+    - self.pii_salt (from AuthHandler)
+    - self.request.remote_ip (from tornado.web.RequestHandler)
 
     """
 
@@ -142,7 +143,7 @@ class RateLimitMixin:
                     raise tornado.web.HTTPError(status_code=429)
 
         # check the session- prefixed request
-        if request_type.startswith("session-"):
+        elif request_type.startswith("session-"):
 
             session_cache_token = (
                 request_body.get("user_id", None) or
@@ -191,7 +192,7 @@ class RateLimitMixin:
                     raise tornado.web.HTTPError(status_code=429)
 
         # check the apikey- prefixed request
-        if request_type.startswith("apikey-"):
+        elif request_type.startswith("apikey-"):
 
             # handle API key issuance
             apikey_cache_token = (
@@ -243,6 +244,48 @@ class RateLimitMixin:
                     )
                     raise tornado.web.HTTPError(status_code=429)
 
+        # check the internal- prefixed request
+        elif request_type.startswith("internal-"):
+
+            # the internal request cache token is the request_type and the
+            # originating IP address of the internal request
+            internal_cache_token = f"{request_type}-{self.request.remote_ip}"
+            internal_cache_key = f"internal-request-{internal_cache_token}"
+
+            internal_reqcount = self.cacheobj.increment(
+                internal_cache_key,
+            )
+
+            # more generous burst allowance for internal requests
+            if internal_reqcount > 500:
+
+                (internal_reqrate,
+                 internal_reqcount,
+                 internal_req_t0,
+                 internal_req_tnow) = (
+                    self.cacheobj.getrate(
+                        internal_cache_key,
+                        60.0,
+                    )
+                )
+
+                # more generous rate allowance for internal requests
+                # 50 reqs/sec/IP address
+                if internal_reqrate > 3000:
+                    LOGGER.error(
+                        "[%s] request '%s' is being rate-limited. "
+                        "Cache token: '%s', count: %s. "
+                        "Rate: %.3f > limit specified for '%s': %s"
+                        % (reqid,
+                           request_type,
+                           pii_hash(internal_cache_key, self.pii_salt),
+                           internal_reqcount,
+                           internal_reqrate,
+                           'internal',
+                           3000)
+                    )
+                    raise tornado.web.HTTPError(status_code=429)
+
 
 class UserLockMixin:
     """This class handles user locking/unlocking and slowing down
@@ -260,8 +303,8 @@ class UserLockMixin:
 
         Requires:
 
-        - self.failed_passchecks
-        - self.config
+        - self.failed_passchecks (from AuthHandler)
+        - self.config (from AuthHandler)
 
         '''
 
@@ -298,8 +341,8 @@ class UserLockMixin:
 
         Requires:
 
-        - self.config
-        - self.executor
+        - self.config (from AuthHandler)
+        - self.executor (from AuthHandler)
 
         '''
 
