@@ -8,15 +8,18 @@ RUN apt-get update \
 WORKDIR /home/authnzerver
 USER authnzerver
 
-COPY --chown=authnzerver:authnzerver . .
+COPY --chown=authnzerver:authnzerver requirements.txt requirements.txt
 RUN python3 -m venv /home/authnzerver/.env \
   && . /home/authnzerver/.env/bin/activate \
   && pip install --no-cache-dir pip setuptools wheel -U \
   && pip install --no-cache-dir -r requirements.txt
+
+COPY --chown=authnzerver:authnzerver . .
 RUN . /home/authnzerver/.env/bin/activate \
   && pip --no-cache-dir install -e /home/authnzerver \
   && mkdir basedir && chown -R authnzerver:authnzerver basedir
-VOLUME ["/home/authnzerver/basedir"]
 
 EXPOSE 13431
+
+VOLUME ["/home/authnzerver/basedir"]
 ENTRYPOINT ["/home/authnzerver/docker_entrypoint.sh"]
