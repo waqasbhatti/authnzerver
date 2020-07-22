@@ -345,6 +345,12 @@ service.
         expose: [13431]
         volumes:
           - authnzerver_basedir:/home/authnzerver/basedir
+        # optional health check
+        healthcheck:
+          test: ["CMD-SHELL", "curl --silent --fail http://localhost:13431/health || exit 1"]
+          interval: 10s
+          timeout: 5s
+          retries: 3
         environment:
           AUTHNZERVER_ALLOWEDHOSTS: authnzerver;localhost
           AUTHNZERVER_AUTHDB: "sqlite:////home/authnzerver/basedir/.authdb.sqlite"
