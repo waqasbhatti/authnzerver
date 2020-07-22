@@ -98,10 +98,16 @@ class RateLimitMixin:
             user_cache_token = (
                 request_body.get("email", None) or
                 request_body.get("user_id", None) or
+                request_body.get("system_id", None) or
                 request_body.get("session_token", None) or
                 request_body.get("ip_address", None) or
                 request_body.get("email_address", None)
             )
+
+            # need special handling for user-lookup-match
+            # FIXME: this should really be an internal- prefixed function
+            if request_type == 'user-lookup-match':
+                user_cache_token = f"user-lookup-{self.request.remote_ip}"
 
             # drop all requests that try to get around rate-limiting
             if not user_cache_token:
