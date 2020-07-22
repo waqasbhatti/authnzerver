@@ -2,9 +2,9 @@
 # actions_session.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to drive session-related auth actions.
+"""This contains functions to drive session-related auth actions.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -62,7 +62,7 @@ def auth_session_new(payload,
                      override_authdb_path=None,
                      raiseonfail=False,
                      config=None):
-    '''Generates a new session token.
+    """Generates a new session token.
 
     Parameters
     ----------
@@ -105,7 +105,7 @@ def auth_session_new(payload,
          'expires': str date in ISO format,
          'messages': list of str messages to pass on to the user if any}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -493,7 +493,7 @@ def auth_session_exists(
         raiseonfail=False,
         config=None
 ):
-    '''
+    """
     Checks if the provided session token exists.
 
     Parameters
@@ -529,7 +529,7 @@ def auth_session_exists(
          Returns a dict containing all of the session info if it exists and has
          not expired.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -684,7 +684,7 @@ def auth_session_delete(
         raiseonfail=False,
         config=None
 ):
-    '''
+    """
     Removes a session token, effectively ending a session.
 
     Parameters
@@ -720,7 +720,7 @@ def auth_session_delete(
         Returns a dict with a success key indicating if the session was deleted
         successfully.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -820,7 +820,7 @@ def auth_delete_sessions_userid(
         raiseonfail=False,
         config=None,
 ):
-    '''Removes all session tokens corresponding to a user ID.
+    """Removes all session tokens corresponding to a user ID.
 
     If keep_current_session is True, will not delete the session token passed in
     the payload. This allows for "delete all my other logins" functionality.
@@ -860,7 +860,7 @@ def auth_delete_sessions_userid(
         Returns a dict with a success key indicating if the sessions were
         deleted successfully.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -978,7 +978,7 @@ def auth_kill_old_sessions(
         raiseonfail=False,
         config=None,
 ):
-    '''
+    """
     Kills all expired sessions.
 
     Parameters
@@ -1006,7 +1006,7 @@ def auth_kill_old_sessions(
         Returns a dict with a success key indicating if the sessions were
         deleted successfully.
 
-    '''
+    """
 
     expires_days = session_expiry_days
     earliest_date = datetime.utcnow() - timedelta(days=expires_days)

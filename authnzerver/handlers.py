@@ -2,9 +2,9 @@
 # handlers.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''These are handlers for the authnzerver.
+"""These are handlers for the authnzerver.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -43,10 +43,10 @@ from .ratelimit import RateLimitMixin, UserLockMixin
 #########################
 
 def check_header_host(allowed_hosts_regex, header_host):
-    '''
+    """
     This checks if the header_host item is in the allowed_hosts.
 
-    '''
+    """
     rematch = allowed_hosts_regex.findall(header_host)
     if rematch is not None:
         return True
@@ -119,20 +119,20 @@ request_functions = {
 class AuthHandler(tornado.web.RequestHandler,
                   RateLimitMixin,
                   UserLockMixin):
-    '''
+    """
     This handles the actual auth requests.
 
-    '''
+    """
 
     def initialize(self,
                    config,
                    executor,
                    cacheobj,
                    failed_passchecks):
-        '''
+        """
         This sets up stuff.
 
-        '''
+        """
 
         self.config = config
         self.authdb = self.config.authdb
@@ -202,10 +202,10 @@ class AuthHandler(tornado.web.RequestHandler,
             self.finish()
 
     async def post(self):
-        '''
+        """
         Handles the incoming POST request.
 
-        '''
+        """
 
         # check the host
         ipcheck = check_header_host(self.allowed_hosts_regex,

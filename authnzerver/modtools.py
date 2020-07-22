@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-'''This contains functions to dynamically import modules and get Python objects.
+"""This contains functions to dynamically import modules and get Python objects.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -32,7 +32,7 @@ import os.path
 ###############
 
 def module_from_string(module, force_reload=False):
-    '''This imports the module specified.
+    """This imports the module specified.
 
     Used to dynamically import Python modules that are needed to support LC
     reader functions.
@@ -66,7 +66,7 @@ def module_from_string(module, force_reload=False):
 
     Hypens are not allowed in module filenames.
 
-    '''
+    """
 
     try:
 
@@ -112,7 +112,7 @@ def module_from_string(module, force_reload=False):
 
 
 def object_from_string(objectpath, force_reload=False):
-    '''This returns a Python object pointed to by the given string.
+    """This returns a Python object pointed to by the given string.
 
     An object can be any valid Python object. One of the main uses for this
     function is to dynamically load Python functions from a module given its
@@ -132,7 +132,7 @@ def object_from_string(objectpath, force_reload=False):
 
       (This is similar to the format used by pytest.)
 
-    '''
+    """
 
     if '::' in objectpath:
         pymod, pyobject = objectpath.split('::')

@@ -2,10 +2,10 @@
 # confload.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to load config from environ, command line params, or
+"""This contains functions to load config from environ, command line params, or
 an envfile.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -44,7 +44,7 @@ ENV_REGEX = re.compile(r'\[\[(\w+)\]\]')
 
 
 def _dict_get(datadict, keylist):
-    '''This gets a requested dict key by walking the dict.
+    """This gets a requested dict key by walking the dict.
 
     Parameters
     ----------
@@ -85,19 +85,22 @@ def _dict_get(datadict, keylist):
     object
         The dict value of the specified key address.
 
-    '''
+    """
 
     # convert the key list items to a list and handle str -> int conversions
     if isinstance(keylist,str):
-        keylist = keylist.split('.')
+        in_keylist = keylist.split('.')
+    else:
+        in_keylist = [str(x) for x in keylist]
 
-    use_keylist = keylist[::]
-
-    for ind, item in enumerate(keylist):
+    use_keylist = []
+    for item in in_keylist:
         if '_arr_' in item:
-            arrind = item.replace('_arr_','')
-            arrind = int(arrind)
-            use_keylist[ind] = arrind
+            arr_item = item.replace('_arr_','')
+            arr_item = int(arr_item)
+            use_keylist.append(arr_item)
+        else:
+            use_keylist.append(item)
 
     return reduce(getitem, use_keylist, datadict)
 
@@ -354,6 +357,7 @@ def item_from_url(url,
     #
     # fire the request and deal with the response
     #
+    conf_item = None
 
     try:
 
@@ -771,7 +775,7 @@ def get_conf_item(env_key,
 def load_config(conf_dict,
                 options_object,
                 envfile=None):
-    '''Loads all the config items in config_dict.
+    """Loads all the config items in config_dict.
 
     Parameters
     ----------
@@ -875,7 +879,7 @@ def load_config(conf_dict,
         This returns an object with the parsed final values of each of the
         config items as object attributes.
 
-    '''
+    """
 
     # get the environ from the envfile as priority 1
     if isinstance(envfile, str) and os.path.exists(envfile):

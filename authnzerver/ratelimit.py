@@ -2,14 +2,14 @@
 # ratelimit.py - Waqas Bhatti (waqas.afzal.bhatti@gmail.com) - Jul 2020
 # License: MIT - see the LICENSE file for the full text.
 
-'''This module contains RequestHandler mixins that do rate-limiting for the
+"""This module contains RequestHandler mixins that do rate-limiting for the
 authnzerver's own API, handle throttling of incorrect password attempts, and
 do user locking/unlocking for repeated password check failures.
 
 None of these will work without bits already defined in handlers.AuthHandler or
 close derivatives.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -294,7 +294,7 @@ class UserLockMixin:
     """
 
     async def handle_failed_logins(self, payload):
-        '''
+        """
         This handles failed logins.
 
         - Adds increasing wait times to successive logins if they keep failing.
@@ -306,10 +306,10 @@ class UserLockMixin:
         - self.failed_passchecks (from AuthHandler)
         - self.config (from AuthHandler)
 
-        '''
+        """
 
         # increment the failure counter and return it
-        if (payload['body']['email'] in self.failed_passchecks):
+        if payload['body']['email'] in self.failed_passchecks:
             self.failed_passchecks[payload['body']['email']] += 1
         else:
             self.failed_passchecks[payload['body']['email']] = 1
@@ -325,26 +325,27 @@ class UserLockMixin:
             if wait_time > 40.0:
                 wait_time = 40.0
             await asyncio.sleep(wait_time)
-            return ('wait', failed_pass_count, wait_time)
+            return 'wait', failed_pass_count, wait_time
 
         elif failed_pass_count > self.config.userlocktries:
-            return ('locked', failed_pass_count, 0.0)
+            return 'locked', failed_pass_count, 0.0
 
         else:
-            return ('ok', failed_pass_count, 0.0)
+            return 'ok', failed_pass_count, 0.0
 
     async def lockuser_repeated_login_failures(self,
                                                payload,
                                                unlock_after_seconds=3600):
-        '''
+        """
         This locks the user account. Also schedules an unlock action for later.
 
         Requires:
 
         - self.config (from AuthHandler)
         - self.executor (from AuthHandler)
+        - self.scheduled_user_unlock() (from UserLockMixin)
 
-        '''
+        """
 
         # look up the user ID using the email address
         loop = tornado.ioloop.IOLoop.current()
@@ -373,7 +374,6 @@ class UserLockMixin:
         else:
 
             # attempt to lock the user using actions.internal_toggle_user_lock
-
             backend_func = partial(
                 actions.internal_toggle_user_lock,
                 {'target_userid':user_info['user_info']['user_id'],
@@ -428,10 +428,10 @@ class UserLockMixin:
         }
 
     async def scheduled_user_unlock(self, user_id, reqid, pii_salt):
-        '''
+        """
         This function is scheduled on the ioloop to unlock the specified user.
 
-        '''
+        """
 
         LOGGER.warning(
             "[%s] Unlocked the account for user ID: %s after "

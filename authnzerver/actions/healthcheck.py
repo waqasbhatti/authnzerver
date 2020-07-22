@@ -2,9 +2,9 @@
 # healthcheck.py - Waqas Bhatti (waqas.afzal.bhatti@gmail.com) - Jul 2020
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to check database health.
+"""This contains functions to check database health.
 
-'''
+"""
 
 #############
 ## LOGGING ##

@@ -2,9 +2,9 @@
 # cache.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to drive the cache.
+"""This contains functions to drive the cache.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -36,10 +36,10 @@ def cache_add(key, value,
               timeout_seconds=0.3,
               expires_seconds=None,
               cache_dirname='/tmp/authnzerver-cache'):
-    '''
+    """
     This sets a key to the value specified in the cache.
 
-    '''
+    """
 
     if not cacheobj:
         cachedir = os.path.abspath(cache_dirname)
@@ -57,10 +57,10 @@ def cache_get(key,
               cacheobj=None,
               timeout_seconds=0.3,
               cache_dirname='/tmp/authnzerver-cache'):
-    '''
+    """
     This sets a key to the value specified in the cache.
 
-    '''
+    """
 
     if not cacheobj:
         cachedir = os.path.abspath(cache_dirname)
@@ -78,10 +78,10 @@ def cache_pop(key,
               cacheobj=None,
               timeout_seconds=0.3,
               cache_dirname='/tmp/authnzerver-cache'):
-    '''
+    """
     This sets a key to the value specified in the cache.
 
-    '''
+    """
 
     if not cacheobj:
         cachedir = os.path.abspath(cache_dirname)
@@ -99,10 +99,10 @@ def cache_delete(key,
                  cacheobj=None,
                  timeout_seconds=0.3,
                  cache_dirname='/tmp/authnzerver-cache'):
-    '''
+    """
     This sets a key to the value specified in the cache.
 
-    '''
+    """
 
     if not cacheobj:
         cachedir = os.path.abspath(cache_dirname)
@@ -120,13 +120,13 @@ def cache_increment(key,
                     cacheobj=None,
                     timeout_seconds=0.3,
                     cache_dirname='/tmp/authnzerver-cache'):
-    '''
+    """
     This sets up a counter for the key in the cache.
 
     Sets the key -> time of initial insertion
     Then increments 'key-counter'.
 
-    '''
+    """
 
     if not cacheobj:
         cachedir = os.path.abspath(cache_dirname)
@@ -151,10 +151,10 @@ def cache_decrement(key,
                     cacheobj=None,
                     timeout_seconds=0.3,
                     cache_dirname='/tmp/authnzerver-cache'):
-    '''
+    """
     This decrements the counter for key.
 
-    '''
+    """
 
     if not cacheobj:
         cachedir = os.path.abspath(cache_dirname)
@@ -178,13 +178,13 @@ def cache_getrate(key,
                   cacheobj=None,
                   timeout_seconds=0.3,
                   cache_dirname='/tmp/authnzerver-cache'):
-    '''This gets the rate of increment for the key by looking at the time of
+    """This gets the rate of increment for the key by looking at the time of
     insertion inserted at key and the number of times it was incremented in
     key-counter. The rate is then:
 
         key-counter_val/((time_now - time_insertion)/60.0)
 
-    '''
+    """
 
     if not cacheobj:
         cachedir = os.path.abspath(cache_dirname)
@@ -215,10 +215,10 @@ def cache_getrate(key,
 def cache_flush(cacheobj=None,
                 timeout_seconds=0.3,
                 cache_dirname='/tmp/authnzerver-cache'):
-    '''
+    """
     This removes all keys from the cache.
 
-    '''
+    """
 
     if not cacheobj:
         cachedir = os.path.abspath(cache_dirname)

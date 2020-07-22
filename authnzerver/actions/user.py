@@ -2,9 +2,9 @@
 # actions_user.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to drive user account related auth actions.
+"""This contains functions to drive user account related auth actions.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -81,7 +81,7 @@ def validate_input_password(
         max_unsafe_similarity=20,
         config=None
 ):
-    '''Validates user input passwords.
+    """Validates user input passwords.
 
     Password rules are:
 
@@ -143,7 +143,7 @@ def validate_input_password(
         Returns True if the password is OK to use and meets all
         specification. False otherwise.
 
-    '''
+    """
 
     # handle kwargs passed via config object
     if config is not None:
@@ -281,7 +281,7 @@ def change_user_password(payload,
                          min_pass_length=12,
                          max_unsafe_similarity=30,
                          config=None):
-    '''Changes the user's password.
+    """Changes the user's password.
 
     Parameters
     ----------
@@ -336,7 +336,7 @@ def change_user_password(payload,
 
     This logs out the user from all of their other sessions.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -533,7 +533,7 @@ def change_user_password(payload,
         ).values({
             'password': hashed_password
         })
-        result = currproc.authdb_conn.execute(upd)
+        currproc.authdb_conn.execute(upd)
 
         sel = select([
             users.c.password,
@@ -641,7 +641,7 @@ def create_new_user(
         raiseonfail=False,
         config=None
 ):
-    '''Makes a new user.
+    """Makes a new user.
 
     Parameters
     ----------
@@ -705,7 +705,7 @@ def create_new_user(
     Only after the user verifies their email, is_active will be set to True and
     user_role will be set to 'authenticated'.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -1011,7 +1011,7 @@ def delete_user(payload,
                 raiseonfail=False,
                 override_authdb_path=None,
                 config=None):
-    '''Deletes a user.
+    """Deletes a user.
 
     This can only be called by the user themselves or the superuser.
 
@@ -1058,7 +1058,7 @@ def delete_user(payload,
     dict
         Returns a dict containing a success key indicating if the user was
         deleted.
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -1286,7 +1286,7 @@ def verify_password_reset(payload,
                           min_pass_length=12,
                           max_unsafe_similarity=30,
                           config=None):
-    '''
+    """
     Verifies a password reset request.
 
     Parameters
@@ -1331,7 +1331,7 @@ def verify_password_reset(payload,
         Returns a dict containing a success key indicating if the user's
         password was reset.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -1538,7 +1538,7 @@ def verify_password_reset(payload,
         ).values({
             'password': hashed_password
         })
-        result = currproc.authdb_conn.execute(upd)
+        currproc.authdb_conn.execute(upd)
 
         sel = select([
             users.c.password,

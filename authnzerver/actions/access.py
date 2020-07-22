@@ -2,9 +2,9 @@
 # access.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to apply access control.
+"""This contains functions to apply access control.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -40,7 +40,7 @@ def check_user_access(payload,
                       override_permissions_json=None,
                       override_authdb_path=None,
                       config=None):
-    '''Checks for user access to a specified item based on a permissions policy.
+    """Checks for user access to a specified item based on a permissions policy.
 
     Parameters
     ----------
@@ -95,7 +95,7 @@ def check_user_access(payload,
             {'success': True or False,
              'messages': list of str messages if any}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -127,6 +127,11 @@ def check_user_access(payload,
                 ),
                 'messages':["Invalid access grant request."],
             }
+
+    originating_userid = int(payload['user_id'])
+    originating_user_role = payload['user_role']
+    target_userid = int(payload['target_owner'])
+    target_sharedwith = payload['target_sharedwith']
 
     try:
 
@@ -166,14 +171,7 @@ def check_user_access(payload,
             )
 
         users = currproc.authdb_meta.tables['users']
-
-        originating_userid = int(payload['user_id'])
-        originating_user_role = payload['user_role']
-        target_userid = int(payload['target_owner'])
-        target_sharedwith = payload['target_sharedwith']
-
-        userids_to_check = [originating_userid,
-                            target_userid]
+        userids_to_check = [originating_userid, target_userid]
 
         if (target_sharedwith and
             target_sharedwith != '' and
@@ -370,7 +368,7 @@ def check_user_limit(payload,
                      override_permissions_json=None,
                      override_authdb_path=None,
                      config=None):
-    '''Applies a specified limit to an item based on a permissions policy.
+    """Applies a specified limit to an item based on a permissions policy.
 
     Parameters
     ----------
@@ -422,7 +420,7 @@ def check_user_limit(payload,
             {'success': True or False,
              'messages': list of str messages if any}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -452,6 +450,9 @@ def check_user_limit(payload,
                 ),
                 'messages':["Invalid limit check request."],
             }
+
+    originating_userid = int(payload['user_id'])
+    originating_user_role = str(payload['user_role'])
 
     try:
 
@@ -486,9 +487,6 @@ def check_user_limit(payload,
             )
 
         users = currproc.authdb_meta.tables['users']
-
-        originating_userid = int(payload['user_id'])
-        originating_user_role = str(payload['user_role'])
 
         s = select([
             users.c.user_id
@@ -558,18 +556,18 @@ def check_user_limit(payload,
             if raiseonfail:
                 raise
 
-                LOGGER.error(
-                    "[%s] Limit check ran into an exception: %r. "
-                    "Provided user_id: %s with "
-                    "role: '%s', limit name: '%s', "
-                    "value checked against limit was: %s." %
-                    (payload['reqid'],
-                     e,
-                     pii_hash(originating_userid, payload['pii_salt']),
-                     payload['user_role'],
-                     payload['limit_name'],
-                     payload['value_to_check'])
-                )
+            LOGGER.error(
+                "[%s] Limit check ran into an exception: %r. "
+                "Provided user_id: %s with "
+                "role: '%s', limit name: '%s', "
+                "value checked against limit was: %s." %
+                (payload['reqid'],
+                 e,
+                 pii_hash(originating_userid, payload['pii_salt']),
+                 payload['user_role'],
+                 payload['limit_name'],
+                 payload['value_to_check'])
+            )
 
             return {
                 'success':False,

@@ -2,9 +2,9 @@
 # actions_session.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to drive session-related auth actions.
+"""This contains functions to log a user in and out.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -73,7 +73,7 @@ def auth_user_login(payload,
                     override_authdb_path=None,
                     raiseonfail=False,
                     config=None):
-    '''Logs a user in.
+    """Logs a user in.
 
     Login flow for frontend:
 
@@ -122,7 +122,7 @@ def auth_user_login(payload,
     dict
         Returns a dict containing the result of the password verification check.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -170,7 +170,7 @@ def auth_user_login(payload,
     if not request_ok:
 
         # dummy session request
-        session_info = auth_session_exists(
+        auth_session_exists(
             {'session_token':'nope',
              'reqid':payload['reqid'],
              'pii_salt':payload['pii_salt']},
@@ -500,7 +500,7 @@ def auth_user_logout(payload,
                      override_authdb_path=None,
                      raiseonfail=False,
                      config=None):
-    '''Logs out a user.
+    """Logs out a user.
 
     Deletes the session token from the session store. On the next request
     (redirect from POST /auth/logout to GET /), the frontend will issue a new
@@ -542,7 +542,7 @@ def auth_user_logout(payload,
     dict
         Returns a dict containing the result of the password verification check.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:

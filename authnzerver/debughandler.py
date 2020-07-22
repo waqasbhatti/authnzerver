@@ -2,9 +2,9 @@
 # debughandler.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This is the deprecated and soon-to-be-removed debug handler for authnzerver.
+"""This is the deprecated and soon-to-be-removed debug handler for authnzerver.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -38,7 +38,7 @@ import tornado.ioloop
 
 from sqlalchemy.sql import select
 
-from . import authdb
+from . import authdb as authdb_module
 from .messaging import encrypt_message, decrypt_message
 
 
@@ -47,10 +47,10 @@ from .messaging import encrypt_message, decrypt_message
 #########################
 
 def check_host(remote_ip):
-    '''
+    """
     This just returns False if the remote_ip != 127.0.0.1
 
-    '''
+    """
     try:
         return (ipaddress.ip_address(remote_ip) ==
                 ipaddress.ip_address('127.0.0.1'))
@@ -59,17 +59,17 @@ def check_host(remote_ip):
 
 
 def auth_echo(payload):
-    '''
+    """
     This just echoes back the payload.
 
-    '''
+    """
 
     # this checks if the database connection is live
     currproc = mp.current_process()
     engine = getattr(currproc, 'authdb_engine', None)
     if not engine:
         currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb.get_auth_db(
+            authdb_module.get_auth_db(
                 currproc.auth_db_path,
                 echo=False
             )
@@ -88,31 +88,31 @@ def auth_echo(payload):
 
 
 class EchoHandler(tornado.web.RequestHandler):
-    '''
+    """
     This just echoes back whatever we send.
 
     Useful to see if the encryption is working as intended.
 
-    '''
+    """
 
     def initialize(self,
                    authdb,
                    fernet_secret,
                    executor):
-        '''
+        """
         This sets up stuff.
 
-        '''
+        """
 
         self.authdb = authdb
         self.fernet_secret = fernet_secret
         self.executor = executor
 
     async def post(self):
-        '''
+        """
         Handles the incoming POST request.
 
-        '''
+        """
 
         ipcheck = check_host(self.request.remote_ip)
 

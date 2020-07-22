@@ -2,9 +2,9 @@
 # actions_apikey.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to drive API key related auth actions.
+"""This contains functions to drive API key related auth actions.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -65,7 +65,7 @@ def issue_apikey(payload,
                  override_authdb_path=None,
                  override_permissions_json=None,
                  config=None):
-    '''Issues a new API key.
+    """Issues a new API key.
 
     Parameters
     ----------
@@ -124,7 +124,7 @@ def issue_apikey(payload,
     entire dict should be serialized to JSON, encrypted and time-stamp signed by
     the frontend as the final "API key", and finally sent back to the client.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -408,7 +408,7 @@ def verify_apikey(payload,
                   override_authdb_path=None,
                   override_permissions_json=None,
                   config=None):
-    '''Checks if an API key is valid.
+    """Checks if an API key is valid.
 
     Parameters
     ----------
@@ -448,7 +448,7 @@ def verify_apikey(payload,
             {'success': True if API key is OK and False otherwise,
              'messages': list of str messages if any}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -620,7 +620,7 @@ def revoke_apikey(payload,
                   override_authdb_path=None,
                   override_permissions_json=None,
                   config=None):
-    '''Revokes an API key.
+    """Revokes an API key.
 
     Parameters
     ----------
@@ -662,7 +662,7 @@ def revoke_apikey(payload,
             {'success': True if API key was revoked and False otherwise,
              'messages': list of str messages if any}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:

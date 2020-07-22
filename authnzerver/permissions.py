@@ -2,10 +2,10 @@
 # permissions.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''
+"""
 This contains the permissions and user-role models for authnzerver.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -67,7 +67,7 @@ def pii_hash(item, key):
 #################################
 
 def load_permissions_json(model_json):
-    '''Loads a permissions JSON and returns the model.'''
+    """Loads a permissions JSON and returns the model."""
 
     with open(model_json,'r') as infd:
         model = json.load(infd)
@@ -119,13 +119,13 @@ def get_item_actions(permissions_model,
                      target_visibility,
                      target_ownership,
                      debug=False):
-    '''Returns the possible actions for a target given a role and target
+    """Returns the possible actions for a target given a role and target
     status.
 
     Parameters
     ----------
 
-    permissions_policy : dict
+    permissions_model : dict
         A permissions model returned by :py:func:`.load_permissions_json`.
 
     role_name : str
@@ -154,7 +154,7 @@ def get_item_actions(permissions_model,
         policy. If the actions don't make sense, returns an empty set, in which
         case access MUST be denied.
 
-    '''
+    """
 
     role_policy = permissions_model['role_policy']
     item_policy = permissions_model['item_policy']
@@ -233,13 +233,13 @@ def check_item_access(permissions_model,
                       target_visibility='private',
                       target_sharedwith=None,
                       debug=False):
-    '''
+    """
     This does a check for user access to a target item.
 
     Parameters
     ----------
 
-    permissions_policy : dict
+    permissions_model : dict
         A permissions model returned by :py:func:`.load_permissions_json`.
 
     userid : int
@@ -273,7 +273,7 @@ def check_item_access(permissions_model,
     bool
         True if access was granted. False otherwise.
 
-    '''
+    """
 
     role_policy = permissions_model['role_policy']
 
@@ -344,7 +344,7 @@ def check_item_access(permissions_model,
               (target_name, role, target_may_be_owned_by_role))
 
     # validate ownership of the target
-    if (userid == target_owner and target_may_be_owned_by_role):
+    if userid == target_owner and target_may_be_owned_by_role:
         perms = get_item_actions(permissions_model,
                                  role,
                                  target_name,
@@ -369,7 +369,7 @@ def check_item_access(permissions_model,
     if debug:
         print("user action: '%s', permitted actions: %s" % (action, perms))
 
-    return ((action in perms) and shared_or_owned_ok)
+    return (action in perms) and shared_or_owned_ok
 
 
 def load_policy_and_check_access(
@@ -382,7 +382,7 @@ def load_policy_and_check_access(
         target_visibility='private',
         target_sharedwith=None,
         debug=False):
-    '''
+    """
     Does a check for user access to a target item.
 
     This version loads a permissions JSON from disk every time it is called.
@@ -390,8 +390,8 @@ def load_policy_and_check_access(
     Parameters
     ----------
 
-    permissions_policy : dict
-        A permissions model returned by :py:func:`.load_permissions_json`.
+    permissions_json : str
+        A JSON file containing a permissions model.
 
     userid : int
         The userid of the user requesting access.
@@ -424,7 +424,7 @@ def load_policy_and_check_access(
     bool
         True if access was granted. False otherwise.
 
-    '''
+    """
 
     permissions_model = load_permissions_json(permissions_json)
     return check_item_access(
@@ -443,7 +443,7 @@ def check_role_limits(permissions_model,
                       role,
                       limit_name,
                       value_to_check):
-    '''
+    """
     This applies the role limits to a value to check.
 
     Parameters
@@ -467,7 +467,7 @@ def check_role_limits(permissions_model,
     bool
         Returns True if the limit hasn't been exceeded. Returns False otherwise.
 
-    '''
+    """
 
     role_policy = permissions_model['role_policy']
     limit_defs = permissions_model['limits']
@@ -521,7 +521,7 @@ def load_policy_and_check_limits(
         limit_name,
         value_to_check
 ):
-    '''
+    """
     Applies the role limits to a value to check.
 
     This version loads a policy JSON every time it is called.
@@ -529,8 +529,8 @@ def load_policy_and_check_limits(
     Parameters
     ----------
 
-    permissions_model : dict
-        A permissions model returned by :py:func:`.load_permissions_json`.
+    permissions_json : dict
+        A JSON file containing a permissions model.
 
     role : str
         The name of the role to check the limits for.
@@ -547,7 +547,7 @@ def load_policy_and_check_limits(
     bool
         Returns True if the limit hasn't been exceeded. Returns False otherwise.
 
-    '''
+    """
 
     permissions_model = load_permissions_json(permissions_json)
     return check_role_limits(

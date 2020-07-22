@@ -2,7 +2,7 @@
 # main.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''Contains the configuration variables that define how the server operates.
+"""Contains the configuration variables that define how the server operates.
 
 The CONF dict in this file describes how to load these variables from the
 environment or command-line options.
@@ -79,9 +79,11 @@ The ``readable_from_file`` key would be set to something like::
 
     "readable_from_file" = ("http",
                             {"method":"get",
-                             "headers":{"Authorization":"Bearer [[GCP_AUTH_TOKEN]]",
-                                        "Content-Type":"application/json",
-                                        "x-goog-user-project": "abcproj"},
+                             "headers":{
+                                 "Authorization":"Bearer [[GCP_AUTH_TOKEN]]",
+                                 "Content-Type":"application/json",
+                                 "x-goog-user-project": "abcproj"
+                             },
                              "data":None,
                              "timeout":5.0},
                             'json',
@@ -103,7 +105,7 @@ the stored item's URL. This module looks like::
 The function above will base-64 decode the value returned from the Secrets
 Manager and finally give us the ``secret`` value we need.
 
-'''
+"""
 
 import os
 import os.path
@@ -158,7 +160,7 @@ CONF = {
         'cmdline':'basedir',
         'type':str,
         'default':os.getcwd(),
-        'help':('The base directory containing secret files and the auth DB.'),
+        'help':'The base directory containing secret files and the auth DB.',
         'readable_from_file':False,
         'postprocess_value':None,
     },
@@ -177,7 +179,7 @@ CONF = {
         'cmdline':'listen',
         'type':str,
         'default':'127.0.0.1',
-        'help':('Bind to this address and serve content.'),
+        'help':'Bind to this address and serve content.',
         'readable_from_file':False,
         'postprocess_value':None,
     },
@@ -196,7 +198,7 @@ CONF = {
         'cmdline':'port',
         'type':int,
         'default':13431,
-        'help':('Run the server on this TCP port.'),
+        'help':'Run the server on this TCP port.',
         'readable_from_file':False,
         'postprocess_value':None,
     },
@@ -226,7 +228,7 @@ CONF = {
         'cmdline':'sessionexpiry',
         'type':int,
         'default':30,
-        'help':('This sets the session-expiry time in days.'),
+        'help':'This sets the session-expiry time in days.',
         'readable_from_file':False,
         'postprocess_value':None,
     },
@@ -295,7 +297,7 @@ CONF = {
         'cmdline':'emailserver',
         'type':str,
         'default':'localhost',
-        'help':('The address of the email server to use.'),
+        'help':'The address of the email server to use.',
         'readable_from_file':False,
         'postprocess_value':None,
     },
@@ -304,7 +306,7 @@ CONF = {
         'cmdline':'emailport',
         'type':int,
         'default':25,
-        'help':('The SMTP port of the email server to use.'),
+        'help':'The SMTP port of the email server to use.',
         'readable_from_file':False,
         'postprocess_value':None,
     },
@@ -313,7 +315,7 @@ CONF = {
         'cmdline':'emailuser',
         'type':str,
         'default':currentuser,
-        'help':('The username to use for login to the email server.'),
+        'help':'The username to use for login to the email server.',
         'readable_from_file':False,
         'postprocess_value':None,
     },
@@ -322,7 +324,7 @@ CONF = {
         'cmdline':'emailpass',
         'type':str,
         'default':'',
-        'help':('The password to use for login to the email server.'),
+        'help':'The password to use for login to the email server.',
         'readable_from_file':False,
         'postprocess_value':None,
     },

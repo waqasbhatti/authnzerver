@@ -2,9 +2,9 @@
 # healthcheck.py - Waqas Bhatti (waqas.afzal.bhatti@gmail.com) - Jul 2020
 # License: MIT - see the LICENSE file for the full text.
 
-'''These are handlers to respond to healt-check requests.
+"""These are handlers to respond to health-check requests.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -110,7 +110,7 @@ class HealthCheckHandler(tornado.web.RequestHandler,
         healthcheck_clock = 0.0
         max_healthcheck_time = 5.0
 
-        while (healthcheck_clock < max_healthcheck_time):
+        while healthcheck_clock < max_healthcheck_time:
 
             # this round-robin schedules the tasks on all the workers
             health_check = await loop.run_in_executor(

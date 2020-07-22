@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-'''This module handles the serialization-deserialization of messages between the
+"""This module handles the serialization-deserialization of messages between the
 authnzerver and any frontends.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -69,7 +69,7 @@ def encrypt_message(
         message_dict,
         key,
 ):
-    '''
+    """
     Encrypts a message dict using Fernet from the PyCA cryptography package.
 
     Parameters
@@ -91,7 +91,7 @@ def encrypt_message(
     encrypted_message : bytes
         Returns the encrypted message as base64 encoded bytes.
 
-    '''
+    """
 
     frn = Fernet(key)
     json_bytes = json.dumps(message_dict).encode()
@@ -106,7 +106,7 @@ def decrypt_message(
         reqid=None,
         ttl=None
 ):
-    '''
+    """
     Decrypts a Fernet-encrypted message back to a message dict.
 
     Parameters
@@ -139,7 +139,7 @@ def decrypt_message(
         message failed to decrypt because of an invalid key or if it was
         tampered with, returns None instead.
 
-    '''
+    """
 
     frn = Fernet(key)
 
@@ -179,7 +179,7 @@ def chacha_encrypt_message(
         key,
         nonce=None,
 ):
-    '''Encrypts a dict using the ChaCha20-Poly1305 symmetric cipher.
+    """Encrypts a dict using the ChaCha20-Poly1305 symmetric cipher.
 
     This depends on OpenSSL containing the cipher, so OpenSSL > 1.1.0
     probably. The version of the cipher used is the IETF-approved one
@@ -215,7 +215,7 @@ def chacha_encrypt_message(
 
         base64(encrypt(<nonce><message dict + iat + ver>))
 
-    '''
+    """
 
     if not nonce:
         nonce = secrets.token_bytes(12)
@@ -249,7 +249,7 @@ def chacha_decrypt_message(
         reqid=None,
         ttl=None
 ):
-    '''
+    """
     Decrypts a ChaCha20-Poly1305-encrypted message back to a message dict.
 
     This depends on OpenSSL containing the cipher, so OpenSSL > 1.1.0
@@ -285,13 +285,12 @@ def chacha_decrypt_message(
         message failed to decrypt because of an invalid key or if it was
         tampered with, returns None instead.
 
-    '''
+    """
 
     if len(key) != 32:
         raise ValueError("ChaCha20-Poly1305 key must be 256 bits == 32 bytes")
 
     chacha = ChaCha20Poly1305(key)
-    current_time = time.time()
 
     message_bytes = b64decode(message)
     nonce, encrypted_message = message_bytes[:12], message_bytes[12:]
@@ -342,7 +341,7 @@ def xsalsa_encrypt_message(
     message_dict,
     key,
 ):
-    '''
+    """
     Encrypts a dict using the XSalsa20-Poly1305 symmetric cipher.
 
     This function requires PyNACL.
@@ -365,7 +364,7 @@ def xsalsa_encrypt_message(
     encrypted_message : bytes
         Returns the encrypted message as base64 encoded bytes.
 
-    '''
+    """
 
     if not NACL:
         raise ImportError("This function will not work without PyNACL.")
@@ -396,7 +395,7 @@ def xsalsa_decrypt_message(
         reqid=None,
         ttl=None
 ):
-    '''
+    """
     Decrypts a XSalsa20-Poly1305-encrypted message back to a message dict.
 
     This function requires PyNACL.
@@ -430,7 +429,7 @@ def xsalsa_decrypt_message(
         message failed to decrypt because of an invalid key or if it was
         tampered with, returns None instead.
 
-    '''
+    """
 
     if not NACL:
         raise ImportError("This function will not work without PyNACL.")
@@ -441,7 +440,6 @@ def xsalsa_decrypt_message(
         )
 
     secret_box = nacl.secret.SecretBox(key)
-    current_time = time.time()
 
     try:
 

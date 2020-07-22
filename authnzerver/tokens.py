@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-'''This module handles generation of various tokens.
+"""This module handles generation of various tokens.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -20,21 +20,7 @@ import json
 from datetime import datetime
 from secrets import token_urlsafe
 
-
-class FrontendEncoder(json.JSONEncoder):
-
-    def default(self, obj):
-
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        elif isinstance(obj, bytes):
-            return obj.decode()
-        elif isinstance(obj, complex):
-            return (obj.real, obj.imag)
-        else:
-            return json.JSONEncoder.default(self, obj)
-
-
+from .jsonencoder import FrontendEncoder
 # this replaces the default encoder and makes it so Tornado will do the right
 # thing when it converts dicts to JSON when a
 # tornado.web.RequestHandler.write(dict) is called.
@@ -59,7 +45,7 @@ def generate_email_token(
         session_token,
         session_cookie_key,
 ):
-    '''This generates a token useful for verifying email addresses.
+    """This generates a token useful for verifying email addresses.
 
     Also used for forgot-password emails.
 
@@ -68,7 +54,7 @@ def generate_email_token(
     scheme and the session cookie (the key used to sign the frontend's cookies)
     to keep things simple.
 
-    '''
+    """
 
     token_payload = {
         'iat':datetime.utcnow(),
@@ -93,7 +79,7 @@ def verify_email_token(
         ttl_seconds=900,
         reqid=None,
 ):
-    '''This verifies the token returned by the user.
+    """This verifies the token returned by the user.
 
     By default, it requires that the token be returned no more than 15 minutes
     after it's been issued. It also tries to match the specified items in
@@ -104,7 +90,7 @@ def verify_email_token(
         'stk' -> session_token
         'ema' -> email_address
 
-    '''
+    """
 
     decrypted_token = decrypt_message(
         token,

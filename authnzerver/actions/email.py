@@ -2,9 +2,9 @@
 # actions_email.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to drive email-related auth actions.
+"""This contains functions to drive email-related auth actions.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -83,7 +83,7 @@ def send_email(
         bcc=False,
         port=587
 ):
-    '''
+    """
     This is a utility function to send email.
 
     Parameters
@@ -140,7 +140,7 @@ def send_email(
     sent_ok : bool
         Returns True if email sending succeeded. False otherwise.
 
-    '''
+    """
 
     # validate the sender's email address
     if '<' in sender and '>' in sender:
@@ -320,7 +320,7 @@ def send_signup_verification_email(payload,
                                    raiseonfail=False,
                                    override_authdb_path=None,
                                    config=None):
-    '''Sends an account verification email.
+    """Sends an account verification email.
 
     Parameters
     -----------
@@ -377,7 +377,7 @@ def send_signup_verification_email(payload,
         Returns a dict containing the user_id, email_address, and the
         emailverify_sent_datetime value if email was sent successfully.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -432,6 +432,11 @@ def send_signup_verification_email(payload,
         emailpass = getattr(config, "emailpass", None)
         emailserver = getattr(config, "emailserver", None)
         emailport = getattr(config, "emailport", None)
+
+    else:
+        emailsender, emailuser, emailpass, emailserver, emailport = (
+            None, None, None, None, None
+        )
 
     # override with payload values
     if 'emailsender' in payload:
@@ -742,7 +747,7 @@ def set_user_emailaddr_verified(payload,
                                 raiseonfail=False,
                                 override_authdb_path=None,
                                 config=None):
-    '''Sets the verification status of the email address of the user.
+    """Sets the verification status of the email address of the user.
 
     This is called by the frontend after it verifies that the token challenge to
     verify the user's email succeeded and has not yet expired. This will set the
@@ -780,7 +785,7 @@ def set_user_emailaddr_verified(payload,
         Returns a dict containing the user_id, is_active, and user_role values
         if verification status is successfully set.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -844,7 +849,7 @@ def set_user_emailaddr_verified(payload,
         'email_verified':True,
         'user_role':'authenticated'
     })
-    result = currproc.authdb_conn.execute(upd)
+    currproc.authdb_conn.execute(upd)
 
     sel = select([
         users.c.user_id,
@@ -904,7 +909,7 @@ def set_user_email_sent(payload,
                         raiseonfail=False,
                         override_authdb_path=None,
                         config=None):
-    '''Sets the verify/forgot-password email sent time of the newly created user.
+    """Sets the verify/forgot email sent flag & time for the newly created user.
 
     This is useful when some other way of emailing the user to verify their sign
     up or their password forgot request is used, external to authnzerver. Use
@@ -946,7 +951,7 @@ def set_user_email_sent(payload,
         email*_sent_datetime values if the sent-email notification was
         successfully set.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -1000,6 +1005,18 @@ def set_user_email_sent(payload,
         update_col = "emailverify_sent_datetime"
     elif payload["email_type"] == "forgotpass":
         update_col = "emailforgotpass_sent_datetime"
+    else:
+        LOGGER.error(
+            '[%s] Invalid email sent notification request, '
+            'incorrect email_type.' % payload['reqid']
+        )
+        return {
+            'success':False,
+            'failure_reason':(
+                    "invalid request: invalid email_type requested"
+            ),
+            'messages':["Invalid email sent notification request."]
+        }
 
     # update the table for this user
     upd = users.update(
@@ -1008,7 +1025,7 @@ def set_user_email_sent(payload,
     ).values({
         update_col:email_sent_datetime,
     })
-    result = currproc.authdb_conn.execute(upd)
+    currproc.authdb_conn.execute(upd)
 
     sel = select([
         users.c.user_id,
@@ -1077,7 +1094,7 @@ def send_forgotpass_verification_email(payload,
                                        raiseonfail=False,
                                        override_authdb_path=None,
                                        config=None):
-    '''This actually sends the forgot password email.
+    """This actually sends the forgot password email.
 
     Parameters
     -----------
@@ -1133,7 +1150,7 @@ def send_forgotpass_verification_email(payload,
         Returns a dict containing the user_id, email_address, and the
         emailforgotpass_sent_datetime value if email was sent successfully.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -1181,12 +1198,15 @@ def send_forgotpass_verification_email(payload,
 
     # now check for the SMTP server config items in the payload or in config
     if config is not None:
-
         emailsender = getattr(config, "emailsender", None)
         emailuser = getattr(config, "emailuser", None)
         emailpass = getattr(config, "emailpass", None)
         emailserver = getattr(config, "emailserver", None)
         emailport = getattr(config, "emailport", None)
+    else:
+        emailsender, emailuser, emailpass, emailserver, emailport = (
+            None, None, None, None, None
+        )
 
     # override with payload values
     if 'emailsender' in payload:

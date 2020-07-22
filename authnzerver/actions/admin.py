@@ -2,9 +2,9 @@
 # admin.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to drive admin related actions (listing users,
+"""This contains functions to drive admin related actions (listing users,
 editing users, change user roles).
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -71,7 +71,7 @@ def list_users(payload,
                override_authdb_path=None,
                override_permissions_json=None,
                config=None):
-    '''This lists users.
+    """This lists users.
 
     FIXME: add permissions checks to this instead of relying on a frontend to
     filter out users who aren't allowed to perform this action.
@@ -97,6 +97,10 @@ def list_users(payload,
     override_authdb_path : str or None
         If given as a str, is the alternative path to the auth DB.
 
+    override_permissions_json : str or None
+        If given as a str, is the alternative path to the permissions JSON
+        to use.
+
     config : SimpleNamespace object or None
         An object containing systemwide config variables as attributes. This is
         useful when the wrapping function needs to pass in some settings
@@ -118,7 +122,7 @@ def list_users(payload,
              'is_active','created_on','user_role',
              'last_login_try','last_login_success'}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -252,7 +256,7 @@ def get_user_by_email(payload,
                       raiseonfail=False,
                       override_authdb_path=None,
                       config=None):
-    '''
+    """
     This gets a user's information using their email address.
 
     FIXME: add permissions checks to this instead of relying on a frontend to
@@ -300,7 +304,7 @@ def get_user_by_email(payload,
              'is_active','created_on','user_role',
              'last_login_try','last_login_success'}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -425,7 +429,7 @@ def lookup_users(payload,
                  raiseonfail=False,
                  override_authdb_path=None,
                  config=None):
-    '''This looks up users by a given property.
+    """This looks up users by a given property.
 
     FIXME: add permissions checks to this instead of relying on a frontend to
     filter out users who aren't allowed to perform this action.
@@ -486,7 +490,7 @@ def lookup_users(payload,
              'is_active','created_on','user_role',
              'last_login_try','last_login_success'}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -646,7 +650,7 @@ def edit_user(payload,
               override_permissions_json=None,
               override_authdb_path=None,
               config=None):
-    '''This edits users.
+    """This edits users.
 
     FIXME: add permissions checks to this instead of relying on a frontend to
     filter out users who aren't allowed to perform this action.
@@ -711,7 +715,7 @@ def edit_user(payload,
              'user_info': dict, with new user info,
              'messages': list of str messages if any}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -1418,7 +1422,7 @@ def internal_toggle_user_lock(payload,
                               raiseonfail=False,
                               override_authdb_path=None,
                               config=None):
-    '''Locks/unlocks user accounts.
+    """Locks/unlocks user accounts.
 
     This version of the function should only be run internally (i.e. not called
     by a client). The use-case is automatically locking user accounts if there
@@ -1462,7 +1466,7 @@ def internal_toggle_user_lock(payload,
              'user_info': dict, with new user info,
              'messages': list of str messages if any}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -1571,6 +1575,25 @@ def internal_toggle_user_lock(payload,
         elif payload['action'] == 'unlock':
             update_dict = {'is_active': True,
                            'user_role': 'authenticated'}
+        else:
+            LOGGER.error(
+                "[%s] Invalid user lock toggle request for user_id: %s. "
+                "Invalid toggle action requested: '%s'." %
+                (payload['reqid'],
+                 payload['action'],
+                 pii_hash(payload['target_userid'],
+                          payload['pii_salt']))
+            )
+
+            return {
+                'success':False,
+                'user_info':None,
+                'failure_reason':(
+                    "invalid lock toggle requested"
+                ),
+                'messages':[
+                    "Invalid lock toggle action requested."],
+            }
 
         # execute the update
         upd = users.update(
@@ -1667,7 +1690,7 @@ def toggle_user_lock(payload,
                      raiseonfail=False,
                      override_authdb_path=None,
                      config=None):
-    '''Locks/unlocks user accounts.
+    """Locks/unlocks user accounts.
 
     Can only be run by superusers and is suitable for use when called from a
     frontend.
@@ -1712,7 +1735,7 @@ def toggle_user_lock(payload,
              'user_info': dict, with new user info,
              'messages': list of str messages if any}
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:

@@ -251,10 +251,10 @@ with open(DISPOSABLE_EMAIL_DOMAINS_FILE,'r') as infd:
 ###############
 
 def validate_reserved_name(value):
-    '''
+    """
     This validates if the value is not one of the reserved names.
 
-    '''
+    """
 
     if (value in DEFAULT_RESERVED_NAMES or
         '.well-known' in value):
@@ -267,10 +267,10 @@ def validate_reserved_name(value):
 
 
 def validate_confusables(value):
-    '''
+    """
     This validates if the value is not a confusable homoglyph.
 
-    '''
+    """
 
     if confusables.is_dangerous(value):
         return False
@@ -280,7 +280,7 @@ def validate_confusables(value):
 
 
 def validate_email_address(emailaddr):
-    '''This validates an email address using the HTML5 specification,
+    """This validates an email address using the HTML5 specification,
     which is good enough for most purposes.
 
     The regex is taken from here:
@@ -289,7 +289,7 @@ def validate_email_address(emailaddr):
 
     And was transformed to Python using the excellent https://regex101.com.
 
-    '''
+    """
 
     match_regex = (
         r"^[a-zA-Z0-9.!#$%&’*+\/=?^_`{|}~-]+@"
@@ -328,12 +328,12 @@ def validate_confusables_email(value):
 
 def validate_unique_value(value, check_list):
 
-    '''This checks if the input value does not already exist in the check_list.
+    """This checks if the input value does not already exist in the check_list.
 
     The check_list comes from the DB and should contain user names, etc. that
     have been already normalized and casefolded.
 
-    '''
+    """
 
     normalized_value = unicodedata.normalize('NFKC', value)
 
@@ -351,12 +351,12 @@ def validate_unique_value(value, check_list):
 ########################
 
 def normalize_value(value):
-    '''
+    """
     This normalizes a given value and casefolds it.
 
     Assumes that the value has already passed validation.
 
-    '''
+    """
 
     if '@' in value:
         local_part, domain = value.split('@')

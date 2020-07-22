@@ -3,11 +3,11 @@
 # main.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''
+"""
 This is the main file for the authnzerver, a simple authorization and
 authentication server backed by SQLite, SQLAlchemy, and Tornado.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -39,10 +39,10 @@ from . import dictcache
 
 # setup signal trapping on SIGINT
 def _recv_sigint(signum, stack):
-    '''
+    """
     handler function to receive and process a SIGINT
 
-    '''
+    """
     raise KeyboardInterrupt
 
 
@@ -74,11 +74,11 @@ import multiprocessing as mp
 def _setup_auth_worker(authdb_path,
                        fernet_secret,
                        permissions_json):
-    '''This stores secrets and the auth DB path in the worker loop's context.
+    """This stores secrets and the auth DB path in the worker loop's context.
 
     The worker will then open the DB and set up its Fernet instance by itself.
 
-    '''
+    """
     # unregister interrupt signals so they don't get to the worker
     # and the executor can kill them cleanly (hopefully)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -91,10 +91,10 @@ def _setup_auth_worker(authdb_path,
 
 def _close_authentication_database():
 
-    '''This is used to close the authentication database when the worker loop
+    """This is used to close the authentication database when the worker loop
     exits.
 
-    '''
+    """
 
     currproc = mp.current_process()
     if getattr(currproc, 'authdb_meta', None):
@@ -163,10 +163,10 @@ define('autosetup',
 ##########
 
 def main():
-    '''
+    """
     This is the main function.
 
-    '''
+    """
 
     # parse the command line
     options.parse_command_line()

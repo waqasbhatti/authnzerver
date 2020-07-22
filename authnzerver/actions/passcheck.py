@@ -2,9 +2,9 @@
 # actions_session.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to drive session-related auth actions.
+"""This contains functions to drive session-related auth actions.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -70,7 +70,7 @@ def auth_password_check(payload,
                         override_authdb_path=None,
                         raiseonfail=False,
                         config=None):
-    '''This runs a password check given a session token and password.
+    """This runs a password check given a session token and password.
 
     Used to gate high-security areas or operations that require re-verification
     of the password for a user's existing session.
@@ -109,7 +109,7 @@ def auth_password_check(payload,
     dict
         Returns a dict containing the result of the password verification check.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -158,7 +158,7 @@ def auth_password_check(payload,
     if not request_ok:
 
         # dummy session request
-        session_info = auth_session_exists(
+        auth_session_exists(
             {'session_token':'nope',
              'reqid':payload['reqid'],
              'pii_salt':payload['pii_salt']},
@@ -395,7 +395,7 @@ def auth_password_check_nosession(payload,
                                   override_authdb_path=None,
                                   raiseonfail=False,
                                   config=None):
-    '''This runs a password check given an email address and password.
+    """This runs a password check given an email address and password.
 
     Used to gate high-security areas or operations that require re-verification
     of the password for a user, without checking if they have a session.
@@ -436,7 +436,7 @@ def auth_password_check_nosession(payload,
     dict
         Returns a dict containing the result of the password verification check.
 
-    '''
+    """
 
     for key in ('reqid','pii_salt'):
         if key not in payload:
@@ -555,6 +555,8 @@ def auth_password_check_nosession(payload,
         user_results = currproc.authdb_conn.execute(user_sel)
         user_info = user_results.fetchone()
         user_results.close()
+
+        pass_ok = False
 
         if user_info:
 

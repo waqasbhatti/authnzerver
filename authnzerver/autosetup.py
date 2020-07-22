@@ -2,10 +2,10 @@
 # autosetup.py - Waqas Bhatti (wbhatti@astro.princeton.edu) - Aug 2018
 # License: MIT - see the LICENSE file for the full text.
 
-'''This contains functions to set up the authnzerver automatically on
+"""This contains functions to set up the authnzerver automatically on
 first-start.
 
-'''
+"""
 
 #############
 ## LOGGING ##
@@ -36,7 +36,7 @@ def autogen_secrets_authdb(basedir,
                            database_url=None,
                            interactive=False,
                            generate_envfile=True):
-    '''This automatically generates secrets files and an authentication DB.
+    """This automatically generates secrets files and an authentication DB.
 
     Run this only once on the first start of an authnzerver.
 
@@ -81,7 +81,7 @@ def autogen_secrets_authdb(basedir,
         The names of the files written by this function will be returned as a
         tuple of strings.
 
-    '''
+    """
 
     import getpass
     from .authdb import (
@@ -125,11 +125,9 @@ def autogen_secrets_authdb(basedir,
         if input_permissions_json and len(input_permissions_json) > 0:
             permissions_json = input_permissions_json
 
+    # if no database_url is specified, create our auth DB in the basedir
     if database_url is None:
-
-        # create our authentication database if it doesn't exist
         authdb_path = os.path.join(basedir, '.authdb.sqlite')
-
         if not os.path.exists(authdb_path):
             LOGGER.warning('No existing authentication DB was found, '
                            'making a new SQLite DB in authnzerver basedir: %s'
@@ -139,13 +137,16 @@ def autogen_secrets_authdb(basedir,
         create_sqlite_authdb(authdb_path, echo=False, returnconn=False)
         database_url = 'sqlite:///%s' % authdb_path
 
-    elif 'sqlite:///' in database_url:
+    # otherwise, if there's an SQLite DB URL provided,
+    # create it at the specified path
+    elif database_url is not None and 'sqlite:///' in database_url:
+        authdb_path = os.path.abspath(database_url.replace('sqlite:///',''))
+        if not os.path.exists(authdb_path):
+            create_sqlite_authdb(authdb_path, echo=False, returnconn=False)
 
-        # generate the initial DB
-        create_sqlite_authdb(authdb_path, echo=False, returnconn=False)
-
+    # otherwise, use normal auth DB creation
     else:
-
+        authdb_path = None
         create_authdb(database_url, echo=False, returnconn=False)
 
     # ask the user for their email address and password the default
@@ -177,6 +178,8 @@ def autogen_secrets_authdb(basedir,
     else:
         password = None
 
+    u, p = None, None
+
     try:
 
         # generate the admin users and initial DB info
@@ -185,7 +188,7 @@ def autogen_secrets_authdb(basedir,
                                       superuser_email=userid,
                                       superuser_pass=password)
 
-        if not u and not p:
+        if u is None:
             LOGGER.error("Could not do initial inserts into the auth DB.")
             return None, None, None
 
@@ -196,16 +199,13 @@ def autogen_secrets_authdb(basedir,
             "Not overwriting..."
         )
 
-    creds = os.path.join(basedir,
-                         '.authnzerver-admin-credentials')
+    creds = os.path.join(basedir, '.authnzerver-admin-credentials')
 
     if os.path.exists(creds):
-
         LOGGER.warning("Admin credentials file already exists. "
                        "Not overwriting...")
 
-    else:
-
+    elif u and p:
         with open(creds,'w') as outfd:
             outfd.write('%s %s\n' % (u,p))
             os.chmod(creds, 0o100400)
