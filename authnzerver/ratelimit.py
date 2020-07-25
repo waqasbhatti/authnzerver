@@ -64,17 +64,22 @@ class RateLimitMixin:
         """
 
         # increment the global request each time
-        all_reqcount = self.cacheobj.increment(
+        all_reqcount = self.cacheobj.counter_increment(
             "all_request_count",
         )
 
         # check the global request rate
         if all_reqcount > self.ratelimits['burst']:
 
-            all_reqrate, all_reqcount, all_req_t0, all_req_tnow = (
-                self.cacheobj.getrate(
+            (all_reqrate,
+             all_reqcount,
+             all_reqcount0,
+             all_req_tnow,
+             all_req_t0) = (
+                self.cacheobj.counter_rate(
                     "all_request_count",
                     60.0,
+                    return_allinfo=True
                 )
             )
 
@@ -120,16 +125,21 @@ class RateLimitMixin:
 
             user_cache_key = f"user-request-{user_cache_token}"
 
-            user_reqcount = self.cacheobj.increment(
+            user_reqcount = self.cacheobj.counter_increment(
                 user_cache_key,
             )
 
             if user_reqcount > self.ratelimits["burst"]:
 
-                user_reqrate, user_reqcount, user_req_t0, user_req_tnow = (
-                    self.cacheobj.getrate(
+                (user_reqrate,
+                 user_reqcount,
+                 user_reqcount0,
+                 user_req_tnow,
+                 user_req_t0) = (
+                    self.cacheobj.counter_rate(
                         user_cache_key,
                         60.0,
+                        return_allinfo=True
                     )
                 )
 
@@ -166,7 +176,7 @@ class RateLimitMixin:
 
             session_cache_key = f"session-request-{session_cache_token}"
 
-            session_reqcount = self.cacheobj.increment(
+            session_reqcount = self.cacheobj.counter_increment(
                 session_cache_key,
             )
 
@@ -174,11 +184,13 @@ class RateLimitMixin:
 
                 (session_reqrate,
                  session_reqcount,
-                 session_req_t0,
-                 session_req_tnow) = (
-                    self.cacheobj.getrate(
+                 session_reqcount0,
+                 session_req_tnow,
+                 session_req_t0) = (
+                    self.cacheobj.counter_rate(
                         session_cache_key,
                         60.0,
+                        return_allinfo=True
                     )
                 )
 
@@ -219,7 +231,7 @@ class RateLimitMixin:
 
             apikey_cache_key = f"apikey-request-{apikey_cache_token}"
 
-            apikey_reqcount = self.cacheobj.increment(
+            apikey_reqcount = self.cacheobj.counter_increment(
                 apikey_cache_key,
             )
 
@@ -227,11 +239,13 @@ class RateLimitMixin:
 
                 (apikey_reqrate,
                  apikey_reqcount,
-                 apikey_req_t0,
-                 apikey_req_tnow) = (
-                    self.cacheobj.getrate(
+                 apikey_reqcount0,
+                 apikey_req_now,
+                 apikey_req_t0) = (
+                    self.cacheobj.counter_rate(
                         apikey_cache_key,
                         60.0,
+                        return_allinfo=True
                     )
                 )
 
@@ -258,7 +272,7 @@ class RateLimitMixin:
             internal_cache_token = f"{request_type}-{self.request.remote_ip}"
             internal_cache_key = f"internal-request-{internal_cache_token}"
 
-            internal_reqcount = self.cacheobj.increment(
+            internal_reqcount = self.cacheobj.counter_increment(
                 internal_cache_key,
             )
 
@@ -267,11 +281,13 @@ class RateLimitMixin:
 
                 (internal_reqrate,
                  internal_reqcount,
-                 internal_req_t0,
-                 internal_req_tnow) = (
-                    self.cacheobj.getrate(
+                 internal_reqcount0,
+                 internal_req_tnow,
+                 internal_req_t0) = (
+                    self.cacheobj.counter_rate(
                         internal_cache_key,
                         60.0,
+                        return_allinfo=True
                     )
                 )
 
