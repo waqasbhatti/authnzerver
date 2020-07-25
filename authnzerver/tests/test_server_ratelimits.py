@@ -121,8 +121,9 @@ def test_ratelimits(monkeypatch, tmpdir):
         # now check if we have about the right number of successful requests
         # should be around 150 (max burst allowed) after which we get all 429s
         respcounter = Counter(resplist)
-        assert respcounter[200]/nreqs == approx(150/nreqs, rel=0.01)
-        assert respcounter[429]/nreqs == approx(150/nreqs, rel=0.01)
+        print(respcounter)
+        assert respcounter[200]/nreqs == approx(150/nreqs, rel=1.0e-3)
+        assert respcounter[429]/nreqs == approx(150/nreqs, rel=1.0e-3)
 
         #
         # kill the server at the end

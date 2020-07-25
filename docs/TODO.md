@@ -39,7 +39,81 @@
 - [x] Remove numpy from requirements (change frontendbase and `test_auth_timing`)
 
 
-## TODO for vNEXT
+## TODO for v0.2
+
+### Refactor actions and cleanup
+
+- [ ] We need to refactor all actions so they have an internal no-permission
+      version and a permission-wrapped public version that uses the permissions
+      model loaded into the authnzerver. This will help add the public external
+      facing /auth endpoint later on.
+- [ ] The requirements file also needs a dependency on the psycopg2 and
+      mysqlclient packages to support the most common DBs out of the box.
+- [ ] Add tests like `test_server_*.py` for all API actions.
+
+### Group handling
+
+- [ ] Implement user groups and sharing of items between group members.
+- [x] We need a Groups table in the DB, that has the following columns: `id`,
+      `system_id`, `group_name`, `group_role` (foreign key into the Roles
+      table), maybe also a `group_owner` column (foreign key into the Users
+      table).
+- [x] We also need a UserGroups table that maps between `user_ids` and
+      `group_ids` so that users can be part of multiple different groups (this
+      is a many-to-many relation).
+- [ ] Add APIs for groups: 'group-new', 'group-add-user', 'group-del-user',
+      'group-delete', 'group-edit' (superuser only or group-owner only).
+- [ ] Add groups, maybe organizations as well, in the permissions policy and
+      fill in the bits.
+
+### User event log
+
+- [ ] Add a user event log. This will require a separate table in the auth DB
+      and a module in the actions subpackage. Call the log function on any event
+      that the user does and store in the log. The user can then view their own
+      events and the admin users can do the same for any user.
+- [ ] This should also be able to publish items to a message bus or a webhook
+      POST endpoint so we can keep other services informed of user events. The
+      workers can create persistent connections to message-buses so they can
+      send out this info quickly.
+
+### JWT handling
+
+- [ ] Use the jwcrypto library and add actions for: jwk-create, jwk-revoke,
+      jwt-create, jwt-revoke, jwt-verify. Make sure to reject weak algorithms
+      and never allow an empty JWT header (eg. one with no algorithm specified).
+- [ ] This will probably need a new table in the DB.
+- [ ] Also add an endpoint that serves the public key and certificate of the
+      authnzerver based on the keys that are created.
+- [ ] Also add an env var for JWT private keys to use, and another env var with
+      trusted JWT public keys/cert URLs
+
+### Public endpoints and OAuth2/OpenID
+
+- [ ] OAuth will require a public endpoint. Figure out how to make a public
+      endpoint base at /auth and translate all the API actions to nice REST-ish
+      URLs.
+- [ ] Figure out how authentication to these endpoints will work. Maybe we can
+      have an OAuth2 password flow using the superuser credentials to get a
+      token, then can bootstrap from there.
+- [ ] Add OAuth2 client and OpenID Connect clients with the various callback URL
+      bits. Check against Google, Twitter, Github, Auth0, Okta.
+
+### Documentation
+
+- [ ] Document the permissions model JSON and the allowed bits and required
+      roles and actions.
+- [x] Document the environment variables and how to launch the server and the
+      frontend.
+- [ ] Add Sphinx-able docstrings everywhere.
+
+
+## Random priority items
+
+### 2FA
+
+- [ ] 2FA using pyotp probably (look up what PyPI uses).
+- [ ] Add WebAuthn using Duo's python web authn library (look up what PyPI uses).
 
 ### Frontend bits
 
@@ -67,65 +141,25 @@
 - [ ] Wire up the change-password and delete-user links on the index page.
 - [ ] Add edit-user bits on the index page.
 
-### User event log
-
-- [ ] Add a user event log. This will require a separate table in the auth DB
-      and a module in the actions subpackage. Call the log function on any event
-      that the user does and store in the log. The user can then view their own
-      events and the admin users can do the same for any user.
-
-### 2FA
-
-- [ ] 2FA using pyotp probably (look up what PyPI uses).
-- [ ] Add WebAuthn using Duo's python web authn library (look up what PyPI uses).
-
-### OAuth and Federation
-
-- [ ] Add OAuth2 client and OpenID Connect clients with the various callback URL
-  bits. Check against Google, Twitter, Github, Auth0.
-- [ ] Look into getting the user database, roles, and limits from a directory
-      service like AD or FreeIPA.
-
-### Group handling
-
-- [ ] Implement user groups and sharing of items between group members.
-- [ ] We need a Groups table in the DB, that has the following columns: `id`,
-      `system_id`, `group_name`, `group_role` (foreign key into the Roles
-      table), maybe also a `group_owner` column (foreign key into the Users
-      table).
-- [ ] We also need a UserGroups table that maps between `user_ids` and
-      `group_ids` so that users can be part of multiple different groups (this
-      is a many-to-many relation).
-- [ ] Add APIs for groups: 'group-new', 'group-add-user', 'group-del-user',
-      'group-delete', 'group-edit' (superuser only or group-owner only).
-- [ ] Add groups as items in the permissions policy and fill in the bits.
-
-### Documentation
-
-- [ ] Document the permissions model JSON and the allowed bits and required
-      roles and actions.
-- [ ] Document the environment variables and how to launch the server and the
-      frontend.
-- [ ] Add Sphinx-able docstrings everywhere.
-
 ### Misc
 
+- [ ] Look into getting the user database, roles, and limits from a directory
+      service like AD or FreeIPA.
+- [ ] Add email sending via an HTTP API.
 - [ ] Think about changing the permissions model so `allowed_actions_for_owned`
   is further scoped by the owned items (e.g. maybe authenticated users shouldn't
   be able to delete datasets even if they own them).
 - [ ] Maybe memlock pages for secure holding of secrets in memory? (how would
       this even work in Python?)
 - [ ] Maybe add a `change_role` action and figure out how this would work.
-- [ ] Docker container.
-- [ ] Add `test_api_*.py` for all of the HTTP API request types. Use
-      `test_server.py` as a prototype.
+- [x] Docker container.
 - [x] Add Sphinx docs for all the modules and make a readthedocs website.
 - [x] For `confload.py`, add the ability to load an item from a URL in either
       text or JSON form.
 - [x] Make confvars.py loadable from the command line options so we can change
       how the config variables are loaded. Copy over confvars.py and
       default-permissions-model.json to the server's basedir on autosetup.
-- [ ] Add a /auth/health handler for responding to health-checkers for frontend
+- [x] Add a /auth/health handler for responding to health-checkers for frontend
       and /health for the backend.
 - [ ] Definitely move to the PyNACL scheme below for public/private keys. Add a
       /auth/keys handler that returns the current public keys for the server in
@@ -138,6 +172,7 @@
       rate-limiting by ASN or GeoIP region. Add backend APIs probably:
       'user-geoip-check', 'user-asn-check', 'user-iprange-check' (for IP range
       rate-limits)
+- [x] Add support for arbitrary user info.
 
 
 ## JWK notes
