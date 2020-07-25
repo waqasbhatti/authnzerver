@@ -30,7 +30,7 @@ LOGGER = logging.getLogger(__name__)
 ## sorted key object ##
 #######################
 
-SortedKey = namedtuple('SortedKey', ['inserted', 'key'])
+KeyWithTime = namedtuple('KeyWithTime', ['keytime', 'key'])
 
 
 ##################
@@ -141,10 +141,10 @@ class DictCache:
 
             insert_time = time()
 
-            sortedkey = SortedKey(insert_time, key)
+            sortedkey = KeyWithTime(insert_time, key)
             self.sortedkeys.add(sortedkey)
             self.container[key] = {'value':value,
-                                   'inserted':insert_time,
+                                   'keytime':insert_time,
                                    'ttl':ttl}
 
             return value
@@ -203,11 +203,11 @@ class DictCache:
         item = self.container.pop(key, None)
         if item:
 
-            sortedkey = SortedKey(item['inserted'], key)
+            sortedkey = KeyWithTime(item['keytime'], key)
             self.sortedkeys.discard(sortedkey)
 
             if item.get('ttl'):
-                ttlkey = SortedKey(item['ttl'], key)
+                ttlkey = KeyWithTime(item['ttl'], key)
                 self.expireable_key_ttls.discard(ttlkey)
 
             return item['value']
@@ -315,9 +315,9 @@ class DictCache:
             key_item = self.container[counter_key]
             tnow = time()
             rate = ( key_item['value'] /
-                     ((tnow - key_item['inserted'])/period_seconds) )
+                     ((tnow - key_item['keytime'])/period_seconds) )
 
-            return rate, key_item['value'], key_item['inserted'], tnow
+            return rate, key_item['value'], key_item['keytime'], tnow
 
         else:
             return None
@@ -330,6 +330,7 @@ class DictCache:
 
         self.container = {}
         self.sortedkeys = SortedSet()
+        self.expireable_key_ttls = SortedSet()
 
     def save(self, outfile, protocol=4, hmac_key=None):
         """This saves the current contents of the cache to disk.
@@ -344,6 +345,7 @@ class DictCache:
 
         serialized = {
             "sortedkeys":self.sortedkeys,
+            "keyttls":self.expireable_key_ttls,
             "container":self.container,
             "capacity":self.capacity
         }
@@ -394,5 +396,6 @@ class DictCache:
                 deserialized = pickle.loads(deserialized_bytes)
 
         self.sortedkeys = deserialized['sortedkeys']
+        self.expireable_key_ttls = deserialized['keyttls']
         self.container = deserialized['container']
         self.capacity = deserialized['capacity']
