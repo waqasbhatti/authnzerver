@@ -57,6 +57,7 @@ class DictCache:
         Removes the oldest key in the cache.
 
         """
+
         if len(self.container) > self.capacity:
             oldest_key = self.sortedkeys.pop()
             self.container.pop(oldest_key.key)
@@ -78,33 +79,49 @@ class DictCache:
 
         del self.expireable_key_ttls[:exp_indices_now]
 
-    def _add_ttl(self, key, ttl):
+    def _add_ttl(self, key, origin_time, ttl):
         """
         Adds a TTL key to self.expireable_key_ttls.
 
         If a key with the same value of key and TTL exists, does nothing.
 
-        FIXME: implement this
-
         """
+
         self._expire()
 
-    def _set_ttl(self, key, ttl):
+        if ttl is not None:
+            ttlkey = KeyWithTime(origin_time + ttl, key)
+            self.expireable_key_ttls.add(ttlkey)
+
+    def _set_ttl(self, key, existing_origin_time, existing_ttl, new_ttl):
         """
         Sets a TTL key in self.expireable_key_ttls to a new TTL.
 
-        FIXME: implement this
-
         """
+
         self._expire()
+
+        if existing_ttl is not None:
+            ttlkey = KeyWithTime(existing_origin_time + existing_ttl, key)
+
+            # pop the existing ttl item
+            ttlitem = self.expireable_key_ttls.pop(ttlkey)
+
+            # if we're going to update it with a new item, generate the new item
+            # and add it back to the SortedSet
+            # otherwise, this falls through to the case of new_ttl = None,
+            # which we've already handled above
+            if ttlitem and new_ttl:
+                new_ttlkey = KeyWithTime(existing_origin_time + new_ttl, key)
+                self.expireable_key_ttls.add(new_ttlkey)
 
     def time(self):
         """
         Returns the cache's current time time counter.
 
         """
-        self._expire()
 
+        self._expire()
         return time()
 
     def size(self):
@@ -112,6 +129,7 @@ class DictCache:
         Returns the number of items in the cache.
 
         """
+
         self._expire()
         return len(self.container)
 
@@ -122,6 +140,7 @@ class DictCache:
         FIXME: implement this
 
         """
+
         self._expire()
 
     def add(self, key, value, ttl=None):
@@ -129,8 +148,6 @@ class DictCache:
         Adds a key and sets it to the value.
 
         If the key already exists, does nothing.
-
-        FIXME: implement TTL
 
         """
 
@@ -142,25 +159,29 @@ class DictCache:
             insert_time = time()
 
             sortedkey = KeyWithTime(insert_time, key)
-            self.sortedkeys.add(sortedkey)
             self.container[key] = {'value':value,
                                    'keytime':insert_time,
                                    'ttl':ttl}
+            self.sortedkeys.add(sortedkey)
+            self._add_ttl(key, insert_time, ttl)
 
             return value
 
         else:
             return value
 
-    def get(self, key):
+    def get(self, key, time_and_ttl=False):
         """
         Gets the value of key from the cache.
 
         """
+
         self._expire()
 
         item = self.container.get(key, None)
-        if item:
+        if item and time_and_ttl:
+            return item['value'], item['keytime'], item['ttl']
+        elif item:
             return item['value']
         else:
             return None
@@ -176,7 +197,11 @@ class DictCache:
         add_ifnotexists is True, adds the key to the cache and returns the
         value.
 
+        ttl = None implies that the TTL no longer applies, in which it will be
+        removed from the key, meaning the key becomes persistent.
+
         """
+
         self._expire()
 
         if key not in self.container and add_ifnotexists:
@@ -184,9 +209,11 @@ class DictCache:
 
         elif key in self.container:
             self.container[key]['value'] = value
-            if ttl is not None:
-                self.container[key]['ttl'] = ttl
-                self._set_ttl(key, ttl)
+            self._set_ttl(key,
+                          self.container[key]['keytime'],
+                          self.container[key]['ttl'],
+                          ttl)
+            self.container[key]['ttl'] = ttl
 
             return self.container[key]['value']
 
@@ -198,6 +225,7 @@ class DictCache:
         Pops the key from the cache.
 
         """
+
         self._expire()
 
         item = self.container.pop(key, None)
@@ -218,6 +246,7 @@ class DictCache:
         """Deletes the key from the cache.
 
         """
+
         self._expire()
 
         removed_item = self.pop(key)
@@ -231,6 +260,7 @@ class DictCache:
         incremented/decremented.
 
         """
+
         self._expire()
 
         counter_key = f"{key}-cachecounterkey"
@@ -250,6 +280,7 @@ class DictCache:
         1.
 
         """
+
         self._expire()
 
         counter_key = f"{key}-cachecounterkey"
@@ -274,6 +305,7 @@ class DictCache:
         in the cache.
 
         """
+
         self._expire()
 
         counter_key = f"{key}-cachecounterkey"
@@ -307,6 +339,7 @@ class DictCache:
         If the counter key does not exist, returns None.
 
         """
+
         self._expire()
 
         counter_key = f"{key}-cachecounterkey"
@@ -341,6 +374,7 @@ class DictCache:
         disk.
 
         """
+
         self._expire()
 
         serialized = {
