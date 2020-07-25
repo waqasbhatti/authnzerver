@@ -10,7 +10,11 @@
 #############
 
 import logging
-from time import monotonic
+
+# normally we'd use monotonic(), but we use time() because
+# we want to be able to preserve the cache expiries across
+# saves/loads of the cache to/from disk
+from time import time
 import pickle
 from collections import namedtuple
 from hashlib import blake2b
@@ -63,7 +67,7 @@ class DictCache:
 
         """
 
-        current_time = monotonic()
+        current_time = time()
         exp_indices_now = self.expirable_key_ttls.bisect_left(
             current_time
         )
@@ -96,12 +100,12 @@ class DictCache:
 
     def time(self):
         """
-        Returns the cache's current monotonic time counter.
+        Returns the cache's current time time counter.
 
         """
         self._expire()
 
-        return monotonic()
+        return time()
 
     def size(self):
         """
@@ -135,7 +139,7 @@ class DictCache:
 
         if key not in self.container:
 
-            insert_time = monotonic()
+            insert_time = time()
 
             sortedkey = SortedKey(insert_time, key)
             self.sortedkeys.add(sortedkey)
@@ -309,7 +313,7 @@ class DictCache:
 
         if counter_key in self.container:
             key_item = self.container[counter_key]
-            tnow = monotonic()
+            tnow = time()
             rate = ( key_item['value'] /
                      ((tnow - key_item['inserted'])/period_seconds) )
 
