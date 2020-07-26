@@ -20,6 +20,7 @@ Submodules
 
    authnzerver.authdb
    authnzerver.autosetup
+   authnzerver.client
    authnzerver.confload
    authnzerver.confvars
    authnzerver.dictcache

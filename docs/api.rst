@@ -48,8 +48,82 @@ exist or the password was incorrect, instead responding with something like
 The sections below describe the various available action request types, how to
 construct the ``body`` dict, and what to expect in the ``response`` dict.
 
-API Examples
-============
+Using the API Client
+====================
+
+An authnzerver HTTP API client is available in the authnzerver Python package's
+:py:mod:`authnzerver.client` module. This contains a class that handles the
+encryption/decryption for the request-response cycle and includes
+both synchronous and asyncio-compatible request methods.
+
+Example
+-------
+
+.. code-block:: python
+
+   import asyncio
+   import base64
+   import secrets
+   import os
+
+   from authnzerver.client import Authnzerver
+
+
+   # this is the secret key shared between the authnzerver and our client
+   # best stored as an environment variable
+   SHARED_SECRET_KEY = os.environ.get("AUTHNZERVER_SECRET", None)
+
+   # if you haven't generated a secret key for authnzerver yet,
+   # here's how to do it
+   SHARED_SECRET_KEY = (
+       base64.urlsafe_b64encode(secrets.token_bytes()).decode('utf-8')
+   )
+
+   # make a new authnzerver client object
+   client = Authnzerver(authnzerver_url="http://localhost:13431",
+                        authnzerver_secret=SHARED_SECRET_KEY)
+
+   # fire a synchronous request
+   response = client.request("user-new",
+                             {"email":"hello@test.org",
+                              "password":"super-strong-password",
+                              "full_name":"Test User"})
+
+   # check if the request was successful
+   print(response.success)
+
+   # look at the response dict
+   print(response.response)
+
+   # look at the messages that can be passed on to an end-user
+   print(response.messages)
+
+   # look at the failure_reason that should be used internally only
+   print(response.failure_reason)
+
+   # look at the headers of the response
+   print(response.headers)
+
+   # look at the HTTP status code of the response -- useful for HTTP 401
+   # or HTTP 429 responses from the authnzerver
+   print(response.status_code)
+
+   #
+   # the same request in an asynchronous style -- using asyncio.run
+   #
+
+   # a runner function to demonstrate await syntax
+   async def run_request():
+       return await client.async_request("user-new",
+                                         {"email":"hello2@test.org",
+                                          "password":"superb-strong-password",
+                                          "full_name":"Test User 2"})
+   # execute the asynchronous request
+   async_response = asyncio.run(run_request())
+
+
+Constructing API Requests manually
+==================================
 
 Request example
 ---------------
