@@ -20,10 +20,16 @@ Submodules
 
    authnzerver.authdb
    authnzerver.autosetup
-   authnzerver.cache
    authnzerver.confload
    authnzerver.confvars
+   authnzerver.dictcache
    authnzerver.handlers
+   authnzerver.healthcheck
+   authnzerver.jsonencoder
    authnzerver.main
+   authnzerver.messaging
+   authnzerver.modtools
    authnzerver.permissions
+   authnzerver.ratelimit
+   authnzerver.tokens
    authnzerver.validators
