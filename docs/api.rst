@@ -64,16 +64,22 @@ Example
    import asyncio
    import base64
    import secrets
+   import os
 
    from authnzerver.client import Authnzerver
 
 
    # this is the secret key shared between the authnzerver and our client
+   # best stored as an environment variable
+   SHARED_SECRET_KEY = os.environ.get("AUTHNZERVER_SECRET", None)
+
+   # if you haven't generated a secret key for authnzerver yet,
+   # here's how to do it
    SHARED_SECRET_KEY = (
        base64.urlsafe_b64encode(secrets.token_bytes()).decode('utf-8')
    )
 
-   # a new authnzerver client object
+   # make a new authnzerver client object
    client = Authnzerver(authnzerver_url="http://localhost:13431",
                         authnzerver_secret=SHARED_SECRET_KEY)
 

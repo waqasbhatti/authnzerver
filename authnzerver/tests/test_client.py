@@ -1,30 +1,25 @@
-'''test_server_ratelimits.py -
-   Waqas Bhatti (waqas.afzal.bhatti@gmail.com) - Mar 2020
-License: MIT. See the LICENSE file for details.
+"""
+This contains tests for the authnzerver client module.
 
-This tests the rate-limiting for a running authnzerver.
+"""
 
-'''
 
 import secrets
 import subprocess
-import requests
 import os.path
 import time
-from datetime import datetime, timedelta
-from collections import Counter
 
-from pytest import mark, approx
+import pytest
 
 from authnzerver.autosetup import autogen_secrets_authdb
-from authnzerver.messaging import encrypt_message
+from authnzerver.client import Authnzerver
 
 
-@mark.skipif(
+@pytest.mark.skipif(
     os.environ.get("GITHUB_WORKFLOW", None) is not None,
     reason="github doesn't allow server tests probably"
 )
-def test_ratelimits(monkeypatch, tmpdir):
+def test_client(monkeypatch, tmpdir):
     '''
     This tests if the server does rate-limiting correctly.
 
@@ -85,50 +80,57 @@ def test_ratelimits(monkeypatch, tmpdir):
     # wait 2.5 seconds for the server to start
     time.sleep(2.5)
 
+    #
+    # start tests
+    #
     try:
 
-        #
-        # 1. hit the server with 300 session-new requests
-        #
-        nreqs = 300
+        client = Authnzerver(
+            authnzerver_url=f"http://{server_listen}:{server_port}",
+            authnzerver_secret=secret
+        )
 
-        resplist = []
-        for req_ind in range(1,nreqs+1):
+        # create a new user
+        resp = client.request(
+            "user-new",
+            {"email":"test-user@test.org",
+             "password":"atYSE6m3bsBL",
+             "full_name":"New User"}
+        )
+        assert resp.success is True
+        assert resp.response["user_id"] == 4
+        assert resp.response["send_verification"] is True
 
-            # create a new anonymous session token
-            session_payload = {
-                'user_id':2,
-                'user_agent':'Mozzarella Killerwhale',
-                'expires':datetime.utcnow()+timedelta(hours=1),
-                'ip_address': '1.1.1.1',
-                'extra_info_json':{'pref_datasets_always_private':True}
-            }
-
-            request_dict = {'request':'session-new',
-                            'body':session_payload,
-                            'reqid':req_ind}
-
-            encrypted_request = encrypt_message(request_dict, secret)
-
-            # send the request to the authnzerver
-            resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
-                data=encrypted_request,
-                timeout=1.0
-            )
-            resplist.append(resp.status_code)
-
-        # now check if we have about the right number of successful requests
-        # should be around 150 (max burst allowed) after which we get all 429s
-        respcounter = Counter(resplist)
-        print(respcounter)
-        assert respcounter[200]/nreqs == approx(150/nreqs, rel=1.0e-3)
-        assert respcounter[429]/nreqs == approx(150/nreqs, rel=1.0e-3)
+        # edit their info
+        resp = client.request(
+            "internal-user-edit",
+            {"target_userid":4,
+             "update_dict":{"email_verified":True,
+                            "is_active":True,
+                            "extra_info":{"provenance":"pytest-user",
+                                          "type":"test",
+                                          "hello":"world"}}}
+        )
+        assert resp.success is True
+        assert resp.response.get("user_info", None) is not None
+        assert (
+            resp.response["user_info"]["extra_info"]["provenance"]
+            == "pytest-user"
+        )
+        assert (
+            resp.response["user_info"]["extra_info"]["type"]
+            == "test"
+        )
+        assert (
+            resp.response["user_info"]["extra_info"]["hello"]
+            == "world"
+        )
+        assert resp.response["user_info"]["email_verified"] is True
+        assert resp.response["user_info"]["is_active"] is True
 
     #
     # kill the server at the end
     #
-
     finally:
 
         p.kill()
