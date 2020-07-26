@@ -664,8 +664,10 @@ def get_conf_item(env_key,
         # NOTE: no casting done here to preserve whatever type default was
         # NOTE: e.g., this allows us to use a a dict as a default
 
-        # handle any postprocessing
-        if isinstance(postprocess_value,str):
+        #
+        # handle any postprocessing of the item after it's been loaded
+        #
+        if isinstance(postprocess_value, str):
             postproc_func = object_from_string(postprocess_value)
             if postproc_func is not None:
                 confitem = postproc_func(confitem)
@@ -763,8 +765,10 @@ def get_conf_item(env_key,
     else:
         confitem = vartype(confitem)
 
-    # handle any postprocessing
-    if isinstance(postprocess_value,str):
+    #
+    # handle any postprocessing of the item after it's been loaded
+    #
+    if isinstance(postprocess_value, str):
         postproc_func = object_from_string(postprocess_value)
         if postproc_func is not None:
             confitem = postproc_func(confitem)
