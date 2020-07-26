@@ -52,7 +52,7 @@ Using the API Client
 ====================
 
 An authnzerver HTTP API client is available in the authnzerver Python package's
-py:mod:`authnzerver.client` module. This contains a class that handles the
+:py:mod:`authnzerver.client` module. This contains a class that handles the
 encryption/decryption for the request-response cycle and includes
 both synchronous and asyncio-compatible request methods.
 

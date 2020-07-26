@@ -45,15 +45,6 @@ AuthnzerverResponse = namedtuple('AuthnzerverResponse',
 class Authnzerver:
     """An authnzerver client class, capable of async and sync calls.
 
-    """
-
-    def __init__(self,
-                 authnzerver_url=None,
-                 authnzerver_secret=None,
-                 tls_certfile=None,
-                 tls_keyfile=None):
-        """Makes a new Authnzerver client object.
-
         To do anything useful, an *authnzerver_url* and *authnzerver_token* are
         required. By default, this object will populate these from the
         environment using the following variables:
@@ -66,6 +57,15 @@ class Authnzerver:
 
         If *tls_certfile* and *tls_keyfile* are both provided, they will be used
         to set up a TLS-enabled connection to the authnzerver.
+
+    """
+
+    def __init__(self,
+                 authnzerver_url=None,
+                 authnzerver_secret=None,
+                 tls_certfile=None,
+                 tls_keyfile=None):
+        """Makes a new Authnzerver client object.
 
         """
 
@@ -126,33 +126,34 @@ class Authnzerver:
         Returns
         -------
 
-        AuthnzerverResponse : namedtuple
-            Returns a named-tuple with the following attributes:
+        namedtuple
+            Returns an *AuthnzerverResponse* named-tuple with the following
+            attributes::
 
-                (success, response, messages,
-                 headers, status_code, failure_reason)
+                (success, response, messages, headers,
+                 status_code, failure_reason)
 
             where:
 
             - *success* is a boolean indicating if the request was successful.
 
             - *response* is a dict containing the full response from the
-               authnzerver.
+              authnzerver.
 
             - *messages* is a list of strings containing any messages that are
-               appropriate to pass on to the end-user.
+              appropriate to pass on to the end-user.
 
             - *headers* is a dict containing the response headers from the
-               authnzerver.
+              authnzerver.
 
             - *status_code* is the HTTP status code of the authnzerver
-               request. Use this to figure out if your request was being
-               rate-limited (check for 429).
+              request. Use this to figure out if your request was being
+              rate-limited (check for 429).
 
             - *failure_reason* is None if the request was successful, but if it
-               wasn't, contains the reason why the request might have failed;
-               including details of any exceptions encountered. This MUST NOT be
-               disclosed to an end-user of the frontend server.
+              wasn't, contains the reason why the request might have failed;
+              including details of any exceptions encountered. This MUST NOT be
+              disclosed to an end-user of the frontend server.
 
         """
 
@@ -301,8 +302,9 @@ class Authnzerver:
         Returns
         -------
 
-        AuthnzerverResponse : namedtuple
-            Returns a named-tuple with the following attributes:
+        namedtuple
+            Returns an *AuthnzerverResponse* named tuple with the following
+            attributes::
 
                 (success, response, messages,
                  headers, status_code, failure_reason)
@@ -312,22 +314,22 @@ class Authnzerver:
             - *success* is a boolean indicating if the request was successful.
 
             - *response* is a dict containing the full response from the
-               authnzerver.
+              authnzerver.
 
             - *messages* is a list of strings containing any messages that are
-               appropriate to pass on to the end-user.
+              appropriate to pass on to the end-user.
 
             - *headers* is a dict containing the response headers from the
-               authnzerver.
+              authnzerver.
 
             - *status_code* is the HTTP status code of the authnzerver
-               request. Use this to figure out if your request was being
-               rate-limited (check for 429).
+              request. Use this to figure out if your request was being
+              rate-limited (check for 429).
 
             - *failure_reason* is None if the request was successful, but if it
-               wasn't, contains the reason why the request might have failed;
-               including details of any exceptions encountered. This MUST NOT be
-               disclosed to an end-user of the frontend server.
+              wasn't, contains the reason why the request might have failed;
+              including details of any exceptions encountered. This MUST NOT be
+              disclosed to an end-user of the frontend server.
 
         """
 
