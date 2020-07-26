@@ -335,7 +335,7 @@ def xsalsa_encrypt_message(
     ----------
 
     message_dict : dict
-    A dict containing items that will be encrypted.
+        A dict containing items that will be encrypted.
 
     key : bytes
         This is a 32-byte encryption key. Generate one using::

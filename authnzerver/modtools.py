@@ -34,8 +34,7 @@ import os.path
 def module_from_string(module, force_reload=False):
     """This imports the module specified.
 
-    Used to dynamically import Python modules that are needed to support LC
-    reader functions.
+    Used to dynamically import Python modules.
 
     Parameters
     ----------
@@ -43,12 +42,8 @@ def module_from_string(module, force_reload=False):
     module : str
         This is either:
 
-        - a Python module import path, e.g. 'astrobase.lcproc.catalogs' or
-        - a path to a Python file, e.g. '/astrobase/hatsurveys/hatlc.py'
-
-        that contains the Python module that contains functions used to open
-        (and optionally normalize) a custom LC format that's not natively
-        supported by astrobase.
+        - a Python module import path, e.g. 'concurrent.futures' or
+        - a path to a Python file, e.g. '~/authnzerver/authnzerver/main.py'
 
     force_reload : bool
         If True, will reload a previous imported module even if it's been
@@ -71,6 +66,9 @@ def module_from_string(module, force_reload=False):
     try:
 
         if os.path.exists(module):
+
+            if '~' in module:
+                module = os.path.expanduser(module)
 
             sys.path.append(os.path.dirname(module))
             module_import_path = os.path.basename(module.replace('.py',''))
@@ -122,13 +120,14 @@ def object_from_string(objectpath, force_reload=False):
 
     - fully qualified module name and object name, e.g.::
 
-        'pipetrex.calibration.objectframe.calibrate_object_frame'
-        'pipetrex.drivers.conf.hatpi.Calibration'
+        'authnzerver.confvars.CONF' -> gets the CONF dict
+        'sqlalchemy.dialects.postgresql.JSONB' -> gets the JSONB class
+        'scipy.ndimage.convolve' -> gets the convolve() function
 
     - path to a module on disk and the object name separated by '::', e.g.::
 
-        '~/pipetrex/calibration/objectframe.py::calibrate_object_frame'
-        '~/pipetrex/drivers/conf/hatpi.py::Calibration'
+        '~/authnzerver/authnzerver/actions/user.py::create_new_user'
+        '~/authzerver/authnzerver/authdb.py::Users'
 
       (This is similar to the format used by pytest.)
 
