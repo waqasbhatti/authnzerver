@@ -21,7 +21,6 @@ import json
 import os
 from collections import namedtuple
 from secrets import token_urlsafe
-from asyncio import get_running_loop
 
 from tornado.httpclient import (
     HTTPClient, AsyncHTTPClient, HTTPRequest, HTTPClientError
@@ -50,7 +49,9 @@ class Authnzerver:
 
     def __init__(self,
                  authnzerver_url=None,
-                 authnzerver_secret=None):
+                 authnzerver_secret=None,
+                 tls_certfile=None,
+                 tls_keyfile=None):
         """Makes a new Authnzerver client object.
 
         To do anything useful, an *authnzerver_url* and *authnzerver_token* are
@@ -62,6 +63,9 @@ class Authnzerver:
 
         These are overridden by whatever you provide in the *authnzerver_url*
         and *authnzerver_secret* kwargs.
+
+        If *tls_certfile* and *tls_keyfile* are both provided, they will be used
+        to set up a TLS-enabled connection to the authnzerver.
 
         """
 
@@ -97,9 +101,9 @@ class Authnzerver:
                 )
                 raise
 
-        # get the HTTP clients
-        self.httpclient = HTTPClient()
-        self.async_httpclient = AsyncHTTPClient()
+        # get the cert file and key
+        self.tls_certfile = tls_certfile
+        self.tls_keyfile = tls_keyfile
 
     def request(self, request_type, request_body, request_id=None):
         """This does a synchronous request to the authnzerver.
@@ -152,6 +156,8 @@ class Authnzerver:
 
         """
 
+        httpclient = HTTPClient()
+
         if request_id is None:
             request_id = token_urlsafe(8)
 
@@ -175,11 +181,13 @@ class Authnzerver:
             body=encrypted_request,
             connect_timeout=5.0,
             request_timeout=5.0,
+            client_key=self.tls_keyfile,
+            client_cert=self.tls_certfile
         )
 
         # fire the request
         try:
-            authnzerver_response = self.httpclient.fetch(
+            authnzerver_response = httpclient.fetch(
                 request_obj,
             )
 
@@ -269,7 +277,7 @@ class Authnzerver:
             )
 
         finally:
-            self.httpclient.close()
+            httpclient.close()
 
     async def async_request(self, request_type, request_body,
                             request_id=None):
@@ -323,6 +331,8 @@ class Authnzerver:
 
         """
 
+        async_httpclient = AsyncHTTPClient()
+
         if request_id is None:
             request_id = token_urlsafe(8)
 
@@ -346,11 +356,13 @@ class Authnzerver:
             body=encrypted_request,
             connect_timeout=5.0,
             request_timeout=5.0,
+            client_key=self.tls_keyfile,
+            client_cert=self.tls_certfile
         )
 
         # fire the request
         try:
-            authnzerver_response = await self.async_httpclient.fetch(
+            authnzerver_response = await async_httpclient.fetch(
                 request_obj,
             )
 
@@ -440,4 +452,4 @@ class Authnzerver:
             )
 
         finally:
-            self.async_httpclient.close()
+            async_httpclient.close()
