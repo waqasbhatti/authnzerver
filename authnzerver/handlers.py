@@ -38,22 +38,6 @@ from .permissions import pii_hash
 from .ratelimit import RateLimitMixin, UserLockMixin
 
 
-#########################
-## REQ/RESP VALIDATION ##
-#########################
-
-def check_header_host(allowed_hosts_regex, header_host):
-    """
-    This checks if the header_host item is in the allowed_hosts.
-
-    """
-    rematch = allowed_hosts_regex.findall(header_host)
-    if rematch is not None:
-        return True
-    else:
-        return False
-
-
 #####################################
 ## AUTH REQUEST HANDLING FUNCTIONS ##
 #####################################
@@ -206,17 +190,6 @@ class AuthHandler(tornado.web.RequestHandler,
         Handles the incoming POST request.
 
         """
-
-        # check the host
-        ipcheck = check_header_host(self.allowed_hosts_regex,
-                                    self.request.host)
-        if not ipcheck:
-            LOGGER.warning(
-                "Invalid host in request header: '%s' "
-                "did not match the allowed hosts regex: '%s'. Request dropped."
-                % (self.request.host, self.allowed_hosts_regex)
-            )
-            raise tornado.web.HTTPError(status_code=401)
 
         # decrypt the request
         payload = decrypt_message(self.request.body, self.fernet_secret)
