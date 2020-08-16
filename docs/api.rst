@@ -377,6 +377,27 @@ Returns a ``response`` with the following items if successful:
 
 - ``email`` (str): the email address of the user
 
+``user-changepass-nosession``: Change an existing user's password (no session required)
+---------------------------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``user_id`` (int): the integer user ID of the user
+
+- ``full_name`` (str): the full name of the user
+
+- ``email`` (str): the email address of the user
+
+- ``current_password`` (str): the current password that will be changed
+
+- ``new_password`` (str): the new password that will be used from now on
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_id`` (int): the user ID of the user
+
+- ``email`` (str): the email address of the user
+
 ``user-delete``: Delete an existing user
 ----------------------------------------
 
@@ -481,6 +502,27 @@ Requires the following ``body`` items in a request:
 
 - ``session_token`` (str): the session token of the session initiating the
   request
+
+Returns a ``response`` with the following items:
+
+- None, check the ``success`` key to see if the request succeeded.
+
+``user-resetpass-nosession``: Reset a user's password (no session required)
+---------------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``email_address`` (str): the email address of the user whose password will be
+  reset
+
+- ``new_password`` (str): the new password provided by the user
+
+- ``required_active`` (bool): if True, the user's *is_active* column value in
+  the DB is required to be True. If False, the user's *is_active* column value
+  in the DB is required to be False. Use this to require a specific user
+  lock-out state before the password is reset. For example, if you always lock
+  out users after their password-reset email token is verified and before
+  they've entered a new password, set *required_active* to False.
 
 Returns a ``response`` with the following items:
 

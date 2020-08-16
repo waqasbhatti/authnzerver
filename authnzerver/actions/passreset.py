@@ -373,8 +373,7 @@ def verify_password_reset_nosession(
 
         - email_address: str
         - new_password: str
-        - required_active: bool, True -> is_active == True for reset to work
-                                 False -> is_active == False for reset to work
+        - required_active: bool
 
         The *required_active* parameter can be used to check the required state
         of the *is_active* DB entry for the user before password reset is

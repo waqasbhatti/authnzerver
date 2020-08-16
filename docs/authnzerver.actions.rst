@@ -18,5 +18,8 @@ Submodules
    authnzerver.actions.email
    authnzerver.actions.loginlogout
    authnzerver.actions.passcheck
+   authnzerver.actions.passchange
+   authnzerver.actions.passreset
+   authnzerver.actions.passwords
    authnzerver.actions.session
    authnzerver.actions.user
