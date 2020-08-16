@@ -345,6 +345,19 @@ Requires the following ``body`` items in a request:
 
 - ``password`` (str): the user's password
 
+Optional parameters are:
+
+- ``extra_info`` (dict): arbitrary key-val items to store for this user. This is
+  a good place to store user metadata like their organization, their avatar URL,
+  their full address, etc.
+
+- ``verify_retry_wait`` (int, default 6, minimum 1): The amount of time in hours
+  the user must wait to retry a failed sign-up attempt. This situation arises if
+  the user didn't get to their verification token email in time and it expired,
+  or they sent back the incorrect token. The user must then wait for
+  *verify_retry_wait* hours before they can try to sign up for an account again
+  and get a new verification token via email.
+
 Returns a ``response`` with the following items if successful:
 
 - ``user_email`` (str): the user's email address

@@ -90,8 +90,13 @@ def create_new_user(
 
         - password: str. User's password.
 
-        - extra_info: dict or None. optional dict to add any extra info for this
-          user, will be stored as JSON in the DB
+        - extra_info: dict or None. optional dict to add any extra
+          info for this user, will be stored as JSON in the DB
+
+        - verify_retry_wait: int or None, default: 6. This sets the amount of
+          time in hours a user must wait before retrying a failed verification
+          action, i.e., responding before expiry of and with the correct
+          verification token.
 
         In addition to these items received from an authnzerver client, the
         payload must also include the following keys (usually added in by a
@@ -132,10 +137,10 @@ def create_new_user(
     has forgotten that they have an account or someone else is being
     annoying. In this case, if is_active is True, we'll tell the user that we've
     sent an email but won't do anything. If is_active is False and
-    emailverify_sent_datetime is at least 24 hours in the past, we'll send a new
-    email verification email and update the emailverify_sent_datetime. In this
-    case, we'll just tell the user that we've sent the email but won't tell them
-    if their account exists.
+    emailverify_sent_datetime is at least *payload['verify_retry_wait']* hours
+    in the past, we'll send a new email verification email and update the
+    emailverify_sent_datetime. In this case, we'll just tell the user that we've
+    sent the email but won't tell them if their account exists.
 
     Only after the user verifies their email, is_active will be set to True and
     user_role will be set to 'authenticated'.
@@ -233,7 +238,19 @@ def create_new_user(
     email = validators.normalize_value(payload['email'])
     full_name = validators.normalize_value(payload['full_name'])
     password = payload['password']
+
+    # get extra info if any
     extra_info = payload.get("extra_info", None)
+
+    # get the verify_retry_wait time
+    verify_retry_wait = payload.get("verify_retry_wait", 6)
+    try:
+        verify_retry_wait = int(verify_retry_wait)
+    except Exception:
+        verify_retry_wait = 6
+
+    if verify_retry_wait < 1:
+        verify_retry_wait = 1
 
     # this checks if the database connection is live
     currproc = mp.current_process()
@@ -302,11 +319,13 @@ def create_new_user(
             extra_info = {
                 "provenance":"request-created",
                 "type":"normal-user",
+                "verify_retry_wait": verify_retry_wait,
             }
         else:
             extra_info.update({
                 "provenance":"request-created",
                 "type":"normal-user",
+                "verify_retry_wait": verify_retry_wait,
             })
 
         new_user_dict = {
@@ -391,19 +410,57 @@ def create_new_user(
         # this sets whether we should resend the verification email
         resend_verification = (
             not(rows['is_active']) and
-            (verification_timedelta > timedelta(hours=24))
+            (verification_timedelta > timedelta(hours=verify_retry_wait))
         )
         LOGGER.warning(
             '[%s] Existing user_id = %s for new user creation '
             'request with email = %s, is_active = %s. '
             'Email verification originally sent at = %sZ, '
-            'will resend verification = %s' %
+            'verification timedelta: %s, verify_retry_wait = %s hours. '
+            'Will resend verification = %s' %
             (payload['reqid'],
              pii_hash(rows['user_id'], payload['pii_salt']),
              pii_hash(payload['email'], payload['pii_salt']),
              rows['is_active'],
              rows['emailverify_sent_datetime'].isoformat(),
+             verification_timedelta, verify_retry_wait,
              resend_verification)
+        )
+
+        # if we're going to resend the verification, update the users table with
+        # the latest info sent by the user (they might've changed their password
+        # in the meantime)
+        del new_user_dict["created_on"]
+        del new_user_dict["system_id"]
+
+        upd = users.update(
+        ).where(
+            users.c.user_id == rows["user_id"]
+        ).values(new_user_dict)
+        result = currproc.authdb_conn.execute(upd)
+        result.close()
+
+        # get back the user ID
+        sel = select([
+            users.c.email,
+            users.c.user_id,
+            users.c.is_active,
+            users.c.emailverify_sent_datetime,
+        ]).select_from(users).where(
+            users.c.email == email
+        )
+        result = currproc.authdb_conn.execute(sel)
+        rows = result.fetchone()
+        result.close()
+
+        LOGGER.warning(
+            "[%s] Resending verification to user: %s because timedelta "
+            "between original sign up and retry: %s > "
+            "verify_retry_wait: %s hours. User information has been updated "
+            "with their latest provided sign-up info." %
+            (payload["reqid"],
+             pii_hash(rows["user_id"], payload["pii_salt"]),
+             verification_timedelta, verify_retry_wait)
         )
 
         messages.append(

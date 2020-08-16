@@ -1013,7 +1013,7 @@ def set_user_email_sent(payload,
         return {
             'success':False,
             'failure_reason':(
-                    "invalid request: invalid email_type requested"
+                "invalid request: invalid email_type requested"
             ),
             'messages':["Invalid email sent notification request."]
         }
