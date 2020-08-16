@@ -158,7 +158,7 @@ def verify_password_reset(payload,
             "email: %s, session_token: %s. "
             "Provided session token was not found in the DB or has expired." %
             (payload['reqid'],
-             pii_hash(payload['email'],
+             pii_hash(payload['email_address'],
                       payload['pii_salt']),
              pii_hash(payload['session_token'],
                       payload['pii_salt']))
@@ -234,7 +234,7 @@ def verify_password_reset(payload,
             "email: %s, session_token: %s, user_id: %s. "
             "User is attempting to reuse the password they supposedly forgot." %
             (payload['reqid'],
-             pii_hash(payload['email'],
+             pii_hash(payload['email_address'],
                       payload['pii_salt']),
              pii_hash(payload['session_token'],
                       payload['pii_salt']),
@@ -265,7 +265,7 @@ def verify_password_reset(payload,
             "email: %s, session_token: %s, user_id: %s. "
             "The new password is insecure." %
             (payload['reqid'],
-             pii_hash(payload['email'],
+             pii_hash(payload['email_address'],
                       payload['pii_salt']),
              pii_hash(payload['session_token'],
                       payload['pii_salt']),
@@ -314,7 +314,7 @@ def verify_password_reset(payload,
                 "[%s] Password reset request succeeded for "
                 "email: %s, session_token: %s, user_id: %s. " %
                 (payload['reqid'],
-                 pii_hash(payload['email'],
+                 pii_hash(payload['email_address'],
                           payload['pii_salt']),
                  pii_hash(payload['session_token'],
                           payload['pii_salt']),
@@ -335,7 +335,7 @@ def verify_password_reset(payload,
                 "email: %s, session_token: %s, user_id: %s. "
                 "The database row for the user could not be updated." %
                 (payload['reqid'],
-                 pii_hash(payload['email'],
+                 pii_hash(payload['email_address'],
                           payload['pii_salt']),
                  pii_hash(payload['session_token'],
                           payload['pii_salt']),
@@ -488,12 +488,10 @@ def verify_password_reset_nosession(
 
         LOGGER.error(
             "[%s] Password reset request failed for "
-            "email: %s, session_token: %s. "
+            "email: %s. "
             "User email was not found in the DB or the user is inactive." %
             (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']),
-             pii_hash(payload['session_token'],
+             pii_hash(payload['email_address'],
                       payload['pii_salt']))
         )
 
@@ -524,12 +522,10 @@ def verify_password_reset_nosession(
 
         LOGGER.warning(
             "[%s] Password reset request warning for "
-            "email: %s, session_token: %s, user_id: %s. "
+            "email: %s, user_id: %s. "
             "User is attempting to reuse the password they supposedly forgot." %
             (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']),
-             pii_hash(payload['session_token'],
+             pii_hash(payload['email_address'],
                       payload['pii_salt']),
              pii_hash(user_info['user_id'],
                       payload['pii_salt']))
@@ -555,12 +551,10 @@ def verify_password_reset_nosession(
 
         LOGGER.error(
             "[%s] Password reset request failed for "
-            "email: %s, session_token: %s, user_id: %s. "
+            "email: %s, user_id: %s. "
             "The new password is insecure." %
             (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']),
-             pii_hash(payload['session_token'],
+             pii_hash(payload['email_address'],
                       payload['pii_salt']),
              pii_hash(user_info['user_id'],
                       payload['pii_salt']))
@@ -584,7 +578,7 @@ def verify_password_reset_nosession(
         ).where(
             users.c.user_id == user_info['user_id']
         ).where(
-            users.c.is_active.is_(True)
+            users.c.is_active.is_(required_active)
         ).where(
             users.c.email == payload['email_address']
         ).values({
@@ -605,11 +599,9 @@ def verify_password_reset_nosession(
 
             LOGGER.info(
                 "[%s] Password reset request succeeded for "
-                "email: %s, session_token: %s, user_id: %s. " %
+                "email: %s, user_id: %s. " %
                 (payload['reqid'],
-                 pii_hash(payload['email'],
-                          payload['pii_salt']),
-                 pii_hash(payload['session_token'],
+                 pii_hash(payload['email_address'],
                           payload['pii_salt']),
                  pii_hash(user_info['user_id'],
                           payload['pii_salt']))
@@ -625,12 +617,10 @@ def verify_password_reset_nosession(
 
             LOGGER.error(
                 "[%s] Password reset request failed for "
-                "email: %s, session_token: %s, user_id: %s. "
+                "email: %s, user_id: %s. "
                 "The database row for the user could not be updated." %
                 (payload['reqid'],
-                 pii_hash(payload['email'],
-                          payload['pii_salt']),
-                 pii_hash(payload['session_token'],
+                 pii_hash(payload['email_address'],
                           payload['pii_salt']),
                  pii_hash(user_info['user_id'],
                           payload['pii_salt']))
