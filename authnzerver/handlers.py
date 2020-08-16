@@ -76,12 +76,14 @@ request_functions = {
     # user actions
     'user-new':actions.create_new_user,
     'user-changepass':actions.change_user_password,
+    'user-changepass-nosession':actions.change_user_password_nosession,
     'user-delete':actions.delete_user,
     'user-list':actions.list_users,
     'user-lookup-email':actions.get_user_by_email,
     'user-lookup-match':actions.lookup_users,
     'user-edit':actions.edit_user,
     'user-resetpass':actions.verify_password_reset,
+    'user-resetpass-nosession':actions.verify_password_reset_nosession,
     'user-lock':actions.toggle_user_lock,
 
     # email actions
