@@ -98,9 +98,11 @@ def validate_input_password(
     Returns
     -------
 
-    bool
-        Returns True if the password is OK to use and meets all
-        specification. False otherwise.
+    (password_ok, messages) : tuple
+        *password_ok* is True if the password is OK to use and meets all
+        specification, False otherwise. *messages* is a list of strings
+        containing helpful messages on why the password was rejected (if it was)
+        that can be passed to an end-user.
 
     """
 
@@ -232,3 +234,139 @@ def validate_input_password(
          fqdn_ok and hist_ok and numeric_ok and tenk_ok),
         messages
     )
+
+
+def validate_password(
+        payload,
+        raiseonfail=False,
+        override_authdb_path=None,
+        config=None
+):
+    """External interface to password validation.
+
+    Use this in a frontend server or client to validate any passwords sent by
+    the end-user.
+
+    Parameters
+    ----------
+
+    payload : dict
+        This is a dict with the following required keys:
+
+        - password: str
+        - email: str
+        - full_name: str
+        - min_pass_length: int
+        - max_unsafe_similarity: int
+
+        The *email* and *full_name* are required to check if the password is too
+        similar to either of these items.
+
+        *min_pass_length* is the minimum number of characters required for the
+        password. All passwords are capped at 256 characters. This value will be
+        overriden by a value in the *config* object's *min_pass_length*
+        attribute.
+
+        *max_unsafe_similarity* is the maximum ratio required to fuzzy-match the
+        input password against the server's domain name, the user's email, or
+        their name. This value will be overriden by a value in the *config*
+        object's *max_unsafe_similarity* attribute.
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing a *success* key indicating if the user's
+        password is valid and can be used. If the password is invalid, the
+        *messages* key will contain messages that inform the user why their
+        password was rejected.
+
+    """
+
+    for key in ('reqid', 'pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
+                'messages':["Invalid password validation request."],
+            }
+
+    for key in {"password", "email", "full_name"}:
+
+        if key not in payload:
+
+            LOGGER.error(
+                '[%s] Invalid password validation request, missing %s.' %
+                (payload['reqid'], key)
+            )
+
+            return {
+                'success':False,
+                'failure_reason':(
+                    "invalid request: missing '%s' in request" % key
+                ),
+                'messages':["Invalid password validation request. "
+                            "Some required parameters are missing."]
+            }
+
+    password, email, full_name = (
+        payload["password"], payload["email"], payload["full_name"]
+    )
+
+    try:
+        min_pass_length = int(payload.get("min_pass_length", 12))
+        if min_pass_length < 0:
+            min_pass_length = 12
+    except Exception:
+        min_pass_length = 12
+
+    try:
+        max_unsafe_similarity = int(payload.get("max_unsafe_similarity", 30))
+        if max_unsafe_similarity < 0:
+            max_unsafe_similarity = 10
+    except Exception:
+        max_unsafe_similarity = 10
+
+    password_ok, messages = validate_input_password(
+        full_name,
+        email,
+        password,
+        payload["pii_salt"],
+        payload["reqid"],
+        min_pass_length=min_pass_length,
+        max_unsafe_similarity=max_unsafe_similarity,
+        config=config
+    )
+
+    retdict = {
+        "success": password_ok,
+        "messages": messages
+    }
+
+    if not password_ok:
+        retdict["failure_reason"] = "password is insecure or invalid"
+
+    return retdict

@@ -30,6 +30,44 @@ logging.basicConfig(
 ## IMPORTS ##
 #############
 
+from .user import (
+    create_new_user,
+    delete_user,
+)
+
+from .session import (
+    internal_edit_session,
+    auth_session_new,
+    auth_session_exists,
+    auth_session_delete,
+    auth_kill_old_sessions,
+    auth_delete_sessions_userid,
+)
+
+from .loginlogout import (
+    auth_user_login,
+    auth_user_logout,
+)
+
+from .passwords import (
+    validate_password
+)
+
+from .passcheck import (
+    auth_password_check,
+    auth_password_check_nosession,
+)
+
+from .passreset import (
+    verify_password_reset,
+    verify_password_reset_nosession
+)
+
+from .passchange import (
+    change_user_password,
+    change_user_password_nosession,
+)
+
 from .apikey import (
     issue_apikey,
     verify_apikey,
@@ -59,40 +97,6 @@ from .email import (
     set_user_email_sent,
     send_forgotpass_verification_email,
     send_email,
-)
-
-from .session import (
-    internal_edit_session,
-    auth_session_new,
-    auth_session_exists,
-    auth_session_delete,
-    auth_kill_old_sessions,
-    auth_delete_sessions_userid,
-)
-
-from .loginlogout import (
-    auth_user_login,
-    auth_user_logout,
-)
-
-from .passcheck import (
-    auth_password_check,
-    auth_password_check_nosession,
-)
-
-from .passreset import (
-    verify_password_reset,
-    verify_password_reset_nosession
-)
-
-from .passchange import (
-    change_user_password,
-    change_user_password_nosession,
-)
-
-from .user import (
-    create_new_user,
-    delete_user,
 )
 
 from .access import (

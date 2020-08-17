@@ -367,50 +367,6 @@ Returns a ``response`` with the following items if successful:
 - ``send_verification`` (bool): whether or not an email for user signup
   verification should be sent to this user
 
-``user-changepass``: Change an existing user's password
--------------------------------------------------------
-
-Requires the following ``body`` items in a request:
-
-- ``user_id`` (int): the integer user ID of the user
-
-- ``session_token`` (str): the current session token of the user
-
-- ``full_name`` (str): the full name of the user
-
-- ``email`` (str): the email address of the user
-
-- ``current_password`` (str): the current password that will be changed
-
-- ``new_password`` (str): the new password that will be used from now on
-
-Returns a ``response`` with the following items if successful:
-
-- ``user_id`` (int): the user ID of the user
-
-- ``email`` (str): the email address of the user
-
-``user-changepass-nosession``: Change an existing user's password (no session required)
----------------------------------------------------------------------------------------
-
-Requires the following ``body`` items in a request:
-
-- ``user_id`` (int): the integer user ID of the user
-
-- ``full_name`` (str): the full name of the user
-
-- ``email`` (str): the email address of the user
-
-- ``current_password`` (str): the current password that will be changed
-
-- ``new_password`` (str): the new password that will be used from now on
-
-Returns a ``response`` with the following items if successful:
-
-- ``user_id`` (int): the user ID of the user
-
-- ``email`` (str): the email address of the user
-
 ``user-delete``: Delete an existing user
 ----------------------------------------
 
@@ -503,6 +459,77 @@ Returns a ``response`` with the following items if successful:
 
 - ``user_info`` (dict): dict containing the user's updated information
 
+``user-lock``: Toggle a lock out for an existing user
+-----------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``user_id`` (int): the user ID initiating this request
+
+- ``user_role`` (str): the role of the user initiating this request
+
+- ``session_token`` (str): the session token of the user initiating this request
+
+- ``target_userid`` (int): the user ID of the subject of this request
+
+- ``action`` (str): either ``unlock`` or ``lock``
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_info`` (dict): a dict with user info related to current lock and
+  account status.
+
+This request can only be initiated by users with the ``superuser`` role.
+
+
+Password handling
+=================
+
+``user-changepass``: Change an existing user's password
+-------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``user_id`` (int): the integer user ID of the user
+
+- ``session_token`` (str): the current session token of the user
+
+- ``full_name`` (str): the full name of the user
+
+- ``email`` (str): the email address of the user
+
+- ``current_password`` (str): the current password that will be changed
+
+- ``new_password`` (str): the new password that will be used from now on
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_id`` (int): the user ID of the user
+
+- ``email`` (str): the email address of the user
+
+``user-changepass-nosession``: Change an existing user's password (no session required)
+---------------------------------------------------------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``user_id`` (int): the integer user ID of the user
+
+- ``full_name`` (str): the full name of the user
+
+- ``email`` (str): the email address of the user
+
+- ``current_password`` (str): the current password that will be changed
+
+- ``new_password`` (str): the new password that will be used from now on
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_id`` (int): the user ID of the user
+
+- ``email`` (str): the email address of the user
+
+
 ``user-resetpass``: Reset a user's password
 -------------------------------------------
 
@@ -519,6 +546,9 @@ Requires the following ``body`` items in a request:
 Returns a ``response`` with the following items:
 
 - None, check the ``success`` key to see if the request succeeded.
+
+Note that this API action deletes all of the user's existing sessions to make
+them log in again with the new password.
 
 ``user-resetpass-nosession``: Reset a user's password (no session required)
 ---------------------------------------------------------------------------
@@ -541,27 +571,32 @@ Returns a ``response`` with the following items:
 
 - None, check the ``success`` key to see if the request succeeded.
 
-``user-lock``: Toggle a lock out for an existing user
------------------------------------------------------
+``user-validatepass``: Validate the user's password to see if it's insecure
+---------------------------------------------------------------------------
 
 Requires the following ``body`` items in a request:
 
-- ``user_id`` (int): the user ID initiating this request
+- ``password`` (str): the password to validate
 
-- ``user_role`` (str): the role of the user initiating this request
+- ``email`` (str): the user's email address
 
-- ``session_token`` (str): the session token of the user initiating this request
+- ``full_name`` (str): the user's full name
 
-- ``target_userid`` (int): the user ID of the subject of this request
+Optional items include:
 
-- ``action`` (str): either ``unlock`` or ``lock``
+- ``min_pass_length`` (int, default: 12): the minimum allowed password length in
+  number of characters
 
-Returns a ``response`` with the following items if successful:
+- ``max_unsafe_similarity`` (int, default: 30): the maximum allowed string
+  similarity (normalized to 100) between the user's password and their email
+  address, their name, or the server's domain name.
 
-- ``user_info`` (dict): a dict with user info related to current lock and
-  account status.
+Returns a ``response`` with the following items:
 
-This request can only be initiated by users with the ``superuser`` role.
+- ``success`` (bool): whether the password is OK.
+
+- ``messages`` (str): any messages for the end-user that explain why their
+  password was rejected if it was.
 
 
 Authorization actions
