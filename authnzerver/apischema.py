@@ -20,9 +20,9 @@ schema = {
         "args": [
             {"name": "ip_address", "type": "str"},
             {"name": "user_agent", "type": "str"},
-            {"name": "user_id", "type": ("int", "none")},
+            {"name": "user_id", "type": ("int", "None")},
             {"name": "expires", "type": "str"},
-            {"name": "extra_info_json", "type": ("dict", "none")},
+            {"name": "extra_info_json", "type": ("dict", "None")},
         ],
         "kwargs": [
         ],
@@ -105,10 +105,10 @@ schema = {
             {"name": "full_name", "type": "str"},
             {"name": "email", "type": "str"},
             {"name": "password", "type": "str"},
-            {"name": "etra_info", "type": ("dict", "none")},
-            {"name": "verify_retry_wait", "type": ("int", "none")}
         ],
         "kwargs": [
+            {"name": "extra_info", "type": ("dict", "None")},
+            {"name": "verify_retry_wait", "type": ("int", "None")}
         ]
     },
     "user-changepass": {
@@ -149,7 +149,7 @@ schema = {
     "user-list": {
         "function": actions.list_users,
         "args": [
-            {"name": "user_id", "type": ("int", "none")},
+            {"name": "user_id", "type": ("int", "None")},
         ],
         "kwargs": [
         ]
@@ -166,7 +166,7 @@ schema = {
         "function": actions.lookup_users,
         "args": [
             {"name": "by", "type": "str"},
-            {"name": "match", "type": "any"},
+            {"name": "match", "type": "Any"},
         ],
         "kwargs": [
         ]
@@ -242,8 +242,8 @@ schema = {
             {"name": "verification_expiry", "type": "int"},
         ],
         "kwargs": [
-            {"name": "emailuser", "type": ("str", "none")},
-            {"name": "emailpass", "type": ("str", "none")},
+            {"name": "emailuser", "type": ("str", "None")},
+            {"name": "emailpass", "type": ("str", "None")},
             {"name": "emailserver", "type": "str"},
             {"name": "emailport", "type": "int"},
             {"name": "emailsender", "type": "str"},
@@ -262,8 +262,8 @@ schema = {
             {"name": "verification_expiry", "type": "int"},
         ],
         "kwargs": [
-            {"name": "emailuser", "type": ("str", "none")},
-            {"name": "emailpass", "type": ("str", "none")},
+            {"name": "emailuser", "type": ("str", "None")},
+            {"name": "emailpass", "type": ("str", "None")},
             {"name": "emailserver", "type": "str"},
             {"name": "emailport", "type": "int"},
             {"name": "emailsender", "type": "str"},
@@ -412,7 +412,7 @@ schema = {
             {"name": "user_id", "type": "int"},
             {"name": "user_role", "type": "str"},
             {"name": "limit_name", "type": "str"},
-            {"name": "value_to_check", "type": "any"},
+            {"name": "value_to_check", "type": "Any"},
         ],
         "kwargs": [
         ]
@@ -473,11 +473,15 @@ def apply_typedef(item, typedef):
             typedef_ok.append(isinstance(item, float))
         elif x == "int":
             typedef_ok.append(isinstance(item, int))
+        elif x == "dict":
+            typedef_ok.append(isinstance(item, dict))
+        elif x == "list":
+            typedef_ok.append(isinstance(item, list))
         elif x == "bool":
             typedef_ok.append(item is True or item is False)
-        elif x == "any":
+        elif x == "Any":
             typedef_ok.append(item is not None)
-        elif x == "none":
+        elif x == "None":
             typedef_ok.append(True)
         else:
             typedef_ok.append(False)
@@ -486,7 +490,8 @@ def apply_typedef(item, typedef):
 
 
 def validate_api_request(request_type,
-                         request_payload):
+                         request_payload,
+                         return_function=True):
     """Validates the incoming request.
 
     Checks to see if the request_type can be found in the schema, then checks
@@ -498,18 +503,29 @@ def validate_api_request(request_type,
     list of missing or invalid request payload items for the request type. The
     third element in the tuple is a message.
 
+    If return_function is False, will return True/False for the first tuple
+    element based on request validation status. This is useful for client-side
+    validation of an authnzerver API request before sending it off to the
+    server.
+
     """
 
     if request_type not in schema:
-        return (None,
-                None,
-                f"request '{request_type}' is not a valid request type")
+
+        if return_function:
+            return (None,
+                    None,
+                    f"request '{request_type}' is not a valid request type")
+        else:
+            return (False,
+                    None,
+                    f"request '{request_type}' is not a valid request type")
 
     request_args = schema[request_type]["args"]
     request_kwargs = schema[request_type]["kwargs"]
     request_function = schema[request_type]["function"]
 
-    invalid_items = []
+    invalid_params = []
     request_valid = True
 
     # check the args first
@@ -519,8 +535,8 @@ def validate_api_request(request_type,
 
         if payload_item not in request_payload:
 
-            invalid_items.append(
-                {"item": payload_item,
+            invalid_params.append(
+                {"param": payload_item,
                  "problem": "missing",
                  "required_type": payload_type,
                  "required_param": True}
@@ -537,8 +553,8 @@ def validate_api_request(request_type,
         typedef_ok = apply_typedef(request_payload[payload_item],
                                    payload_type)
         if not typedef_ok:
-            invalid_items.append(
-                {"item": payload_item,
+            invalid_params.append(
+                {"param": payload_item,
                  "problem": "incorrect type",
                  "required_type": payload_type,
                  "required_param": True}
@@ -551,25 +567,40 @@ def validate_api_request(request_type,
 
         payload_item, payload_type = kwarg["name"], kwarg["type"]
 
-        typedef_ok = apply_typedef(request_payload[payload_item],
-                                   payload_type)
-        if not typedef_ok:
-            invalid_items.append(
-                {"item": payload_item,
-                 "problem": "incorrect type",
-                 "required_type": payload_type,
-                 "required_param": False}
-            )
-            request_valid = False
+        if request_payload.get(payload_item, None):
 
+            typedef_ok = apply_typedef(request_payload[payload_item],
+                                       payload_type)
+            if not typedef_ok:
+                invalid_params.append(
+                    {"param": payload_item,
+                     "problem": "incorrect type",
+                     "required_type": payload_type,
+                     "required_param": False}
+                )
+                request_valid = False
+
+    #
+    # return bad if request is not valid
+    #
     if not request_valid:
-        return (None,
-                invalid_items,
-                f"request '{request_type}' has invalid parameter types")
+        if return_function:
+            return (None,
+                    {"problems": invalid_params},
+                    f"request '{request_type}' has invalid parameter types")
+        else:
+            return (False,
+                    {"problems": invalid_params},
+                    f"request '{request_type}' has invalid parameter types")
 
     #
-    # otherwise, the request is valid, return the function
+    # otherwise, the request is valid, return OK
     #
-    return (request_function,
-            None,
-            f"request '{request_type}' validated successfully")
+    if return_function:
+        return (request_function,
+                None,
+                f"request '{request_type}' validated successfully")
+    else:
+        return (True,
+                None,
+                f"request '{request_type}' validated successfully")

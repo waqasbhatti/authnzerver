@@ -90,10 +90,12 @@ def create_new_user(
 
         - password: str. User's password.
 
-        - extra_info: dict or None. optional dict to add any extra
+        Optional payload items include:
+
+        - extra_info: dict. optional dict to add any extra
           info for this user, will be stored as JSON in the DB
 
-        - verify_retry_wait: int or None, default: 6. This sets the amount of
+        - verify_retry_wait: int, default: 6. This sets the amount of
           time in hours a user must wait before retrying a failed verification
           action, i.e., responding before expiry of and with the correct
           verification token.
