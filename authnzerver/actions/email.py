@@ -330,7 +330,7 @@ def send_signup_verification_email(payload,
 
         - email_address: str, the email address to send the email to
         - session_token: str, session token of the user being sent the email
-        - created_info: str, the dict returned by ``users.auth_create_user()``
+        - created_info: dict, the dict returned by ``users.auth_create_user()``
         - server_name: str, the name of the frontend server
         - server_baseurl: str, the base URL of the frontend server
         - account_verify_url: str, the URL fragment of the frontend verification
@@ -339,8 +339,8 @@ def send_signup_verification_email(payload,
         - verification_expiry: int, number of seconds after which the token
           expires
 
-        In addition, the following items must be provided by a wrapper function
-        to set up the email server.
+        In addition, the following optional items must be provided by a wrapper
+        function to set up the email server.
 
         - emailuser
         - emailpass

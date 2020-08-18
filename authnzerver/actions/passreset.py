@@ -198,7 +198,7 @@ def verify_password_reset(payload,
             "email: %s, session_token: %s. "
             "User email was not found in the DB or the user is inactive." %
             (payload['reqid'],
-             pii_hash(payload['email'],
+             pii_hash(payload['email_address'],
                       payload['pii_salt']),
              pii_hash(payload['session_token'],
                       payload['pii_salt']))
