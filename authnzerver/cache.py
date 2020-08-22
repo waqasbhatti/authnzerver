@@ -200,7 +200,7 @@ def cache_getrate(key,
 
     if time_of_insertion is not None:
 
-        rate = (counter_val/(time.time() - time_of_insertion))*60.0
+        rate = (counter_val / (time.time() - time_of_insertion)) * 60.0
     else:
         rate = 0.0
 

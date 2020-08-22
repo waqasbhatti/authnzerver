@@ -142,7 +142,7 @@ define('envfile',
 
 # the path to the confvar file
 define('confvars',
-       default=os.path.join(modpath,'confvars.py'),
+       default=os.path.join(modpath, 'confvars.py'),
        help=('Path to the file containing the configuration '
              'variables needed by the server and how to load them.'),
        type=str)
@@ -319,7 +319,7 @@ def main():
     else:
         ratelimits = [x.strip().split(':')
                       for x in loaded_config.ratelimits.split(';')]
-        ratelimits = {x[0]:int(x[1]) for x in ratelimits}
+        ratelimits = {x[0]: int(x[1]) for x in ratelimits}
         loaded_config.ratelimits = ratelimits
         LOGGER.info(
             "HTTP request rate-limiting (requests/minute) "
@@ -341,14 +341,14 @@ def main():
     # we only have one actual endpoint, the other one is for testing
     handlers = [
         (r'/', AuthHandler,
-         {'config':loaded_config,
-          'cacheobj':cacheobj,
-          'executor':executor,
-          'failed_passchecks':{}}),
+         {'config': loaded_config,
+          'cacheobj': cacheobj,
+          'executor': executor,
+          'failed_passchecks': {}}),
         (r'/health', HealthCheckHandler,
-         {'config':loaded_config,
-          'executor':executor,
-          'cacheobj':cacheobj}),
+         {'config': loaded_config,
+          'executor': executor,
+          'cacheobj': cacheobj}),
     ]
 
     if DEBUG:
@@ -356,9 +356,9 @@ def main():
         from .debughandler import EchoHandler
         handlers.append(
             (r'/echo', EchoHandler,
-             {'authdb':auth_database_url,
-              'fernet_secret':secret,
-              'executor':executor})
+             {'authdb': auth_database_url,
+              'fernet_secret': secret,
+              'executor': executor})
         )
 
     #############################
@@ -403,7 +403,7 @@ def main():
     # running these after the DB is already set up doesn't do anything
     if 'sqlite:///' in auth_database_url:
 
-        sqlite_authdb_filepath = auth_database_url.replace('sqlite:///','')
+        sqlite_authdb_filepath = auth_database_url.replace('sqlite:///', '')
 
         LOGGER.info("Checking SQLite auth DB: %s..." % sqlite_authdb_filepath)
         authdb_module.create_sqlite_authdb(
@@ -434,7 +434,7 @@ def main():
             creds = os.path.join(basedir,
                                  '.authnzerver-admin-credentials-%s'
                                  % int(time.time()))
-        with open(creds,'w') as outfd:
+        with open(creds, 'w') as outfd:
             outfd.write('%s %s\n' % (admin_user, admin_pass))
             os.chmod(creds, 0o100400)
 

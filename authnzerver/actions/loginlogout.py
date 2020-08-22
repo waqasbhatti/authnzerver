@@ -124,18 +124,18 @@ def auth_user_login(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'messages':["Invalid user login request."],
+                'user_id': None,
+                'messages': ["Invalid user login request."],
             }
 
     # check broken
@@ -171,9 +171,9 @@ def auth_user_login(payload,
 
         # dummy session request
         auth_session_exists(
-            {'session_token':'nope',
-             'reqid':payload['reqid'],
-             'pii_salt':payload['pii_salt']},
+            {'session_token': 'nope',
+             'reqid': payload['reqid'],
+             'pii_salt': payload['pii_salt']},
             raiseonfail=raiseonfail,
             override_authdb_path=override_authdb_path
         )
@@ -206,9 +206,9 @@ def auth_user_login(payload,
             pass
 
         # run a fake session delete
-        auth_session_delete({'session_token':'nope',
-                             'reqid':payload['reqid'],
-                             'pii_salt':payload['pii_salt']},
+        auth_session_delete({'session_token': 'nope',
+                             'reqid': payload['reqid'],
+                             'pii_salt': payload['pii_salt']},
                             raiseonfail=raiseonfail,
                             override_authdb_path=override_authdb_path)
 
@@ -222,22 +222,22 @@ def auth_user_login(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing "
                 "'session_token', 'email', or 'password' in request"
             ),
-            'user_id':None,
-            'messages':['No session token provided.']
+            'user_id': None,
+            'messages': ['No session token provided.']
         }
 
     # otherwise, now we'll check if the session exists
     else:
 
         session_info = auth_session_exists(
-            {'session_token':payload['session_token'],
-             'reqid':payload['reqid'],
-             'pii_salt':payload['pii_salt']},
+            {'session_token': payload['session_token'],
+             'reqid': payload['reqid'],
+             'pii_salt': payload['pii_salt']},
             raiseonfail=raiseonfail,
             override_authdb_path=override_authdb_path
         )
@@ -254,7 +254,7 @@ def auth_user_login(payload,
             dummy_results.close()
 
             try:
-                pass_hasher.verify(dummy_password,'nope')
+                pass_hasher.verify(dummy_password, 'nope')
             except Exception:
                 pass
 
@@ -273,9 +273,9 @@ def auth_user_login(payload,
 
             # run a fake session delete
             auth_session_delete(
-                {'session_token':'nope',
-                 'reqid':payload['reqid'],
-                 'pii_salt':payload['pii_salt']},
+                {'session_token': 'nope',
+                 'reqid': payload['reqid'],
+                 'pii_salt': payload['pii_salt']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
@@ -290,12 +290,12 @@ def auth_user_login(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "session does not exist"
                 ),
-                'user_id':None,
-                'messages':['No session token provided.']
+                'user_id': None,
+                'messages': ['No session token provided.']
             }
 
         # if the session token does exist, we'll proceed to checking the
@@ -338,7 +338,7 @@ def auth_user_login(payload,
 
                     pass_ok = pass_hasher.verify(
                         user_info['password'],
-                        payload['password'][:256],
+                        payload['password'][: 256],
                     )
 
                 except Exception as e:
@@ -372,9 +372,9 @@ def auth_user_login(payload,
             # always re-ask for a new session token on the next request after
             # login if it fails or succeeds.
             auth_session_delete(
-                {'session_token':payload['session_token'],
-                 'reqid':payload['reqid'],
-                 'pii_salt':payload['pii_salt']},
+                {'session_token': payload['session_token'],
+                 'reqid': payload['reqid'],
+                 'pii_salt': payload['pii_salt']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
@@ -382,13 +382,13 @@ def auth_user_login(payload,
             if not pass_ok:
 
                 return {
-                    'success':False,
-                    'failure_reason':(
+                    'success': False,
+                    'failure_reason': (
                         "user does not exist or password doesn't match"
                     ),
-                    'user_id':None,
-                    'messages':["Sorry, that user ID and "
-                                "password combination didn't work."]
+                    'user_id': None,
+                    'messages': ["Sorry, that user ID and "
+                                 "password combination didn't work."]
                 }
 
             # if password verification succeeeded, check if the user can
@@ -413,7 +413,7 @@ def auth_user_login(payload,
 
                     # rehash and store the new password
                     rehashed_password = pass_hasher.hash(
-                        payload['password'][:256]
+                        payload['password'][: 256]
                     )
 
                     # update the table for this user
@@ -463,9 +463,9 @@ def auth_user_login(payload,
                     )
 
                     return {
-                        'success':True,
+                        'success': True,
                         'user_id': user_info['user_id'],
-                        'messages':["Login successful."]
+                        'messages': ["Login successful."]
                     }
 
                 # if the user account is locked, return a failure
@@ -486,13 +486,13 @@ def auth_user_login(payload,
                     )
 
                     return {
-                        'success':False,
-                        'failure_reason':(
+                        'success': False,
+                        'failure_reason': (
                             "user exists but is inactive"
                         ),
                         'user_id': user_info['user_id'],
-                        'messages':["Sorry, that user ID and "
-                                    "password combination didn't work."]
+                        'messages': ["Sorry, that user ID and "
+                                     "password combination didn't work."]
                     }
 
 
@@ -544,21 +544,21 @@ def auth_user_logout(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'messages':["Invalid user logout request."],
+                'user_id': None,
+                'messages': ["Invalid user logout request."],
             }
 
-    for key in ('session_token','user_id'):
+    for key in ('session_token', 'user_id'):
         if key not in payload:
 
             LOGGER.error(
@@ -566,19 +566,19 @@ def auth_user_logout(payload,
                 (payload['reqid'], key)
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid user logout request. "
-                            "No %s provided." % key],
+                'messages': ["Invalid user logout request. "
+                             "No %s provided." % key],
             }
 
     # check if the session token exists
     session = auth_session_exists(
-        {'session_token':payload['session_token'],
-         'reqid':payload['reqid'],
-         'pii_salt':payload['pii_salt']},
+        {'session_token': payload['session_token'],
+         'reqid': payload['reqid'],
+         'pii_salt': payload['pii_salt']},
         override_authdb_path=override_authdb_path,
         raiseonfail=raiseonfail)
 
@@ -588,9 +588,9 @@ def auth_user_logout(payload,
         if payload['user_id'] == session['session_info']['user_id']:
 
             deleted = auth_session_delete(
-                {'session_token':payload['session_token'],
-                 'reqid':payload['reqid'],
-                 'pii_salt':payload['pii_salt']},
+                {'session_token': payload['session_token'],
+                 'reqid': payload['reqid'],
+                 'pii_salt': payload['pii_salt']},
                 override_authdb_path=override_authdb_path,
                 raiseonfail=raiseonfail
             )
@@ -608,9 +608,9 @@ def auth_user_logout(payload,
                 )
 
                 return {
-                    'success':True,
+                    'success': True,
                     'user_id': session['session_info']['user_id'],
-                    'messages':["Logout successful."]
+                    'messages': ["Logout successful."]
                 }
 
             else:
@@ -627,13 +627,13 @@ def auth_user_logout(payload,
                               payload['pii_salt']))
                 )
                 return {
-                    'success':False,
-                    'failure_reason':(
+                    'success': False,
+                    'failure_reason': (
                         "delete session failed"
                     ),
-                    'user_id':payload['user_id'],
-                    'messages':["Logout failed. Invalid "
-                                "session_token for user_id."]
+                    'user_id': payload['user_id'],
+                    'messages': ["Logout failed. Invalid "
+                                 "session_token for user_id."]
                 }
 
         else:
@@ -649,12 +649,14 @@ def auth_user_logout(payload,
                           payload['pii_salt']))
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "user does not exist"
                 ),
-                'user_id':payload['user_id'],
-                'messages':["Logout failed. Invalid session_token for user_id."]
+                'user_id': payload['user_id'],
+                'messages': [
+                    "Logout failed. Invalid session_token for user_id."
+                ]
             }
 
     else:
@@ -671,11 +673,11 @@ def auth_user_logout(payload,
                       payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "session does not exist"
             ),
-            'user_id':payload['user_id'],
-            'messages':["Logout failed. Invalid "
-                        "session_token for user_id."]
+            'user_id': payload['user_id'],
+            'messages': ["Logout failed. Invalid "
+                         "session_token for user_id."]
         }

@@ -210,19 +210,19 @@ def issue_apikey(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'apikey':None,
-                'expires':None,
-                'messages':["Invalid API key request."],
+                'apikey': None,
+                'expires': None,
+                'messages': ["Invalid API key request."],
             }
 
     for key in ('user_id',
@@ -245,13 +245,13 @@ def issue_apikey(payload,
 
         if key not in payload:
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' from request" % key
                 ),
-                'apikey':None,
-                'expires':None,
-                'messages':["Some required keys are missing from payload."]
+                'apikey': None,
+                'expires': None,
+                'messages': ["Some required keys are missing from payload."]
             }
 
     # check if the provided user_id and role can actually create an API key
@@ -259,15 +259,15 @@ def issue_apikey(payload,
     user_role = payload['user_role']
 
     apikey_creation_allowed = check_user_access(
-        {'user_id':user_id,
-         'user_role':user_role,
-         'action':'create',
-         'target_name':'apikey',
-         'target_owner':user_id,
-         'target_visibility':'private',
-         'target_sharedwith':None,
-         'reqid':payload['reqid'],
-         'pii_salt':payload['pii_salt']},
+        {'user_id': user_id,
+         'user_role': user_role,
+         'action': 'create',
+         'target_name': 'apikey',
+         'target_owner': user_id,
+         'target_visibility': 'private',
+         'target_sharedwith': None,
+         'reqid': payload['reqid'],
+         'pii_salt': payload['pii_salt']},
         raiseonfail=raiseonfail,
         override_permissions_json=override_permissions_json,
         override_authdb_path=override_authdb_path
@@ -284,12 +284,12 @@ def issue_apikey(payload,
              pii_hash(user_role, payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "originating user is not allowed to issue an API key"
             ),
-            'messages':["API key issuance failed. "
-                        "You are not allowed to issue an API key."]
+            'messages': ["API key issuance failed. "
+                         "You are not allowed to issue an API key."]
         }
 
     # this checks if the database connection is live
@@ -324,17 +324,17 @@ def issue_apikey(payload,
     )
 
     apikey_dict = {
-        'iss':payload['issuer'],
-        'ver':payload['apiversion'],
-        'uid':payload['user_id'],
-        'rol':payload['user_role'],
-        'aud':payload['audience'],
-        'sub':payload['subject'],
-        'ipa':payload['ip_address'],
-        'tkn':random_token,
-        'iat':issued.isoformat(),
-        'nbf':notvalidbefore.isoformat(),
-        'exp':expires.isoformat()
+        'iss': payload['issuer'],
+        'ver': payload['apiversion'],
+        'uid': payload['user_id'],
+        'rol': payload['user_role'],
+        'aud': payload['audience'],
+        'sub': payload['subject'],
+        'ipa': payload['ip_address'],
+        'tkn': random_token,
+        'iat': issued.isoformat(),
+        'nbf': notvalidbefore.isoformat(),
+        'exp': expires.isoformat()
     }
     apikey_json = json.dumps(apikey_dict)
 
@@ -357,16 +357,16 @@ def issue_apikey(payload,
     # equality against the value stored in the API key dict['tkn'] when we send
     # in this API key for verification later
     ins = apikeys.insert({
-        'apikey':random_token,
-        'issued':issued,
-        'expires':expires,
-        'not_valid_before':notvalidbefore,
-        'refresh_token':hashed_refresh_token,
-        'refresh_issued':issued,
-        'refresh_expires':refresh_token_expiry,
-        'refresh_nbf':refresh_token_nbf,
-        'user_id':payload['user_id'],
-        'user_role':payload['user_role'],
+        'apikey': random_token,
+        'issued': issued,
+        'expires': expires,
+        'not_valid_before': notvalidbefore,
+        'refresh_token': hashed_refresh_token,
+        'refresh_issued': issued,
+        'refresh_expires': refresh_token_expiry,
+        'refresh_nbf': refresh_token_nbf,
+        'user_id': payload['user_id'],
+        'user_role': payload['user_role'],
     })
 
     result = currproc.authdb_conn.execute(ins)
@@ -402,12 +402,12 @@ def issue_apikey(payload,
     )
 
     return {
-        'success':True,
-        'apikey':apikey_json,
-        'expires':expires.isoformat(),
-        'refresh_token':refresh_token,
-        'refresh_token_expires':refresh_token_expiry.isoformat(),
-        'messages':([
+        'success': True,
+        'apikey': apikey_json,
+        'expires': expires.isoformat(),
+        'refresh_token': refresh_token,
+        'refresh_token_expires': refresh_token_expiry.isoformat(),
+        'messages': ([
             messages
         ])
     }
@@ -462,19 +462,19 @@ def verify_apikey(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'apikey':None,
-                'expires':None,
-                'messages':["Invalid API key request."],
+                'apikey': None,
+                'expires': None,
+                'messages': ["Invalid API key request."],
             }
 
     for key in ('apikey_dict', 'user_id', 'user_role'):
@@ -484,11 +484,11 @@ def verify_apikey(payload,
                 (payload['reqid'], key)
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Some required keys are missing from payload."]
+                'messages': ["Some required keys are missing from payload."]
             }
 
     apikey_dict = payload['apikey_dict']
@@ -497,15 +497,15 @@ def verify_apikey(payload,
 
     # check if the user is allowed to read the presented API key
     apikey_verify_allowed = check_user_access(
-        {'user_id':user_id,
-         'user_role':user_role,
-         'action':'view',
-         'target_name':'apikey',
-         'target_owner':apikey_dict['uid'],
-         'target_visibility':'private',
-         'target_sharedwith':None,
-         'reqid':payload['reqid'],
-         'pii_salt':payload['pii_salt']},
+        {'user_id': user_id,
+         'user_role': user_role,
+         'action': 'view',
+         'target_name': 'apikey',
+         'target_owner': apikey_dict['uid'],
+         'target_visibility': 'private',
+         'target_sharedwith': None,
+         'reqid': payload['reqid'],
+         'pii_salt': payload['pii_salt']},
         raiseonfail=raiseonfail,
         override_permissions_json=override_permissions_json,
         override_authdb_path=override_authdb_path
@@ -522,12 +522,12 @@ def verify_apikey(payload,
              pii_hash(user_role, payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "originating user is not allowed to operate on this API key"
             ),
-            'messages':["API key verification failed. "
-                        "You are not allowed to operate on this API key."]
+            'messages': ["API key verification failed. "
+                         "You are not allowed to operate on this API key."]
         }
 
     # this checks if the database connection is live
@@ -592,8 +592,8 @@ def verify_apikey(payload,
         )
 
         return {
-            'success':True,
-            'messages':[(
+            'success': True,
+            'messages': [(
                 "No-session API key verified successfully. Expires: %s." %
                 row['expires'].isoformat()
             )]
@@ -616,12 +616,12 @@ def verify_apikey(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "key validation failed, "
                 "provided key does not match stored key or has expired"
             ),
-            'messages':[(
+            'messages': [(
                 "API key could not be verified."
             )]
         }
@@ -678,20 +678,20 @@ def revoke_apikey(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid API key revocation request."],
+                'messages': ["Invalid API key revocation request."],
             }
 
-    for key in ('apikey_dict','user_id','user_role'):
+    for key in ('apikey_dict', 'user_id', 'user_role'):
         if 'apikey_dict' not in payload:
 
             LOGGER.error(
@@ -700,11 +700,11 @@ def revoke_apikey(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Some required keys are missing from payload."]
+                'messages': ["Some required keys are missing from payload."]
             }
 
     apikey_dict = payload['apikey_dict']
@@ -713,15 +713,15 @@ def revoke_apikey(payload,
 
     # check if the user is allowed to revoke the presented API key
     apikey_revocation_allowed = check_user_access(
-        {'user_id':user_id,
-         'user_role':user_role,
-         'action':'delete',
-         'target_name':'apikey',
-         'target_owner':apikey_dict['uid'],
-         'target_visibility':'private',
-         'target_sharedwith':None,
-         'reqid':payload['reqid'],
-         'pii_salt':payload['pii_salt']},
+        {'user_id': user_id,
+         'user_role': user_role,
+         'action': 'delete',
+         'target_name': 'apikey',
+         'target_owner': apikey_dict['uid'],
+         'target_visibility': 'private',
+         'target_sharedwith': None,
+         'reqid': payload['reqid'],
+         'pii_salt': payload['pii_salt']},
         raiseonfail=raiseonfail,
         override_permissions_json=override_permissions_json,
         override_authdb_path=override_authdb_path
@@ -738,12 +738,12 @@ def revoke_apikey(payload,
              pii_hash(user_role, payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "originating user is not allowed to operate on this API key"
             ),
-            'messages':["API key revocation failed. "
-                        "You are not allowed to operate on this API key."]
+            'messages': ["API key revocation failed. "
+                         "You are not allowed to operate on this API key."]
         }
 
     #
@@ -785,8 +785,8 @@ def revoke_apikey(payload,
     )
 
     return {
-        'success':True,
-        'messages':["API key revocation successful."]
+        'success': True,
+        'messages': ["API key revocation successful."]
     }
 
 
@@ -842,20 +842,20 @@ def revoke_all_apikeys(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid API key revocation request."],
+                'messages': ["Invalid API key revocation request."],
             }
 
-    for key in ('apikey_dict','user_id','user_role'):
+    for key in ('apikey_dict', 'user_id', 'user_role'):
         if 'apikey_dict' not in payload:
 
             LOGGER.error(
@@ -864,11 +864,11 @@ def revoke_all_apikeys(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Some required keys are missing from payload."]
+                'messages': ["Some required keys are missing from payload."]
             }
 
     apikey_dict = payload['apikey_dict']
@@ -877,15 +877,15 @@ def revoke_all_apikeys(payload,
 
     # check if the user is allowed to revoke API keys
     apikey_revocation_allowed = check_user_access(
-        {'user_id':user_id,
-         'user_role':user_role,
-         'action':'delete',
-         'target_name':'apikey',
-         'target_owner':apikey_dict['uid'],
-         'target_visibility':'private',
-         'target_sharedwith':None,
-         'reqid':payload['reqid'],
-         'pii_salt':payload['pii_salt']},
+        {'user_id': user_id,
+         'user_role': user_role,
+         'action': 'delete',
+         'target_name': 'apikey',
+         'target_owner': apikey_dict['uid'],
+         'target_visibility': 'private',
+         'target_sharedwith': None,
+         'reqid': payload['reqid'],
+         'pii_salt': payload['pii_salt']},
         raiseonfail=raiseonfail,
         override_permissions_json=override_permissions_json,
         override_authdb_path=override_authdb_path
@@ -902,23 +902,23 @@ def revoke_all_apikeys(payload,
              pii_hash(user_role, payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "originating user is not allowed to delete API keys"
             ),
-            'messages':["All API keys revocation failed. "
-                        "You are not allowed to delete API keys."]
+            'messages': ["All API keys revocation failed. "
+                         "You are not allowed to delete API keys."]
         }
 
     #
     # verify the presented API key
     #
     apikey_verification = verify_apikey(
-        {"apikey_dict":apikey_dict,
-         "user_id":user_id,
-         "user_role":user_role,
-         "reqid":payload["reqid"],
-         "pii_salt":payload["pii_salt"]},
+        {"apikey_dict": apikey_dict,
+         "user_id": user_id,
+         "user_role": user_role,
+         "reqid": payload["reqid"],
+         "pii_salt": payload["pii_salt"]},
         raiseonfail=raiseonfail,
         override_permissions_json=override_permissions_json,
         override_authdb_path=override_authdb_path
@@ -935,13 +935,13 @@ def revoke_all_apikeys(payload,
              pii_hash(user_role, payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "provided API key is invalid, "
                 "revoke-all operation requires a valid key to start with"
             ),
-            'messages':["All API keys revocation failed. "
-                        "The API key presented is invalid."]
+            'messages': ["All API keys revocation failed. "
+                         "The API key presented is invalid."]
         }
 
     #
@@ -983,8 +983,8 @@ def revoke_all_apikeys(payload,
     )
 
     return {
-        'success':True,
-        'messages':["All API keys revocation successful."]
+        'success': True,
+        'messages': ["All API keys revocation successful."]
     }
 
 
@@ -1055,17 +1055,17 @@ def refresh_apikey(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid API key revocation request."],
+                'messages': ["Invalid API key revocation request."],
             }
 
     for key in ('apikey_dict', 'user_id', 'user_role', 'refresh_token',
@@ -1080,11 +1080,11 @@ def refresh_apikey(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Some required keys are missing from payload."]
+                'messages': ["Some required keys are missing from payload."]
             }
 
     apikey_dict = payload['apikey_dict']
@@ -1144,11 +1144,11 @@ def refresh_apikey(payload,
              pii_hash(user_role, payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "provided API key has no stored refresh token, probably invalid"
             ),
-            'messages':[
+            'messages': [
                 "API key refresh failed. "
                 "The API key presented does not have a valid refresh token. "
                 "You may need to login again to generate a new API key."
@@ -1170,11 +1170,11 @@ def refresh_apikey(payload,
              pii_hash(user_role, payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "provided refresh token does not match stored refresh token"
             ),
-            'messages':[
+            'messages': [
                 "API key refresh failed. "
                 "The API key presented does not have a valid refresh token. "
                 "You may need to login again to generate a new API key."
@@ -1186,11 +1186,11 @@ def refresh_apikey(payload,
     # then generate a new API key
     #
     revoke_try = revoke_apikey(
-        {"apikey_dict":apikey_dict,
-         "user_id":user_id,
-         "user_role":user_role,
-         "reqid":payload["reqid"],
-         "pii_salt":payload["pii_salt"]},
+        {"apikey_dict": apikey_dict,
+         "user_id": user_id,
+         "user_role": user_role,
+         "reqid": payload["reqid"],
+         "pii_salt": payload["pii_salt"]},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path,
         override_permissions_json=override_permissions_json,
@@ -1207,11 +1207,11 @@ def refresh_apikey(payload,
              pii_hash(user_role, payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "user from provided API key not allowed to revoke old key"
             ),
-            'messages':[
+            'messages': [
                 "API key refresh failed. "
                 "The API key presented does not have a valid refresh token."
                 "You may need to login again to generate a new API key."
@@ -1219,19 +1219,19 @@ def refresh_apikey(payload,
         }
 
     new_apikey_try = issue_apikey(
-        {"issuer":apikey_dict["iss"],
-         "apiversion":apikey_dict["ver"],
-         "user_id":user_id,
-         "user_role":user_role,
-         "audience":apikey_dict["aud"],
-         "subject":apikey_dict["sub"],
-         "ip_address":payload["ip_address"],
-         "expires_seconds":payload["expires_seconds"],
-         "not_valid_before":payload["not_valid_before"],
-         "refresh_expires":payload["refresh_expires"],
-         "refresh_nbf":payload["refresh_nbf"],
-         "reqid":payload["reqid"],
-         "pii_salt":payload["pii_salt"]},
+        {"issuer": apikey_dict["iss"],
+         "apiversion": apikey_dict["ver"],
+         "user_id": user_id,
+         "user_role": user_role,
+         "audience": apikey_dict["aud"],
+         "subject": apikey_dict["sub"],
+         "ip_address": payload["ip_address"],
+         "expires_seconds": payload["expires_seconds"],
+         "not_valid_before": payload["not_valid_before"],
+         "refresh_expires": payload["refresh_expires"],
+         "refresh_nbf": payload["refresh_nbf"],
+         "reqid": payload["reqid"],
+         "pii_salt": payload["pii_salt"]},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path,
         override_permissions_json=override_permissions_json,
@@ -1248,11 +1248,11 @@ def refresh_apikey(payload,
              pii_hash(user_role, payload['pii_salt']))
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "user from provided API key not allowed to issue new key"
             ),
-            'messages':[
+            'messages': [
                 "API key refresh failed. "
                 "The API key presented does not have a valid refresh token."
                 "You may need to login again to generate a new API key."

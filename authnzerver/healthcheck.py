@@ -67,7 +67,7 @@ class HealthCheckHandler(tornado.web.RequestHandler,
 
         """
 
-        self.set_header('content-type','text/plain; charset=UTF-8')
+        self.set_header('content-type', 'text/plain; charset=UTF-8')
         if status_code == 400:
             self.write(f"HTTP {status_code}: Could not service this request "
                        f"because of invalid request parameters.")
@@ -95,7 +95,7 @@ class HealthCheckHandler(tornado.web.RequestHandler,
 
         self.ratelimit_request(101010,
                                "apikey-healthcheck",
-                               {"ip_address":self.request.remote_ip})
+                               {"ip_address": self.request.remote_ip})
 
         loop = tornado.ioloop.IOLoop.current()
 
@@ -130,10 +130,10 @@ class HealthCheckHandler(tornado.web.RequestHandler,
                           and len(health_checks) == self.nworkers)
 
         retdict = {
-            "Expected-Workers":self.nworkers,
-            "Workers":health_checks,
+            "Expected-Workers": self.nworkers,
+            "Workers": health_checks,
             "Check-Time": healthcheck_clock,
-            "Health-Ok":all_workers_ok
+            "Health-Ok": all_workers_ok
         }
 
         if all_workers_ok:

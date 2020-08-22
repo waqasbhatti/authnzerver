@@ -213,9 +213,9 @@ def chacha_encrypt_message(
     chacha = ChaCha20Poly1305(key)
     current_time = time.time()
 
-    chacha_dict = {'message':message_dict,
-                   'iat':current_time,
-                   'ver':CHACHA_VERSION}
+    chacha_dict = {'message': message_dict,
+                   'iat': current_time,
+                   'ver': CHACHA_VERSION}
     message_json_bytes = json.dumps(chacha_dict).encode()
     json_encrypted_bytes = chacha.encrypt(
         nonce,
@@ -362,9 +362,9 @@ def xsalsa_encrypt_message(
     secret_box = nacl.secret.SecretBox(key)
     current_time = time.time()
 
-    xsalsa_dict = {'message':message_dict,
-                   'iat':current_time,
-                   'ver':XSALSA_VERSION}
+    xsalsa_dict = {'message': message_dict,
+                   'iat': current_time,
+                   'ver': XSALSA_VERSION}
     message_json_bytes = json.dumps(xsalsa_dict).encode()
 
     encrypted_base64 = secret_box.encrypt(

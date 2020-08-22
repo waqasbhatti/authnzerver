@@ -113,8 +113,8 @@ def validate_input_password(
         if passpolicy:
             try:
                 pass_minlen, pass_maxsim = passpolicy.split(';')
-                min_pass_length = int(pass_minlen.strip().split(':')[1])
-                max_unsafe_similarity = int(pass_maxsim.strip().split(':')[1])
+                min_pass_length = int(pass_minlen.strip().split(': ')[1])
+                max_unsafe_similarity = int(pass_maxsim.strip().split(': ')[1])
             except Exception:
                 LOGGER.error(
                     "[%s] Invalid password policy could not be parsed: '%s'. "
@@ -172,9 +172,9 @@ def validate_input_password(
         None, password_to_match, full_name.casefold()
     )
 
-    fqdn_match = fqdn_matcher.ratio()*100.0
-    email_match = email_matcher.ratio()*100.0
-    name_match = name_matcher.ratio()*100.0
+    fqdn_match = fqdn_matcher.ratio() * 100.0
+    email_match = email_matcher.ratio() * 100.0
+    name_match = name_matcher.ratio() * 100.0
 
     fqdn_ok = fqdn_match < max_unsafe_similarity
     email_ok = email_match < max_unsafe_similarity
@@ -206,7 +206,7 @@ def validate_input_password(
     hist_ok = True
 
     for h in histogram:
-        if (histogram[h]/len(password)) > 0.2:
+        if (histogram[h] / len(password)) > 0.2:
             hist_ok = False
             LOGGER.warning('[%s] Password for new account '
                            'with email: %s does not have enough entropy. '
@@ -307,11 +307,11 @@ def validate_password(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid password validation request."],
+                'messages': ["Invalid password validation request."],
             }
 
     for key in {"password", "email", "full_name"}:
@@ -324,12 +324,12 @@ def validate_password(
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid password validation request. "
-                            "Some required parameters are missing."]
+                'messages': ["Invalid password validation request. "
+                             "Some required parameters are missing."]
             }
 
     password, email, full_name = (

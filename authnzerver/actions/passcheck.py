@@ -111,18 +111,18 @@ def auth_password_check(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'messages':["Invalid password check request."],
+                'user_id': None,
+                'messages': ["Invalid password check request."],
             }
 
     # check broken request
@@ -159,9 +159,9 @@ def auth_password_check(payload,
 
         # dummy session request
         auth_session_exists(
-            {'session_token':'nope',
-             'reqid':payload['reqid'],
-             'pii_salt':payload['pii_salt']},
+            {'session_token': 'nope',
+             'reqid': payload['reqid'],
+             'pii_salt': payload['pii_salt']},
             raiseonfail=raiseonfail,
             override_authdb_path=override_authdb_path
         )
@@ -201,21 +201,21 @@ def auth_password_check(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing either 'password' or 'session_token'"
             ),
-            'user_id':None,
-            'messages':['Invalid password verification request.']
+            'user_id': None,
+            'messages': ['Invalid password verification request.']
         }
 
     # otherwise, now we'll check if the session exists
     else:
 
         session_info = auth_session_exists(
-            {'session_token':payload['session_token'],
-             'reqid':payload['reqid'],
-             'pii_salt':payload['pii_salt']},
+            {'session_token': payload['session_token'],
+             'reqid': payload['reqid'],
+             'pii_salt': payload['pii_salt']},
             raiseonfail=raiseonfail,
             override_authdb_path=override_authdb_path
         )
@@ -256,12 +256,12 @@ def auth_password_check(payload,
                  pii_hash(payload['session_token'], payload['pii_salt']))
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "session does not exist"
                 ),
-                'user_id':None,
-                'messages':['No session token provided.']
+                'user_id': None,
+                'messages': ['No session token provided.']
             }
 
         # if the session token does exist, we'll proceed to checking the
@@ -300,7 +300,7 @@ def auth_password_check(payload,
 
                     pass_ok = pass_hasher.verify(
                         user_info['password'],
-                        payload['password'][:256],
+                        payload['password'][: 256],
                     )
 
                 except Exception as e:
@@ -330,13 +330,13 @@ def auth_password_check(payload,
             if not pass_ok:
 
                 return {
-                    'success':False,
-                    'failure_reason':(
+                    'success': False,
+                    'failure_reason': (
                         "user does not exist or password doesn't match"
                     ),
-                    'user_id':None,
-                    'messages':["Sorry, that user ID and "
-                                "password combination didn't work."]
+                    'user_id': None,
+                    'messages': ["Sorry, that user ID and "
+                                 "password combination didn't work."]
                 }
 
             # if password verification succeeeded, check if the user can
@@ -361,9 +361,9 @@ def auth_password_check(payload,
                     )
 
                     return {
-                        'success':True,
+                        'success': True,
                         'user_id': user_info['user_id'],
-                        'messages':["Verification successful."]
+                        'messages': ["Verification successful."]
                     }
 
                 # if the user account is locked, return a failure
@@ -381,13 +381,13 @@ def auth_password_check(payload,
                     )
 
                     return {
-                        'success':False,
-                        'failure_reason':(
+                        'success': False,
+                        'failure_reason': (
                             "user exists but is inactive"
                         ),
                         'user_id': user_info['user_id'],
-                        'messages':["Sorry, that user ID and "
-                                    "password combination didn't work."]
+                        'messages': ["Sorry, that user ID and "
+                                     "password combination didn't work."]
                     }
 
 
@@ -438,18 +438,18 @@ def auth_password_check_nosession(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'messages':["Invalid password check request."],
+                'user_id': None,
+                'messages': ["Invalid password check request."],
             }
 
     # check broken request
@@ -519,12 +519,12 @@ def auth_password_check_nosession(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing 'email' or 'password' in request"
             ),
-            'user_id':None,
-            'messages':['Invalid password verification request.']
+            'user_id': None,
+            'messages': ['Invalid password verification request.']
         }
 
     # otherwise, now we'll check if the user exists and the password is correct
@@ -564,7 +564,7 @@ def auth_password_check_nosession(payload,
 
                 pass_ok = pass_hasher.verify(
                     user_info['password'],
-                    payload['password'][:256],
+                    payload['password'][: 256],
                 )
 
             except Exception as e:
@@ -595,13 +595,13 @@ def auth_password_check_nosession(payload,
         if not pass_ok:
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "user does not exist or password doesn't match"
                 ),
-                'user_id':None,
-                'messages':["Sorry, that user ID and "
-                            "password combination didn't work."]
+                'user_id': None,
+                'messages': ["Sorry, that user ID and "
+                             "password combination didn't work."]
             }
 
         # if password verification succeeeded, check if the user can
@@ -626,9 +626,9 @@ def auth_password_check_nosession(payload,
                 )
 
                 return {
-                    'success':True,
+                    'success': True,
                     'user_id': user_info['user_id'],
-                    'messages':["Verification successful."]
+                    'messages': ["Verification successful."]
                 }
 
             # if the user account is locked, return a failure
@@ -646,11 +646,11 @@ def auth_password_check_nosession(payload,
                 )
 
                 return {
-                    'success':False,
-                    'failure_reason':(
+                    'success': False,
+                    'failure_reason': (
                         "user exists but is inactive"
                     ),
                     'user_id': user_info['user_id'],
-                    'messages':["Sorry, that user ID and "
-                                "password combination didn't work."]
+                    'messages': ["Sorry, that user ID and "
+                                 "password combination didn't work."]
                 }

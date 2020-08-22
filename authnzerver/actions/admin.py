@@ -124,18 +124,18 @@ def list_users(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_info':None,
-                'messages':["Invalid user info request."],
+                'user_info': None,
+                'messages': ["Invalid user info request."],
             }
 
     if 'user_id' not in payload:
@@ -146,12 +146,12 @@ def list_users(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing 'user_id' in request"
             ),
-            'user_info':None,
-            'messages':["No user_id provided."],
+            'user_info': None,
+            'messages': ["No user_id provided."],
         }
 
     user_id = payload['user_id']
@@ -207,9 +207,9 @@ def list_users(payload,
                           payload['pii_salt']))
             )
             return {
-                'success':True,
-                'user_info':serialized_result,
-                'messages':["User look up successful."],
+                'success': True,
+                'user_info': serialized_result,
+                'messages': ["User look up successful."],
             }
 
         except Exception as e:
@@ -226,10 +226,10 @@ def list_users(payload,
                 raise
 
             return {
-                'success':False,
-                'failure_reason':'target user not found in DB',
-                'user_info':None,
-                'messages':["User look up failed."],
+                'success': False,
+                'failure_reason': 'target user not found in DB',
+                'user_info': None,
+                'messages': ["User look up failed."],
             }
 
     except Exception as e:
@@ -246,9 +246,9 @@ def list_users(payload,
             raise
 
         return {
-            'success':False,
-            'user_info':None,
-            'messages':["User look up failed."],
+            'success': False,
+            'user_info': None,
+            'messages': ["User look up failed."],
         }
 
 
@@ -306,18 +306,18 @@ def get_user_by_email(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid user info request."],
+                'messages': ["Invalid user info request."],
             }
 
     if 'email' not in payload:
@@ -328,10 +328,10 @@ def get_user_by_email(payload,
         )
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':"invalid request: missing 'email' in request",
-            'messages':["email provided."],
+            'success': False,
+            'user_info': None,
+            'failure_reason': "invalid request: missing 'email' in request",
+            'messages': ["email provided."],
         }
 
     email = payload['email']
@@ -379,9 +379,9 @@ def get_user_by_email(payload,
                           payload['pii_salt']))
             )
             return {
-                'success':True,
-                'user_info':serialized_result,
-                'messages':["User look up successful."],
+                'success': True,
+                'user_info': serialized_result,
+                'messages': ["User look up successful."],
             }
 
         except Exception as e:
@@ -398,10 +398,10 @@ def get_user_by_email(payload,
                 raise
 
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':'user email not found in DB',
-                'messages':["User look up failed."],
+                'success': False,
+                'user_info': None,
+                'failure_reason': 'user email not found in DB',
+                'messages': ["User look up failed."],
             }
 
     except Exception as e:
@@ -418,10 +418,10 @@ def get_user_by_email(payload,
             raise
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':'exception when checking the DB',
-            'messages':["User look up failed."],
+            'success': False,
+            'user_info': None,
+            'failure_reason': 'exception when checking the DB',
+            'messages': ["User look up failed."],
         }
 
 
@@ -492,18 +492,18 @@ def lookup_users(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid user info request."],
+                'messages': ["Invalid user info request."],
             }
 
     for key in ("by", "match"):
@@ -513,12 +513,12 @@ def lookup_users(payload,
                 (payload['reqid'], key)
             )
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid match condition provided."],
+                'messages': ["Invalid match condition provided."],
             }
 
     lookup_by = payload['by']
@@ -535,14 +535,14 @@ def lookup_users(payload,
         )
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "invalid request: 'by' is 'extra_info' but "
                 "'match' is not a dict or "
                 "'match' is a dict and 'by' is not 'extra_info'"
             ),
-            'messages':["Invalid match condition provided."],
+            'messages': ["Invalid match condition provided."],
         }
 
     try:
@@ -601,9 +601,9 @@ def lookup_users(payload,
                 payload['reqid']
             )
             return {
-                'success':True,
-                'user_info':serialized_result,
-                'messages':["User look up successful."],
+                'success': True,
+                'user_info': serialized_result,
+                'messages': ["User look up successful."],
             }
 
         except Exception as e:
@@ -617,10 +617,10 @@ def lookup_users(payload,
                 raise
 
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':'user not found in DB',
-                'messages':["User look up failed."],
+                'success': False,
+                'user_info': None,
+                'failure_reason': 'user not found in DB',
+                'messages': ["User look up failed."],
             }
 
     except Exception as e:
@@ -634,10 +634,10 @@ def lookup_users(payload,
             raise
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':'exception in DB access',
-            'messages':["User look up failed."],
+            'success': False,
+            'user_info': None,
+            'failure_reason': 'exception in DB access',
+            'messages': ["User look up failed."],
         }
 
 
@@ -717,18 +717,18 @@ def edit_user(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid user edit request."],
+                'messages': ["Invalid user edit request."],
             }
 
     for key in ('user_id',
@@ -744,12 +744,12 @@ def edit_user(payload,
                 (payload['reqid'], key)
             )
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["No %s provided." % key],
+                'messages': ["No %s provided." % key],
             }
 
     user_id = payload['user_id']
@@ -775,13 +775,13 @@ def edit_user(payload,
         )
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':'invalid request: no update dict was provided',
-            'messages':["No update_dict provided."],
+            'success': False,
+            'user_info': None,
+            'failure_reason': 'invalid request: no update dict was provided',
+            'messages': ["No update_dict provided."],
         }
 
-    if target_userid in (2,3):
+    if target_userid in (2, 3):
 
         LOGGER.error(
             "[%s] User edit request failed for "
@@ -797,12 +797,12 @@ def edit_user(payload,
                       payload['pii_salt']))
         )
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "invalid request: can't edit anonymous/locked users"
             ),
-            'messages':["Editing anonymous/locked user accounts not allowed."],
+            'messages': ["Editing anonymous/locked user accounts not allowed."],
         }
 
     try:
@@ -829,14 +829,14 @@ def edit_user(payload,
             )
 
         # the case where the user updates their own info
-        if target_userid == user_id and user_role in ('authenticated','staff'):
+        if target_userid == user_id and user_role in ('authenticated', 'staff'):
 
             # check if the user_id == target_userid
             # if so, check if session_token is valid and belongs to user_id
             session_info = auth_session_exists(
-                {'session_token':session_token,
-                 'pii_salt':payload['pii_salt'],
-                 'reqid':payload['reqid']},
+                {'session_token': session_token,
+                 'pii_salt': payload['pii_salt'],
+                 'reqid': payload['reqid']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
@@ -849,7 +849,7 @@ def edit_user(payload,
                 session_info['session_info']['user_id'] == user_id and
                 session_info['session_info']['user_role'] == user_role):
 
-                editeable_elements = {'full_name','email'}
+                editeable_elements = {'full_name', 'email'}
                 update_check = set(update_dict.keys()) - editeable_elements
 
                 # check if the update keys are valid
@@ -872,14 +872,14 @@ def edit_user(payload,
                     )
 
                     return {
-                        'success':False,
-                        'user_info':None,
-                        'failure_reason':(
+                        'success': False,
+                        'user_info': None,
+                        'failure_reason': (
                             "role '%s' can't edit anything other "
                             "than 'full_name', 'email'" % payload['user_role']
                         ),
-                        'messages':["extra elements in "
-                                    "update_dict not allowed"],
+                        'messages': ["extra elements in "
+                                     "update_dict not allowed"],
                     }
 
             else:
@@ -899,13 +899,13 @@ def edit_user(payload,
                               payload['pii_salt']))
                 )
                 return {
-                    'success':False,
-                    'failure_reason':(
+                    'success': False,
+                    'failure_reason': (
                         "no valid session found for originating user_id"
                     ),
-                    'user_info':None,
-                    'messages':["User session info not available "
-                                "for this user edit attempt."],
+                    'user_info': None,
+                    'messages': ["User session info not available "
+                                 "for this user edit attempt."],
                 }
 
         # the case where the superuser updates a user's info (or their own info)
@@ -914,9 +914,9 @@ def edit_user(payload,
             # check if the user_id == target_userid
             # if so, check if session_token is valid and belongs to user_id
             session_info = auth_session_exists(
-                {'session_token':session_token,
-                 'pii_salt':payload['pii_salt'],
-                 'reqid':payload['reqid']},
+                {'session_token': session_token,
+                 'pii_salt': payload['pii_salt'],
+                 'reqid': payload['reqid']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
@@ -929,8 +929,8 @@ def edit_user(payload,
                 session_info['session_info']['user_id'] == user_id and
                 session_info['session_info']['user_role'] == user_role):
 
-                editeable_elements = {'full_name','email',
-                                      'is_active','user_role',
+                editeable_elements = {'full_name', 'email',
+                                      'is_active', 'user_role',
                                       'email_verified'}
                 update_check = set(update_dict.keys()) - editeable_elements
 
@@ -953,14 +953,14 @@ def edit_user(payload,
                     )
 
                     return {
-                        'success':False,
-                        'user_info':None,
-                        'failure_reason':(
+                        'success': False,
+                        'user_info': None,
+                        'failure_reason': (
                             "role: '%s' is not allowed to edit items: '%s'" %
                             (payload['user_role'], list(update_dict.keys()))
                         ),
-                        'messages':["extra elements in "
-                                    "update_dict not allowed"],
+                        'messages': ["extra elements in "
+                                     "update_dict not allowed"],
                     }
 
                 # check if the roles provided are valid
@@ -989,13 +989,13 @@ def edit_user(payload,
                     )
 
                     return {
-                        'success':False,
-                        'user_info':None,
-                        'failure_reason':(
+                        'success': False,
+                        'user_info': None,
+                        'failure_reason': (
                             "role change requested is not valid"
                         ),
-                        'messages':["unknown role change "
-                                    "request in update_dict"],
+                        'messages': ["unknown role change "
+                                     "request in update_dict"],
                     }
 
             else:
@@ -1016,13 +1016,13 @@ def edit_user(payload,
                               payload['pii_salt']))
                 )
                 return {
-                    'success':False,
-                    'user_info':None,
-                    'failure_reason':(
+                    'success': False,
+                    'user_info': None,
+                    'failure_reason': (
                         "invalid session for edit attempt"
                     ),
-                    'messages':["Superuser session info not available "
-                                "for this user edit attempt."],
+                    'messages': ["Superuser session info not available "
+                                 "for this user edit attempt."],
                 }
 
         # any other case is a failure
@@ -1044,13 +1044,13 @@ def edit_user(payload,
             )
 
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid session for edit attempt"
                 ),
-                'messages':["user_id or session info not available "
-                            "for this user edit attempt."],
+                'messages': ["user_id or session info not available "
+                             "for this user edit attempt."],
             }
 
         #
@@ -1094,9 +1094,9 @@ def edit_user(payload,
             )
 
             return {
-                'success':True,
-                'user_info':serialized_result,
-                'messages':["User update successful."],
+                'success': True,
+                'user_info': serialized_result,
+                'messages': ["User update successful."],
             }
 
         except Exception as e:
@@ -1119,12 +1119,12 @@ def edit_user(payload,
                 raise
 
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "exception when trying to update user"
                 ),
-                'messages':["User update failed."],
+                'messages': ["User update failed."],
             }
 
     except Exception as e:
@@ -1147,12 +1147,12 @@ def edit_user(payload,
             raise
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "exception when trying to update user"
             ),
-            'messages':["User update failed."],
+            'messages': ["User update failed."],
         }
 
 
@@ -1212,19 +1212,19 @@ def internal_edit_user(
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'failure_reason':(
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'success':False,
-                'session_token':None,
-                'expires':None,
-                'messages':["Invalid edit-user request."],
+                'success': False,
+                'session_token': None,
+                'expires': None,
+                'messages': ["Invalid edit-user request."],
             }
 
     for key in ('target_userid', 'update_dict'):
@@ -1237,26 +1237,26 @@ def internal_edit_user(
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'session_info':None,
-                'messages':["Invalid edit-user request: "
-                            "missing or invalid parameters."],
+                'session_info': None,
+                'messages': ["Invalid edit-user request: "
+                             "missing or invalid parameters."],
             }
 
     target_userid = payload['target_userid']
     update_dict = payload['update_dict']
     if update_dict is None or len(update_dict) == 0:
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing 'update_dict' in request"
             ),
-            'session_info':None,
-            'messages':["Invalid user-edit request: "
-                        "missing or invalid parameters."],
+            'session_info': None,
+            'messages': ["Invalid user-edit request: "
+                         "missing or invalid parameters."],
         }
 
     update_dict_keys = set(update_dict.keys())
@@ -1275,14 +1275,14 @@ def internal_edit_user(
             (payload['reqid'], leftover_keys)
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: disallowed keys in update_dict: %s" %
                 leftover_keys
             ),
-            'session_info':None,
-            'messages':["Invalid edit-user request: "
-                        "invalid update parameters."],
+            'session_info': None,
+            'messages': ["Invalid edit-user request: "
+                         "invalid update parameters."],
         }
 
     #
@@ -1320,10 +1320,10 @@ def internal_edit_user(
 
         if not userid_and_extrainfo or len(userid_and_extrainfo) == 0:
             return {
-                'success':False,
-                "failure_reason":"no such user",
-                'user_info':None,
-                'messages':["User info update failed."],
+                'success': False,
+                "failure_reason": "no such user",
+                'user_info': None,
+                'messages': ["User info update failed."],
             }
 
         if ('extra_info' in update_dict and
@@ -1372,9 +1372,9 @@ def internal_edit_user(
             )
 
             return {
-                'success':True,
-                'user_info':serialized_result,
-                'messages':["User-info update successful."],
+                'success': True,
+                'user_info': serialized_result,
+                'messages': ["User-info update successful."],
             }
 
         except Exception as e:
@@ -1389,12 +1389,12 @@ def internal_edit_user(
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "user requested for update doesn't exist"
                 ),
-                'user_info':None,
-                'messages':["User info update failed."],
+                'user_info': None,
+                'messages': ["User info update failed."],
             }
 
     except Exception as e:
@@ -1409,12 +1409,12 @@ def internal_edit_user(
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "DB error when updating user info"
             ),
-            'session_info':None,
-            'messages':["User info update failed."],
+            'session_info': None,
+            'messages': ["User info update failed."],
         }
 
 
@@ -1468,18 +1468,18 @@ def internal_toggle_user_lock(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid user lock toggle request."],
+                'messages': ["Invalid user lock toggle request."],
             }
 
     from .session import auth_delete_sessions_userid
@@ -1494,18 +1494,18 @@ def internal_toggle_user_lock(payload,
             )
 
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["No %s provided for toggle_user_lock" % key],
+                'messages': ["No %s provided for toggle_user_lock" % key],
             }
 
     target_userid = payload['target_userid']
     action = payload['action']
 
-    if action not in ('unlock','lock'):
+    if action not in ('unlock', 'lock'):
 
         LOGGER.error(
             "[%s] Invalid user lock toggle request for user_id: %s. "
@@ -1517,15 +1517,15 @@ def internal_toggle_user_lock(payload,
         )
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "action must be either 'lock' or 'unlock'"
             ),
-            'messages':["Unknown action requested for toggle_user_lock."],
+            'messages': ["Unknown action requested for toggle_user_lock."],
         }
 
-    if target_userid in (2,3):
+    if target_userid in (2, 3):
 
         LOGGER.error(
             "[%s] Invalid user lock toggle request for user_id: %s. "
@@ -1536,12 +1536,12 @@ def internal_toggle_user_lock(payload,
         )
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "can't edit anonymous/locked users"
             ),
-            'messages':["Editing anonymous/locked user accounts not allowed."],
+            'messages': ["Editing anonymous/locked user accounts not allowed."],
         }
 
     try:
@@ -1586,12 +1586,12 @@ def internal_toggle_user_lock(payload,
             )
 
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid lock toggle requested"
                 ),
-                'messages':[
+                'messages': [
                     "Invalid lock toggle action requested."],
             }
 
@@ -1615,11 +1615,11 @@ def internal_toggle_user_lock(payload,
         if payload['action'] == 'lock':
 
             auth_delete_sessions_userid(
-                {'user_id':target_userid,
-                 'session_token':None,
-                 'keep_current_session':False,
-                 'pii_salt':payload['pii_salt'],
-                 'reqid':payload['reqid']},
+                {'user_id': target_userid,
+                 'session_token': None,
+                 'keep_current_session': False,
+                 'pii_salt': payload['pii_salt'],
+                 'reqid': payload['reqid']},
                 raiseonfail=raiseonfail,
                 override_authdb_path=override_authdb_path
             )
@@ -1636,9 +1636,9 @@ def internal_toggle_user_lock(payload,
             )
 
             return {
-                'success':True,
-                'user_info':serialized_result,
-                'messages':["User lock toggle successful."],
+                'success': True,
+                'user_info': serialized_result,
+                'messages': ["User lock toggle successful."],
             }
 
         except Exception as e:
@@ -1655,12 +1655,12 @@ def internal_toggle_user_lock(payload,
                 raise
 
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "exception encountered when trying lock toggle action"
                 ),
-                'messages':["User lock toggle failed."],
+                'messages': ["User lock toggle failed."],
             }
 
     except Exception as e:
@@ -1677,12 +1677,12 @@ def internal_toggle_user_lock(payload,
             raise
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "exception encountered when trying lock toggle action"
             ),
-            'messages':["User lock toggle failed."],
+            'messages': ["User lock toggle failed."],
         }
 
 
@@ -1737,18 +1737,18 @@ def toggle_user_lock(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid user lock toggle request."],
+                'messages': ["Invalid user lock toggle request."],
             }
 
     for key in ('user_id',
@@ -1764,12 +1764,12 @@ def toggle_user_lock(payload,
             )
 
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["No %s provided for toggle_user_lock" % key],
+                'messages': ["No %s provided for toggle_user_lock" % key],
             }
 
     user_id = payload['user_id']
@@ -1798,12 +1798,12 @@ def toggle_user_lock(payload,
         )
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "user role is not 'superuser', required to toggle locks"
             ),
-            'messages':["You don't have lock/unlock privileges."],
+            'messages': ["You don't have lock/unlock privileges."],
         }
 
     # don't lock the calling user out
@@ -1826,16 +1826,16 @@ def toggle_user_lock(payload,
         )
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "can't toggle a lock state on self"
             ),
-            'messages':["You can't lock/unlock your own user account."],
+            'messages': ["You can't lock/unlock your own user account."],
         }
 
     # unknown action attempted
-    if action not in ('unlock','lock'):
+    if action not in ('unlock', 'lock'):
 
         LOGGER.error(
             "[%s] Invalid user lock toggle request "
@@ -1854,16 +1854,16 @@ def toggle_user_lock(payload,
         )
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "action must be one of 'lock', 'unlock'"
             ),
-            'messages':["Unknown action requested for toggle_user_lock."],
+            'messages': ["Unknown action requested for toggle_user_lock."],
         }
 
     # attempt to edit systemwide accounts
-    if target_userid in (2,3):
+    if target_userid in (2, 3):
 
         LOGGER.error(
             "[%s] Invalid user lock toggle request "
@@ -1882,12 +1882,12 @@ def toggle_user_lock(payload,
         )
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "can't toggle lock state for system anonymous/locked accounts"
             ),
-            'messages':["Editing anonymous/locked user accounts not allowed."],
+            'messages': ["Editing anonymous/locked user accounts not allowed."],
         }
 
     #
@@ -1915,9 +1915,9 @@ def toggle_user_lock(payload,
 
         # check if session_token is valid and belongs to user_id
         session_info = auth_session_exists(
-            {'session_token':session_token,
-             'pii_salt':payload['pii_salt'],
-             'reqid':payload['reqid']},
+            {'session_token': session_token,
+             'pii_salt': payload['pii_salt'],
+             'reqid': payload['reqid']},
             raiseonfail=raiseonfail,
             override_authdb_path=override_authdb_path
         )
@@ -1947,13 +1947,13 @@ def toggle_user_lock(payload,
             )
 
             return {
-                'success':False,
-                'user_info':None,
-                'failure_reason':(
+                'success': False,
+                'user_info': None,
+                'failure_reason': (
                     "invalid session for user attempting lock toggle"
                 ),
-                'messages':["Superuser session info not available "
-                            "for this user edit attempt."],
+                'messages': ["Superuser session info not available "
+                             "for this user edit attempt."],
             }
 
         #
@@ -1988,10 +1988,10 @@ def toggle_user_lock(payload,
             raise
 
         return {
-            'success':False,
-            'user_info':None,
-            'failure_reason':(
+            'success': False,
+            'user_info': None,
+            'failure_reason': (
                 "exception when trying to toggle lock state"
             ),
-            'messages':["User lock toggle failed."],
+            'messages': ["User lock toggle failed."],
         }

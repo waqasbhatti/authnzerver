@@ -57,12 +57,12 @@ def generate_email_token(
     """
 
     token_payload = {
-        'iat':datetime.utcnow(),
-        'ipa':ip_address,
-        'usa':user_agent,
-        'ema':email_address,
-        'stk':session_token,
-        'tid':token_urlsafe(16),
+        'iat': datetime.utcnow(),
+        'ipa': ip_address,
+        'usa': user_agent,
+        'ema': email_address,
+        'stk': session_token,
+        'tid': token_urlsafe(16),
     }
 
     return encrypt_message(token_payload, session_cookie_key)
@@ -75,7 +75,7 @@ def verify_email_token(
         session_token,
         email_address,
         session_cookie_key,
-        match_returned_items=('ipa','ema'),
+        match_returned_items=('ipa', 'ema'),
         ttl_seconds=900,
         reqid=None,
 ):

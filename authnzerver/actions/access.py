@@ -97,21 +97,21 @@ def check_user_access(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid access grant request."],
+                'messages': ["Invalid access grant request."],
             }
 
-    for key in ('user_id','user_role','action','target_name',
-                'target_owner','target_visibility',
+    for key in ('user_id', 'user_role', 'action', 'target_name',
+                'target_owner', 'target_visibility',
                 'target_sharedwith'):
 
         if key not in payload:
@@ -121,11 +121,11 @@ def check_user_access(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid access grant request."],
+                'messages': ["Invalid access grant request."],
             }
 
     originating_userid = int(payload['user_id'])
@@ -213,9 +213,9 @@ def check_user_access(payload,
 
             return {
                 'success': False,
-                'failure_reason':'user initiating request is not valid',
-                'messages':['Access request check successful. '
-                            'Access granted: False.']
+                'failure_reason': 'user initiating request is not valid',
+                'messages': ['Access request check successful. '
+                             'Access granted: False.']
             }
 
         # now check if the rest of the user IDs make sense
@@ -255,8 +255,8 @@ def check_user_access(payload,
 
                     retdict = {
                         'success': access_granted,
-                        'messages':['Access request check successful. '
-                                    'Access granted: %s.' % access_granted]
+                        'messages': ['Access request check successful. '
+                                     'Access granted: %s.' % access_granted]
                     }
 
                     if not access_granted:
@@ -282,11 +282,11 @@ def check_user_access(payload,
 
                     return {
                         'success': False,
-                        'failure_reason':(
+                        'failure_reason': (
                             'users specified as owner or shared-with not found'
                         ),
-                        'messages':['Access request check successful. '
-                                    'Access granted: False.']
+                        'messages': ['Access request check successful. '
+                                     'Access granted: False.']
                     }
 
             else:
@@ -307,11 +307,11 @@ def check_user_access(payload,
 
                 return {
                     'success': False,
-                    'failure_reason':(
+                    'failure_reason': (
                         'none of the users specified in the request were found'
                     ),
-                    'messages':['Access request check successful. '
-                                'Access granted: False.']
+                    'messages': ['Access request check successful. '
+                                 'Access granted: False.']
                 }
 
         except Exception as e:
@@ -333,9 +333,9 @@ def check_user_access(payload,
                 raise
 
             return {
-                'success':False,
-                'failure_reason':'exception when checking the DB',
-                'messages':["Access request check failed."],
+                'success': False,
+                'failure_reason': 'exception when checking the DB',
+                'messages': ["Access request check failed."],
             }
 
     except Exception as e:
@@ -357,9 +357,9 @@ def check_user_access(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':'exception when checking the DB',
-            'messages':["Could not validate access to the requested item."],
+            'success': False,
+            'failure_reason': 'exception when checking the DB',
+            'messages': ["Could not validate access to the requested item."],
         }
 
 
@@ -422,20 +422,20 @@ def check_user_limit(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' from request" % key
                 ),
-                'messages':["Invalid access grant request."],
+                'messages': ["Invalid access grant request."],
             }
 
-    for key in ('user_id','user_role','limit_name','value_to_check'):
+    for key in ('user_id', 'user_role', 'limit_name', 'value_to_check'):
 
         if key not in payload:
             LOGGER.error(
@@ -444,11 +444,11 @@ def check_user_limit(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' from request" % key
                 ),
-                'messages':["Invalid limit check request."],
+                'messages': ["Invalid limit check request."],
             }
 
     originating_userid = int(payload['user_id'])
@@ -520,8 +520,8 @@ def check_user_limit(payload,
 
                 retdict = {
                     'success': limit_checked,
-                    'messages':['Limit check successful. '
-                                'Limit check passed: %s.' % limit_checked]
+                    'messages': ['Limit check successful. '
+                                 'Limit check passed: %s.' % limit_checked]
                 }
 
                 if not limit_checked:
@@ -546,9 +546,9 @@ def check_user_limit(payload,
 
                 return {
                     'success': False,
-                    'failure_reason':'user attempting access not found',
-                    'messages':['Limit check successful. '
-                                'Limit check passed: False.']
+                    'failure_reason': 'user attempting access not found',
+                    'messages': ['Limit check successful. '
+                                 'Limit check passed: False.']
                 }
 
         except Exception as e:
@@ -570,9 +570,9 @@ def check_user_limit(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':'exception when checking the DB',
-                'messages':["Limit check failed."],
+                'success': False,
+                'failure_reason': 'exception when checking the DB',
+                'messages': ["Limit check failed."],
             }
 
     except Exception as e:
@@ -594,8 +594,8 @@ def check_user_limit(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':'exception when checking the DB',
-            'messages':["Could not validate limit "
-                        "rule for the requested item."],
+            'success': False,
+            'failure_reason': 'exception when checking the DB',
+            'messages': ["Could not validate limit "
+                         "rule for the requested item."],
         }

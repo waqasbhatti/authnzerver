@@ -160,9 +160,9 @@ def send_email(
 
     # remove all newlines from the subject, the sender's email address,
     # and all the recipient email address to prevent header injection attacks
-    cleaned_sender = sender.replace('\n','')
-    cleaned_subject = subject.replace('\n','')
-    cleaned_recipients = [x.replace('\n','') for x in recipients]
+    cleaned_sender = sender.replace('\n', '')
+    cleaned_subject = subject.replace('\n', '')
+    cleaned_recipients = [x.replace('\n', '') for x in recipients]
 
     # validate the recipients' email addresses
     validated_recipients = []
@@ -213,7 +213,8 @@ def send_email(
     # handle the BCC kwarg
     #
 
-    # if everyone is to be BCCed, remove all the recipients from the "To:" field
+    # if everyone is to be BCCed, remove all the recipients from the "To: "
+    # field
     if bcc is True:
 
         msg['To'] = "undisclosed-recipients"
@@ -224,7 +225,7 @@ def send_email(
 
         for bcc_recipient in bcc:
 
-            cleaned_bcc_recipient = bcc_recipient.replace('\n','')
+            cleaned_bcc_recipient = bcc_recipient.replace('\n', '')
 
             if '<' in cleaned_bcc_recipient and '>' in cleaned_bcc_recipient:
                 bcc_recipient_email = re.findall(r'<(\S+)>',
@@ -379,20 +380,20 @@ def send_signup_verification_email(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'email_address':None,
-                'emailverify_sent_datetime':None,
-                'messages':["Invalid verify email request."],
+                'user_id': None,
+                'email_address': None,
+                'emailverify_sent_datetime': None,
+                'messages': ["Invalid verify email request."],
             }
 
     for key in ('email_address',
@@ -412,14 +413,14 @@ def send_signup_verification_email(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'email_address':None,
-                'emailverify_sent_datetime':None,
-                'messages':([
+                'user_id': None,
+                'email_address': None,
+                'emailverify_sent_datetime': None,
+                'messages': ([
                     "Invalid verify email request."
                 ])
             }
@@ -460,15 +461,15 @@ def send_signup_verification_email(payload,
             payload['reqid']
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing 'emailsender', "
                 "'emailserver', or 'emailport' in request"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailverify_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailverify_sent_datetime': None,
+            'messages': ([
                 "Invalid email server settings provided. Can't send an email."
             ])
         }
@@ -487,15 +488,15 @@ def send_signup_verification_email(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "not allowed to send verification email to target user, "
                 "send_verification = False"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailverify_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailverify_sent_datetime': None,
+            'messages': ([
                 "Not allowed to send an email verification request."
             ])
         }
@@ -549,14 +550,14 @@ def send_signup_verification_email(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "target user for verification email does not exist"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailverify_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailverify_sent_datetime': None,
+            'messages': ([
                 "Invalid verify email request."
             ])
         }
@@ -575,23 +576,23 @@ def send_signup_verification_email(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "target user for verification email already active and verified"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailverify_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailverify_sent_datetime': None,
+            'messages': ([
                 "Not sending an verify email request to an existing user."
             ])
         }
 
     # check the session
     session_info = auth_session_exists(
-        {'session_token':payload['session_token'],
-         'pii_salt':payload['pii_salt'],
-         'reqid':payload['reqid']},
+        {'session_token': payload['session_token'],
+         'pii_salt': payload['pii_salt'],
+         'reqid': payload['reqid']},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path
     )
@@ -609,14 +610,14 @@ def send_signup_verification_email(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid session for requesting a verification email"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailverify_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailverify_sent_datetime': None,
+            'messages': ([
                 "Invalid verify email request."
             ])
         }
@@ -653,7 +654,7 @@ def send_signup_verification_email(payload,
         account_verify_url=payload['account_verify_url'],
         verification_code=formatted_verification_token,
         verification_expiry='%s (UTC time)' % verification_expiry_dt,
-        browser_identifier=browser.replace('_','.'),
+        browser_identifier=browser.replace('_', '.'),
         ip_address=ip_addr,
         user_email=payload['email_address'],
     )
@@ -706,11 +707,11 @@ def send_signup_verification_email(payload,
         )
 
         return {
-            'success':True,
-            'user_id':user_info['user_id'],
-            'email_address':user_info['email'],
-            'emailverify_sent_datetime':emailverify_sent_datetime,
-            'messages':([
+            'success': True,
+            'user_id': user_info['user_id'],
+            'email_address': user_info['email'],
+            'emailverify_sent_datetime': emailverify_sent_datetime,
+            'messages': ([
                 "Verify email sent successfully."
             ])
         }
@@ -729,15 +730,15 @@ def send_signup_verification_email(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "verification email could not be sent "
                 "because of an email server problem"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailverify_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailverify_sent_datetime': None,
+            'messages': ([
                 "Could not send email for the verify email request."
             ])
         }
@@ -787,20 +788,20 @@ def set_user_emailaddr_verified(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'is_active':False,
-                'user_role':'locked',
-                'messages':["Invalid email verification toggle request."],
+                'user_id': None,
+                'is_active': False,
+                'user_role': 'locked',
+                'messages': ["Invalid email verification toggle request."],
             }
 
     if 'email' not in payload:
@@ -811,14 +812,14 @@ def set_user_emailaddr_verified(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing '%s' in request" % 'email'
             ),
-            'user_id':None,
+            'user_id': None,
             'is_active': False,
-            'user_role':'locked',
-            'messages':["Invalid email verification toggle request."]
+            'user_role': 'locked',
+            'messages': ["Invalid email verification toggle request."]
         }
 
     # this checks if the database connection is live
@@ -845,9 +846,9 @@ def set_user_emailaddr_verified(payload,
     ).where(
         users.c.email == payload['email']
     ).values({
-        'is_active':True,
-        'email_verified':True,
-        'user_role':'authenticated'
+        'is_active': True,
+        'email_verified': True,
+        'user_role': 'authenticated'
     })
     currproc.authdb_conn.execute(upd)
 
@@ -875,11 +876,11 @@ def set_user_emailaddr_verified(payload,
         )
 
         return {
-            'success':True,
-            'user_id':rows['user_id'],
-            'is_active':rows['is_active'],
-            'user_role':rows['user_role'],
-            'messages':["Email verification toggle request succeeded."]
+            'success': True,
+            'user_id': rows['user_id'],
+            'is_active': rows['is_active'],
+            'user_role': rows['user_role'],
+            'messages': ["Email verification toggle request succeeded."]
         }
 
     else:
@@ -894,14 +895,14 @@ def set_user_emailaddr_verified(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "could not update user verified status in DB"
             ),
-            'user_id':None,
-            'is_active':False,
-            'user_role':'locked',
-            'messages':["Email verification toggle request failed."]
+            'user_id': None,
+            'is_active': False,
+            'user_role': 'locked',
+            'messages': ["Email verification toggle request failed."]
         }
 
 
@@ -953,20 +954,20 @@ def set_user_email_sent(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid email sent notification request."],
+                'messages': ["Invalid email sent notification request."],
             }
 
-    for key in ('email','email_type'):
+    for key in ('email', 'email_type'):
         if key not in payload:
 
             LOGGER.error(
@@ -975,11 +976,11 @@ def set_user_email_sent(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid email sent notification request."]
+                'messages': ["Invalid email sent notification request."]
             }
 
     # this checks if the database connection is live
@@ -1011,11 +1012,11 @@ def set_user_email_sent(payload,
             'incorrect email_type.' % payload['reqid']
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: invalid email_type requested"
             ),
-            'messages':["Invalid email sent notification request."]
+            'messages': ["Invalid email sent notification request."]
         }
 
     # update the table for this user
@@ -1023,7 +1024,7 @@ def set_user_email_sent(payload,
     ).where(
         users.c.email == payload['email']
     ).values({
-        update_col:email_sent_datetime,
+        update_col: email_sent_datetime,
     })
     currproc.authdb_conn.execute(upd)
 
@@ -1054,16 +1055,16 @@ def set_user_email_sent(payload,
         )
 
         return {
-            'success':True,
-            'email':rows['email'],
-            'emailverify_sent_datetime':rows['emailverify_sent_datetime'],
-            'emailforgotpass_sent_datetime':(
+            'success': True,
+            'email': rows['email'],
+            'emailverify_sent_datetime': rows['emailverify_sent_datetime'],
+            'emailforgotpass_sent_datetime': (
                 rows['emailforgotpass_sent_datetime']
             ),
-            'user_id':rows['user_id'],
-            'is_active':rows['is_active'],
-            'user_role':rows['user_role'],
-            'messages':["Email sent notification request succeeded."]
+            'user_id': rows['user_id'],
+            'is_active': rows['is_active'],
+            'user_role': rows['user_role'],
+            'messages': ["Email sent notification request succeeded."]
         }
 
     else:
@@ -1078,11 +1079,11 @@ def set_user_email_sent(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "could not update the email sent status in DB"
             ),
-            'messages':["Email sent notification request failed."]
+            'messages': ["Email sent notification request failed."]
         }
 
 
@@ -1152,20 +1153,20 @@ def send_forgotpass_verification_email(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'email_address':None,
-                'emailforgotpass_sent_datetime':None,
-                'messages':["Invalid forgot-password email request."],
+                'user_id': None,
+                'email_address': None,
+                'emailforgotpass_sent_datetime': None,
+                'messages': ["Invalid forgot-password email request."],
             }
 
     for key in ('email_address',
@@ -1184,14 +1185,14 @@ def send_forgotpass_verification_email(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'email_address':None,
-                'emailforgotpass_sent_datetime':None,
-                'messages':([
+                'user_id': None,
+                'email_address': None,
+                'emailforgotpass_sent_datetime': None,
+                'messages': ([
                     "Invalid forgot-password email request."
                 ])
             }
@@ -1230,14 +1231,14 @@ def send_forgotpass_verification_email(payload,
             payload['reqid']
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "missing 'emailserver', 'emailsender', 'emailport' in request"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailforgotpass_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailforgotpass_sent_datetime': None,
+            'messages': ([
                 "Invalid email server settings provided. Can't send an email."
             ])
         }
@@ -1290,14 +1291,14 @@ def send_forgotpass_verification_email(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid user for forgot-pass email request"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailforgotpass_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailforgotpass_sent_datetime': None,
+            'messages': ([
                 "Invalid password reset email request."
             ])
         }
@@ -1331,23 +1332,23 @@ def send_forgotpass_verification_email(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "forgot-pass verification email sent less than 24 hours ago"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailforgotpass_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailforgotpass_sent_datetime': None,
+            'messages': ([
                 "Invalid password reset email request."
             ])
         }
 
     # check the session
     session_info = auth_session_exists(
-        {'session_token':payload['session_token'],
-         'pii_salt':payload['pii_salt'],
-         'reqid':payload['reqid']},
+        {'session_token': payload['session_token'],
+         'pii_salt': payload['pii_salt'],
+         'reqid': payload['reqid']},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path
     )
@@ -1364,14 +1365,14 @@ def send_forgotpass_verification_email(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid session for forgot-pass request"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailforgotpass_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailforgotpass_sent_datetime': None,
+            'messages': ([
                 "Invalid verification email request."
             ])
         }
@@ -1412,7 +1413,7 @@ def send_forgotpass_verification_email(payload,
         server_name=payload['server_name'],
         verification_code=formatted_verification_token,
         verification_expiry='%s (UTC time)' % verification_expiry_dt,
-        browser_identifier=browser.replace('_','.'),
+        browser_identifier=browser.replace('_', '.'),
         ip_address=ip_addr,
         user_email=payload['email_address'],
     )
@@ -1462,11 +1463,11 @@ def send_forgotpass_verification_email(payload,
         )
 
         return {
-            'success':True,
-            'user_id':user_info['user_id'],
-            'email_address':user_info['email'],
-            'emailforgotpass_sent_datetime':emailforgotpass_sent_datetime,
-            'messages':([
+            'success': True,
+            'user_id': user_info['user_id'],
+            'email_address': user_info['email'],
+            'emailforgotpass_sent_datetime': emailforgotpass_sent_datetime,
+            'messages': ([
                 "Password reset request sent successfully to %s"
                 % recipients
             ])
@@ -1485,15 +1486,15 @@ def send_forgotpass_verification_email(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "forgot-pass verification email "
                 "could not be sent because email server issue"
             ),
-            'user_id':None,
-            'email_address':None,
-            'emailforgotpass_sent_datetime':None,
-            'messages':([
+            'user_id': None,
+            'email_address': None,
+            'emailforgotpass_sent_datetime': None,
+            'messages': ([
                 "Could not send email to %s for "
                 "the user password reset request."
                 % recipients

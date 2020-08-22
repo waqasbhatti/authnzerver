@@ -88,7 +88,7 @@ def _dict_get(datadict, keylist):
     """
 
     # convert the key list items to a list and handle str -> int conversions
-    if isinstance(keylist,str):
+    if isinstance(keylist, str):
         in_keylist = keylist.split('.')
     else:
         in_keylist = [str(x) for x in keylist]
@@ -96,7 +96,7 @@ def _dict_get(datadict, keylist):
     use_keylist = []
     for item in in_keylist:
         if '_arr_' in item:
-            arr_item = item.replace('_arr_','')
+            arr_item = item.replace('_arr_', '')
             arr_item = int(arr_item)
             use_keylist.append(arr_item)
         else:
@@ -152,7 +152,7 @@ def item_from_file(file_path,
 
     # handle special substitutions
     if '[[basedir]]' in file_path:
-        file_to_load = file_path.replace('[[basedir]]',basedir)
+        file_to_load = file_path.replace('[[basedir]]', basedir)
     elif '[[homedir]]' in file_path:
         file_to_load = file_path.replace(
             '[[homedir]]',
@@ -176,7 +176,7 @@ def item_from_file(file_path,
     # string load
     if isinstance(file_spec, str) and file_spec == 'string':
 
-        with open(file_to_load,'r') as infd:
+        with open(file_to_load, 'r') as infd:
             conf_item = infd.read().strip('\n')
 
         return conf_item
@@ -184,7 +184,7 @@ def item_from_file(file_path,
     # JSON load entire file
     elif isinstance(file_spec, str) and file_spec == 'json':
 
-        with open(file_to_load,'r') as infd:
+        with open(file_to_load, 'r') as infd:
             conf_item = json.load(infd)
 
         return conf_item
@@ -194,7 +194,7 @@ def item_from_file(file_path,
         item_path = file_spec[-1]
         item_path = item_path.split('.')
 
-        with open(file_to_load,'r') as infd:
+        with open(file_to_load, 'r') as infd:
             conf_dict = json.load(infd)
             conf_item = _dict_get(conf_dict, item_path)
 
@@ -582,7 +582,7 @@ def get_conf_item(env_key,
         if isinstance(confitem, str):
 
             if '[[basedir]]' in confitem:
-                file_check = confitem.replace('[[basedir]]',basedir)
+                file_check = confitem.replace('[[basedir]]', basedir)
             elif '[[homedir]]' in confitem:
                 file_check = confitem.replace(
                     '[[homedir]]',
@@ -684,7 +684,7 @@ def get_conf_item(env_key,
     if isinstance(confitem, str):
 
         if '[[basedir]]' in confitem:
-            file_check = confitem.replace('[[basedir]]',basedir)
+            file_check = confitem.replace('[[basedir]]', basedir)
         elif '[[homedir]]' in confitem:
             file_check = confitem.replace(
                 '[[homedir]]',
@@ -889,7 +889,7 @@ def load_config(conf_dict,
     if isinstance(envfile, str) and os.path.exists(envfile):
 
         # inspired by: https://stackoverflow.com/a/26859985
-        with open(envfile,'r') as infd:
+        with open(envfile, 'r') as infd:
             envfd = chain(('[DEFAULT]',), infd)
             c = ConfigParser()
             c.read_file(envfd)

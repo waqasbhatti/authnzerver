@@ -146,9 +146,9 @@ class AuthHandler(tornado.web.RequestHandler,
         """
 
         response_dict = {"success": response['success'],
-                         "response":response,
+                         "response": response,
                          "messages": response['messages'],
-                         "reqid":reqid}
+                         "reqid": reqid}
 
         # add the failure reason as a top level item in the response dict
         # if the action failed
@@ -160,7 +160,7 @@ class AuthHandler(tornado.web.RequestHandler,
             self.fernet_secret
         )
 
-        self.set_header('content-type','text/plain; charset=UTF-8')
+        self.set_header('content-type', 'text/plain; charset=UTF-8')
         self.write(encrypted_base64)
         self.finish()
 
@@ -170,7 +170,7 @@ class AuthHandler(tornado.web.RequestHandler,
 
         """
 
-        self.set_header('content-type','text/plain; charset=UTF-8')
+        self.set_header('content-type', 'text/plain; charset=UTF-8')
         if status_code == 400:
             self.write(f"HTTP {status_code}: Could not service this request "
                        f"because of invalid request parameters.")

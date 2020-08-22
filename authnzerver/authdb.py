@@ -54,7 +54,7 @@ Roles = Table(
 Sessions = Table(
     'sessions',
     AUTHDB_META,
-    Column('session_token',String(), primary_key=True, nullable=False),
+    Column('session_token', String(), primary_key=True, nullable=False),
     Column('ip_address', String(length=280), nullable=False),
     # some annoying people send zero-length client-headers
     # we won't allow them to initiate a session
@@ -91,7 +91,7 @@ Users = Table(
 
     Column('password', Text(), nullable=False),
     Column('email', String(length=280), nullable=False, unique=True),
-    Column('email_verified',Boolean(), default=False,
+    Column('email_verified', Boolean(), default=False,
            nullable=False, index=True),
     Column('is_active', Boolean(), default=False, nullable=False, index=True),
 
@@ -115,10 +115,10 @@ Users = Table(
 
     Column('created_on', DateTime(),
            default=datetime.utcnow,
-           nullable=False,index=True),
+           nullable=False, index=True),
     Column('last_updated', DateTime(),
            onupdate=datetime.utcnow,
-           nullable=False,index=True),
+           nullable=False, index=True),
     Column('user_role', String(length=100),
            ForeignKey("roles.name"),
            nullable=False, index=True)
@@ -131,8 +131,8 @@ Groups = Table(
     'groups', AUTHDB_META,
     Column('group_id', Integer, primary_key=True),
     Column('system_id', String(length=50), index=True, nullable=False),
-    Column('group_name',String(length=280), nullable=False),
-    Column('visibility',String(length=100), nullable=False,
+    Column('group_name', String(length=280), nullable=False),
+    Column('visibility', String(length=100), nullable=False,
            default='public', index=True),
     Column('created_by', Integer, ForeignKey("users.user_id"),
            nullable=False),
@@ -140,10 +140,10 @@ Groups = Table(
            nullable=False, index=True),
     Column('created_on', DateTime(),
            default=datetime.utcnow,
-           nullable=False,index=True),
+           nullable=False, index=True),
     Column('last_updated', DateTime(),
            onupdate=datetime.utcnow,
-           nullable=False,index=True),
+           nullable=False, index=True),
     Column('group_role', String(length=100), ForeignKey("roles.name"),
            nullable=False, index=True),
     Column('extra_info', JSON(none_as_null=True)),
@@ -203,7 +203,7 @@ APIKeysNoSession = Table(
     Column('issued', DateTime(), nullable=False, default=datetime.utcnow),
     Column('expires', DateTime(), index=True, nullable=False),
     Column('not_valid_before', DateTime(), index=True, nullable=False),
-    Column('refresh_token',Text(), nullable=False),
+    Column('refresh_token', Text(), nullable=False),
     Column('refresh_issued', DateTime(),
            nullable=False, default=datetime.utcnow),
     Column('refresh_expires', DateTime(), index=True, nullable=False),
@@ -292,7 +292,7 @@ def get_auth_db(authdb_path,
 
     # if this is an SQLite DB, make sure to check the auth DB permissions before
     # we load it so we can be sure no one else messes with it
-    potential_file_path = authdb_path.replace('sqlite:///','')
+    potential_file_path = authdb_path.replace('sqlite:///', '')
 
     if os.path.exists(potential_file_path):
 
@@ -344,7 +344,7 @@ def initial_authdb_inserts(auth_db_path,
 
         mod_dir = os.path.dirname(__file__)
         permissions_json = os.path.abspath(
-            os.path.join(mod_dir,'default-permissions-model.json')
+            os.path.join(mod_dir, 'default-permissions-model.json')
         )
 
         LOGGER.warning(
@@ -356,7 +356,7 @@ def initial_authdb_inserts(auth_db_path,
 
     roles_to_use = permissions_model['roles']
 
-    for k in ('superuser','anonymous','locked'):
+    for k in ('superuser', 'anonymous', 'locked'):
         if k not in roles_to_use:
             LOGGER.error("The '%s' role is required for the authnzerver "
                          "to work properly. It must be included in the "
@@ -366,8 +366,8 @@ def initial_authdb_inserts(auth_db_path,
     insert_list = []
     for role in roles_to_use:
         insert_list.append(
-            {'name':role,
-             'desc':'Role with %s privileges' % role}
+            {'name': role,
+             'desc': 'Role with %s privileges' % role}
         )
 
     res = conn.execute(roles.insert(), insert_list)
@@ -396,44 +396,44 @@ def initial_authdb_inserts(auth_db_path,
     result = conn.execute(
         users.insert().values([
             # the superuser
-            {'user_id':1,
+            {'user_id': 1,
              'password': hashed_password,
              'email': superuser_email,
-             'system_id':str(uuid.uuid4()),
+             'system_id': str(uuid.uuid4()),
              'email_verified': True,
              'is_active': True,
              'user_role': 'superuser',
              'created_on': datetime.utcnow(),
              'last_updated': datetime.utcnow(),
              'full_name': "Superuser account",
-             "extra_info":{"provenance":"auto-created",
-                           "type":"system-user"}},
+             "extra_info": {"provenance": "auto-created",
+                            "type": "system-user"}},
             # the anonuser,
-            {'user_id':2,
+            {'user_id': 2,
              'password': hasher.hash(secrets.token_urlsafe(32)),
              'email': 'anonuser@localhost',
-             'system_id':str(uuid.uuid4()),
+             'system_id': str(uuid.uuid4()),
              'email_verified': True,
              'is_active': True,
              'user_role': 'anonymous',
              'created_on': datetime.utcnow(),
              'last_updated': datetime.utcnow(),
              'full_name': "The systemwide anonymous user",
-             "extra_info":{"provenance":"auto-created",
-                           "type":"system-user"}},
+             "extra_info": {"provenance": "auto-created",
+                            "type": "system-user"}},
             # the dummyuser to fail passwords for nonexistent users against
-            {'user_id':3,
+            {'user_id': 3,
              'password': hasher.hash(secrets.token_urlsafe(32)),
              'email': 'dummyuser@localhost',
-             'system_id':str(uuid.uuid4()),
+             'system_id': str(uuid.uuid4()),
              'email_verified': True,
              'is_active': False,
              'user_role': 'locked',
              'created_on': datetime.utcnow(),
              'last_updated': datetime.utcnow(),
              'full_name': "The systemwide locked user",
-             "extra_info":{"provenance":"auto-created",
-                           "type":"locked-user"}},
+             "extra_info": {"provenance": "auto-created",
+                            "type": "locked-user"}},
         ])
     )
     result.close()

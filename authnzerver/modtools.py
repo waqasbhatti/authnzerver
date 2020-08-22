@@ -71,7 +71,7 @@ def module_from_string(module, force_reload=False):
                 module = os.path.expanduser(module)
 
             sys.path.append(os.path.dirname(module))
-            module_import_path = os.path.basename(module.replace('.py',''))
+            module_import_path = os.path.basename(module.replace('.py', ''))
 
             if '-' in module_import_path or ' ' in module_import_path:
                 LOGERROR("Can't import the requested module."

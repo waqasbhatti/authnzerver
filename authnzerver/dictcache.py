@@ -181,10 +181,10 @@ class DictCache:
         self._expire()
 
         infodict = {
-            "size":self.size(),
-            "ttlkeys":len(self.expireable_key_ttl),
-            "capacity":self.capacity,
-            "time":self.time(),
+            "size": self.size(),
+            "ttlkeys": len(self.expireable_key_ttl),
+            "capacity": self.capacity,
+            "time": self.time(),
         }
         return infodict
 
@@ -217,9 +217,9 @@ class DictCache:
             insert_time = time()
 
             sortedkey = KeyWithTime(insert_time, key)
-            self.container[key] = {'value':value,
-                                   'keytime':insert_time,
-                                   'ttl':ttl}
+            self.container[key] = {'value': value,
+                                   'keytime': insert_time,
+                                   'ttl': ttl}
             if extras is not None:
                 self.container[key]['extras'] = extras
 
@@ -384,7 +384,7 @@ class DictCache:
             return self.add(counter_key,
                             int_initial_value,
                             ttl=ttl,
-                            extras={'initval':initial_value})
+                            extras={'initval': initial_value})
         else:
             return self.counter_get(key)
 
@@ -427,7 +427,7 @@ class DictCache:
         if counter_key in self.container:
 
             count = self.counter_get(key)
-            updated_count = self.counter_set(key, count+1, ttl=ttl)
+            updated_count = self.counter_set(key, count + 1, ttl=ttl)
             return updated_count
 
         else:
@@ -459,7 +459,7 @@ class DictCache:
                 return 0
 
             else:
-                new_count = self.counter_set(key, count-1, ttl=ttl)
+                new_count = self.counter_set(key, count - 1, ttl=ttl)
                 if new_count == 0:
                     self.pop(counter_key)
                     return 0
@@ -496,7 +496,7 @@ class DictCache:
             key_item = self.container[counter_key]
             tnow = time()
             rate = ( (key_item['value'] - key_item['extras']['initval']) /
-                     ((tnow - key_item['keytime'])/period_seconds) )
+                     ((tnow - key_item['keytime']) / period_seconds) )
 
             if absolute_rate is True:
                 rate = abs(rate)
@@ -531,10 +531,10 @@ class DictCache:
         self._expire()
 
         serialized = {
-            "sortedkeys":self.sortedkeys,
-            "keyttls":self.expireable_key_ttls,
-            "container":self.container,
-            "capacity":self.capacity
+            "sortedkeys": self.sortedkeys,
+            "keyttls": self.expireable_key_ttls,
+            "container": self.container,
+            "capacity": self.capacity
         }
 
         if hmac_key is not None:
@@ -547,7 +547,7 @@ class DictCache:
             with open(outfile, 'wb') as outfd:
                 outfd.write(hmac_sig.encode('utf-8') + pickle_bytes)
         else:
-            with open(outfile,'wb') as outfd:
+            with open(outfile, 'wb') as outfd:
                 pickle.dump(serialized, outfd, protocol=protocol)
 
     def load(self, infile, hmac_key=None):

@@ -107,19 +107,19 @@ def auth_session_new(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'session_token':None,
-                'expires':None,
-                'messages':["Invalid session initiation request."],
+                'session_token': None,
+                'expires': None,
+                'messages': ["Invalid session initiation request."],
             }
 
     # fail immediately if the required payload keys are not present
@@ -137,14 +137,14 @@ def auth_session_new(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'session_token':None,
-                'expires':None,
-                'messages':["Invalid session initiation request. "
-                            "Missing some parameters."]
+                'session_token': None,
+                'expires': None,
+                'messages': ["Invalid session initiation request. "
+                             "Missing some parameters."]
             }
 
     try:
@@ -158,11 +158,11 @@ def auth_session_new(payload,
 
         # check if the payload expires key is a string and not a datetime.time
         # and reform it to a datetime if necessary
-        if isinstance(payload['expires'],str):
+        if isinstance(payload['expires'], str):
 
             # this is assuming UTC
             payload['expires'] = datetime.strptime(
-                payload['expires'].replace('Z',''),
+                payload['expires'].replace('Z', ''),
                 '%Y-%m-%dT%H:%M:%S.%f'
             )
 
@@ -192,12 +192,12 @@ def auth_session_new(payload,
         # get the insert object from sqlalchemy
         sessions = currproc.authdb_meta.tables['sessions']
         insert = sessions.insert().values({
-            'session_token':session_token,
-            'ip_address':payload['ip_address'],
-            'user_agent':payload['user_agent'],
-            'user_id':payload['user_id'],
-            'expires':payload['expires'],
-            'extra_info_json':payload['extra_info_json'],
+            'session_token': session_token,
+            'ip_address': payload['ip_address'],
+            'user_agent': payload['user_agent'],
+            'user_id': payload['user_id'],
+            'expires': payload['expires'],
+            'extra_info_json': payload['extra_info_json'],
         })
         result = currproc.authdb_conn.execute(insert)
         result.close()
@@ -213,11 +213,11 @@ def auth_session_new(payload,
         )
 
         return {
-            'success':True,
-            'session_token':session_token,
-            'expires':payload['expires'].isoformat(),
-            'messages':["Generated session_token successfully. "
-                        "Session initiated."]
+            'success': True,
+            'session_token': session_token,
+            'expires': payload['expires'].isoformat(),
+            'messages': ["Generated session_token successfully. "
+                         "Session initiated."]
         }
 
     except Exception as e:
@@ -237,13 +237,13 @@ def auth_session_new(payload,
             raise
 
         return {
-            'failure_reason':(
+            'failure_reason': (
                 "DB error when making new session"
             ),
-            'success':False,
-            'session_token':None,
-            'expires':None,
-            'messages':["Could not create a new session."],
+            'success': False,
+            'session_token': None,
+            'expires': None,
+            'messages': ["Could not create a new session."],
         }
 
 
@@ -298,19 +298,19 @@ def internal_edit_session(
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'failure_reason':(
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'success':False,
-                'session_token':None,
-                'expires':None,
-                'messages':["Invalid session edit request."],
+                'success': False,
+                'session_token': None,
+                'expires': None,
+                'messages': ["Invalid session edit request."],
             }
 
     for key in ('target_session_token', 'update_dict'):
@@ -323,26 +323,26 @@ def internal_edit_session(
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'session_info':None,
-                'messages':["Invalid session edit request: "
-                            "missing or invalid parameters."],
+                'session_info': None,
+                'messages': ["Invalid session edit request: "
+                             "missing or invalid parameters."],
             }
 
     target_session_token = payload['target_session_token']
     update_dict = payload['update_dict']
     if update_dict is None or len(update_dict) == 0:
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing 'update_dict' in request"
             ),
-            'session_info':None,
-            'messages':["Invalid session edit request: "
-                        "missing or invalid parameters."],
+            'session_info': None,
+            'messages': ["Invalid session edit request: "
+                         "missing or invalid parameters."],
         }
 
     try:
@@ -379,10 +379,10 @@ def internal_edit_session(
 
         if not sessiontoken_extrainfo or len(sessiontoken_extrainfo) == 0:
             return {
-                'success':False,
-                "failure_reason":"no such session",
-                'session_info':None,
-                'messages':["Session extra_info update failed."],
+                'success': False,
+                "failure_reason": "no such session",
+                'session_info': None,
+                'messages': ["Session extra_info update failed."],
             }
 
         #
@@ -402,7 +402,7 @@ def internal_edit_session(
         # get back the new version
         upd = sessions.update().where(
             sessions.c.session_token == target_session_token
-        ).values({"extra_info_json":session_extra_info})
+        ).values({"extra_info_json": session_extra_info})
         currproc.authdb_conn.execute(upd)
 
         s = select([
@@ -441,9 +441,9 @@ def internal_edit_session(
             )
 
             return {
-                'success':True,
-                'session_info':serialized_result,
-                'messages':["Session extra_info update successful."],
+                'success': True,
+                'session_info': serialized_result,
+                'messages': ["Session extra_info update successful."],
             }
 
         except Exception as e:
@@ -458,12 +458,12 @@ def internal_edit_session(
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "session requested for update doesn't exist or expired"
                 ),
-                'session_info':None,
-                'messages':["Session extra_info update failed."],
+                'session_info': None,
+                'messages': ["Session extra_info update failed."],
             }
 
     except Exception as e:
@@ -478,12 +478,12 @@ def internal_edit_session(
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "DB error when updating session info"
             ),
-            'session_info':None,
-            'messages':["Session info update failed."],
+            'session_info': None,
+            'messages': ["Session info update failed."],
         }
 
 
@@ -531,18 +531,18 @@ def auth_session_exists(
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'session_info':None,
-                'messages':["Invalid session info request."],
+                'session_info': None,
+                'messages': ["Invalid session info request."],
             }
 
     if 'session_token' not in payload:
@@ -552,12 +552,12 @@ def auth_session_exists(
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing 'session_token' in request"
             ),
-            'session_info':None,
-            'messages':["No session token provided."],
+            'session_info': None,
+            'messages': ["No session token provided."],
         }
 
     session_token = payload['session_token']
@@ -632,9 +632,9 @@ def auth_session_exists(
             )
 
             return {
-                'success':True,
-                'session_info':serialized_result,
-                'messages':["Session look up successful."],
+                'success': True,
+                'session_info': serialized_result,
+                'messages': ["Session look up successful."],
             }
 
         except Exception as e:
@@ -649,12 +649,12 @@ def auth_session_exists(
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "session does not exist or expired"
                 ),
-                'session_info':None,
-                'messages':["Session look up failed."],
+                'session_info': None,
+                'messages': ["Session look up failed."],
             }
 
     except Exception as e:
@@ -669,12 +669,12 @@ def auth_session_exists(
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "DB error when retrieving session info"
             ),
-            'session_info':None,
-            'messages':["Session look up failed."],
+            'session_info': None,
+            'messages': ["Session look up failed."],
         }
 
 
@@ -722,17 +722,17 @@ def auth_session_delete(
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid session delete request."],
+                'messages': ["Invalid session delete request."],
             }
 
     if 'session_token' not in payload:
@@ -743,12 +743,12 @@ def auth_session_delete(
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid request: missing 'session_token' in request"
             ),
-            'messages':["Invalid session delete request. "
-                        "No session token provided."],
+            'messages': ["Invalid session delete request. "
+                         "No session token provided."],
         }
 
     session_token = payload['session_token']
@@ -788,8 +788,8 @@ def auth_session_delete(
         )
 
         return {
-            'success':True,
-            'messages':["Session deleted successfully."],
+            'success': True,
+            'messages': ["Session deleted successfully."],
         }
 
     except Exception as e:
@@ -806,11 +806,11 @@ def auth_session_delete(
             raise
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "DB error when deleting session"
             ),
-            'messages':["Session could not be deleted."],
+            'messages': ["Session could not be deleted."],
         }
 
 
@@ -862,17 +862,17 @@ def auth_delete_sessions_userid(
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid session delete request."],
+                'messages': ["Invalid session delete request."],
             }
 
     for key in ('user_id',
@@ -887,12 +887,12 @@ def auth_delete_sessions_userid(
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Missing or invalid parameters "
-                            "auth_delete_sessions_userid."],
+                'messages': ["Missing or invalid parameters "
+                             "auth_delete_sessions_userid."],
             }
 
     user_id = payload['user_id']
@@ -945,8 +945,8 @@ def auth_delete_sessions_userid(
         )
 
         return {
-            'success':True,
-            'messages':["Sessions deleted successfully."],
+            'success': True,
+            'messages': ["Sessions deleted successfully."],
         }
 
     except Exception as e:
@@ -964,11 +964,11 @@ def auth_delete_sessions_userid(
             raise
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "DB error when updating session info"
             ),
-            'messages':["Sessions could not be deleted."],
+            'messages': ["Sessions could not be deleted."],
         }
 
 
@@ -1052,10 +1052,10 @@ def auth_kill_old_sessions(
         result.close()
 
         return {
-            'success':True,
-            'messages':["%s sessions older than %sZ deleted." %
-                        (len(rows),
-                         earliest_date.isoformat())]
+            'success': True,
+            'messages': ["%s sessions older than %sZ deleted." %
+                         (len(rows),
+                          earliest_date.isoformat())]
         }
 
     else:
@@ -1065,10 +1065,10 @@ def auth_kill_old_sessions(
             earliest_date.isoformat()
         )
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "no sessions found to delete"
             ),
-            'messages':['No sessions older than %sZ found to delete' %
-                        earliest_date.isoformat()]
+            'messages': ['No sessions older than %sZ found to delete' %
+                         earliest_date.isoformat()]
         }

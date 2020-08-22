@@ -374,9 +374,9 @@ class UserLockMixin:
 
         backend_func = partial(
             actions.get_user_by_email,
-            {'email':payload['body']['email'],
-             'reqid':payload['body']['reqid'],
-             'pii_salt':payload['body']['pii_salt']},
+            {'email': payload['body']['email'],
+             'reqid': payload['body']['reqid'],
+             'pii_salt': payload['body']['pii_salt']},
             config=self.config
         )
 
@@ -398,10 +398,10 @@ class UserLockMixin:
             # attempt to lock the user using actions.internal_toggle_user_lock
             backend_func = partial(
                 actions.internal_toggle_user_lock,
-                {'target_userid':user_info['user_info']['user_id'],
-                 'action':'lock',
-                 'reqid':payload['body']['reqid'],
-                 'pii_salt':payload['body']['pii_salt']},
+                {'target_userid': user_info['user_info']['user_id'],
+                 'action': 'lock',
+                 'reqid': payload['body']['reqid'],
+                 'pii_salt': payload['body']['pii_salt']},
                 config=self.config
             )
 
@@ -440,8 +440,8 @@ class UserLockMixin:
         # above to deny the login
         return {
             "success": False,
-            "user_id":None,
-            "messages":[
+            "user_id": None,
+            "messages": [
                 "Your user account has been locked "
                 "after repeated login failures. "
                 "Try again in an hour or "
@@ -465,10 +465,10 @@ class UserLockMixin:
 
         backend_func = partial(
             actions.internal_toggle_user_lock,
-            {'target_userid':user_id,
-             'action':'unlock',
-             'reqid':reqid,
-             'pii_salt':pii_salt},
+            {'target_userid': user_id,
+             'action': 'unlock',
+             'reqid': reqid,
+             'pii_salt': pii_salt},
             config=self.config
         )
 

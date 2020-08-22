@@ -69,7 +69,7 @@ def pii_hash(item, key):
 def load_permissions_json(model_json):
     """Loads a permissions JSON and returns the model."""
 
-    with open(model_json,'r') as infd:
+    with open(model_json, 'r') as infd:
         model = json.load(infd)
 
     # load the item policy

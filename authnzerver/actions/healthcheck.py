@@ -74,8 +74,8 @@ def database_health_check(raiseonfail=False,
 
         retdict = {
             'success': check,
-            'process':currproc_name,
-            'messages':messages
+            'process': currproc_name,
+            'messages': messages
         }
         if failure_reason is not None:
             retdict['failure_reason'] = failure_reason
@@ -89,7 +89,7 @@ def database_health_check(raiseonfail=False,
 
         return {
             'success': False,
-            'process':currproc_name,
-            'failure_reason':'database broken',
-            'messages':['Database has no superuser, probably broken.']
+            'process': currproc_name,
+            'failure_reason': 'database broken',
+            'messages': ['Database has no superuser, probably broken.']
         }

@@ -102,19 +102,19 @@ def change_user_password(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'email':None,
-                'messages':["Invalid password change request."],
+                'user_id': None,
+                'email': None,
+                'messages': ["Invalid password change request."],
             }
 
     for key in ('user_id',
@@ -132,14 +132,14 @@ def change_user_password(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'email':None,
-                'messages':['Invalid password change request. '
-                            'Some args are missing.'],
+                'user_id': None,
+                'email': None,
+                'messages': ['Invalid password change request. '
+                             'Some args are missing.'],
             }
 
     # this checks if the database connection is live
@@ -190,21 +190,21 @@ def change_user_password(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "user does not exist"
             ),
-            'user_id':payload['user_id'],
-            'email':payload['email'],
-            'messages':['Your current password did '
-                        'not match the stored password.']
+            'user_id': payload['user_id'],
+            'email': payload['email'],
+            'messages': ['Your current password did '
+                         'not match the stored password.']
         }
 
     #
     # proceed with hashing
     #
-    current_password = payload['current_password'][:256]
-    new_password = payload['new_password'][:256]
+    current_password = payload['current_password'][: 256]
+    new_password = payload['new_password'][: 256]
 
     try:
         pass_check = pass_hasher.verify(rows['password'],
@@ -226,14 +226,14 @@ def change_user_password(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "user password does not match"
             ),
-            'user_id':payload['user_id'],
-            'email':payload['email'],
-            'messages':['Your current password did '
-                        'not match the stored password.']
+            'user_id': payload['user_id'],
+            'email': payload['email'],
+            'messages': ['Your current password did '
+                         'not match the stored password.']
         }
 
     # check if the new hashed password is the same as the old hashed password,
@@ -257,14 +257,14 @@ def change_user_password(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "password did not change"
             ),
-            'user_id':payload['user_id'],
-            'email':payload['email'],
-            'messages':['Your new password cannot '
-                        'be the same as your old password.']
+            'user_id': payload['user_id'],
+            'email': payload['email'],
+            'messages': ['Your new password cannot '
+                         'be the same as your old password.']
         }
 
     # hash the user's password
@@ -323,22 +323,22 @@ def change_user_password(payload,
 
             # delete all of this user's other sessions
             auth_delete_sessions_userid(
-                {'session_token':payload['session_token'],
-                 'user_id':payload['user_id'],
-                 'keep_current_session':True,
-                 'reqid':payload['reqid'],
-                 'pii_salt':payload['pii_salt']},
+                {'session_token': payload['session_token'],
+                 'user_id': payload['user_id'],
+                 'keep_current_session': True,
+                 'reqid': payload['reqid'],
+                 'pii_salt': payload['pii_salt']},
                 override_authdb_path=override_authdb_path,
                 raiseonfail=raiseonfail
             )
 
             return {
-                'success':True,
-                'user_id':payload['user_id'],
-                'email':payload['email'],
-                'messages':(messages +
-                            ['For security purposes, you have been '
-                             'logged out of all other sessions.'])
+                'success': True,
+                'user_id': payload['user_id'],
+                'email': payload['email'],
+                'messages': (messages +
+                             ['For security purposes, you have been '
+                              'logged out of all other sessions.'])
             }
 
         else:
@@ -357,13 +357,13 @@ def change_user_password(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "DB error when updating password"
                 ),
-                'user_id':payload['user_id'],
-                'email':payload['email'],
-                'messages':messages
+                'user_id': payload['user_id'],
+                'email': payload['email'],
+                'messages': messages
             }
 
     else:
@@ -383,12 +383,12 @@ def change_user_password(payload,
                         "It must be at least 12 characters long and "
                         "be sufficiently complex.")
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "new password is insecure"
             ),
-            'user_id':payload['user_id'],
-            'email':payload['email'],
+            'user_id': payload['user_id'],
+            'email': payload['email'],
             'messages': messages
         }
 
@@ -457,19 +457,19 @@ def change_user_password_nosession(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'email':None,
-                'messages':["Invalid password change request."],
+                'user_id': None,
+                'email': None,
+                'messages': ["Invalid password change request."],
             }
 
     for key in ('user_id',
@@ -486,14 +486,14 @@ def change_user_password_nosession(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id':None,
-                'email':None,
-                'messages':['Invalid password change request. '
-                            'Some args are missing.'],
+                'user_id': None,
+                'email': None,
+                'messages': ['Invalid password change request. '
+                             'Some args are missing.'],
             }
 
     # this checks if the database connection is live
@@ -544,21 +544,21 @@ def change_user_password_nosession(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "user does not exist"
             ),
-            'user_id':payload['user_id'],
-            'email':payload['email'],
-            'messages':['Your current password did '
-                        'not match the stored password.']
+            'user_id': payload['user_id'],
+            'email': payload['email'],
+            'messages': ['Your current password did '
+                         'not match the stored password.']
         }
 
     #
     # proceed with hashing
     #
-    current_password = payload['current_password'][:256]
-    new_password = payload['new_password'][:256]
+    current_password = payload['current_password'][: 256]
+    new_password = payload['new_password'][: 256]
 
     try:
         pass_check = pass_hasher.verify(rows['password'],
@@ -580,14 +580,14 @@ def change_user_password_nosession(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "user password does not match"
             ),
-            'user_id':payload['user_id'],
-            'email':payload['email'],
-            'messages':['Your current password did '
-                        'not match the stored password.']
+            'user_id': payload['user_id'],
+            'email': payload['email'],
+            'messages': ['Your current password did '
+                         'not match the stored password.']
         }
 
     # check if the new hashed password is the same as the old hashed password,
@@ -611,14 +611,14 @@ def change_user_password_nosession(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "password did not change"
             ),
-            'user_id':payload['user_id'],
-            'email':payload['email'],
-            'messages':['Your new password cannot '
-                        'be the same as your old password.']
+            'user_id': payload['user_id'],
+            'email': payload['email'],
+            'messages': ['Your new password cannot '
+                         'be the same as your old password.']
         }
 
     # hash the user's password
@@ -676,12 +676,12 @@ def change_user_password_nosession(payload,
             )
 
             return {
-                'success':True,
-                'user_id':payload['user_id'],
-                'email':payload['email'],
-                'messages':(messages +
-                            ['For security purposes, you have been '
-                             'logged out of all other sessions.'])
+                'success': True,
+                'user_id': payload['user_id'],
+                'email': payload['email'],
+                'messages': (messages +
+                             ['For security purposes, you have been '
+                              'logged out of all other sessions.'])
             }
 
         else:
@@ -700,13 +700,13 @@ def change_user_password_nosession(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "DB error when updating password"
                 ),
-                'user_id':payload['user_id'],
-                'email':payload['email'],
-                'messages':messages
+                'user_id': payload['user_id'],
+                'email': payload['email'],
+                'messages': messages
             }
 
     else:
@@ -726,11 +726,11 @@ def change_user_password_nosession(payload,
                         "It must be at least 12 characters long and "
                         "be sufficiently complex.")
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "new password is insecure"
             ),
-            'user_id':payload['user_id'],
-            'email':payload['email'],
+            'user_id': payload['user_id'],
+            'email': payload['email'],
             'messages': messages
         }

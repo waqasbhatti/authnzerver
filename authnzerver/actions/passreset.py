@@ -92,17 +92,17 @@ def verify_password_reset(payload,
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid password reset request."],
+                'messages': ["Invalid password reset request."],
             }
 
     for key in ('email_address',
@@ -117,12 +117,12 @@ def verify_password_reset(payload,
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid password reset request. "
-                            "Some required parameters are missing."]
+                'messages': ["Invalid password reset request. "
+                             "Some required parameters are missing."]
             }
 
     # this checks if the database connection is live
@@ -144,9 +144,9 @@ def verify_password_reset(payload,
 
     # check the session
     session_info = auth_session_exists(
-        {'session_token':payload['session_token'],
-         'pii_salt':payload['pii_salt'],
-         'reqid':payload['reqid']},
+        {'session_token': payload['session_token'],
+         'pii_salt': payload['pii_salt'],
+         'reqid': payload['reqid']},
         raiseonfail=raiseonfail,
         override_authdb_path=override_authdb_path
     )
@@ -165,11 +165,11 @@ def verify_password_reset(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "session does not exist"
             ),
-            'messages':([
+            'messages': ([
                 "Invalid session token for password reset request."
             ])
         }
@@ -205,17 +205,17 @@ def verify_password_reset(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "user does not exist"
             ),
-            'messages':([
+            'messages': ([
                 "Invalid user for password reset request."
             ])
         }
 
     # let's hash the new password against the current password
-    new_password = payload['new_password'][:256]
+    new_password = payload['new_password'][: 256]
 
     try:
         pass_same = pass_hasher.verify(
@@ -274,11 +274,11 @@ def verify_password_reset(payload,
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid password"
             ),
-            'messages':([
+            'messages': ([
                 "Insecure password for password reset request."
             ] + messages)
         }
@@ -324,8 +324,8 @@ def verify_password_reset(payload,
 
             messages.append('Password changed successfully.')
             return {
-                'success':True,
-                'messages':messages
+                'success': True,
+                'messages': messages
             }
 
         else:
@@ -345,11 +345,11 @@ def verify_password_reset(payload,
 
             messages.append('Password could not be changed.')
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "password update failed in DB"
                 ),
-                'messages':messages
+                'messages': messages
             }
 
 
@@ -415,17 +415,17 @@ def verify_password_reset_nosession(
 
     """
 
-    for key in ('reqid','pii_salt'):
+    for key in ('reqid', 'pii_salt'):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid password reset request."],
+                'messages': ["Invalid password reset request."],
             }
 
     for key in ('email_address',
@@ -440,12 +440,12 @@ def verify_password_reset_nosession(
             )
 
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages':["Invalid password reset request. "
-                            "Some required parameters are missing."]
+                'messages': ["Invalid password reset request. "
+                             "Some required parameters are missing."]
             }
 
     # this checks if the database connection is live
@@ -496,17 +496,17 @@ def verify_password_reset_nosession(
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "user does not exist or is_active was not as required"
             ),
-            'messages':([
+            'messages': ([
                 "Invalid user for password reset request."
             ])
         }
 
     # let's hash the new password against the current password
-    new_password = payload['new_password'][:256]
+    new_password = payload['new_password'][: 256]
 
     try:
         pass_same = pass_hasher.verify(
@@ -561,11 +561,11 @@ def verify_password_reset_nosession(
         )
 
         return {
-            'success':False,
-            'failure_reason':(
+            'success': False,
+            'failure_reason': (
                 "invalid new password"
             ),
-            'messages':([
+            'messages': ([
                 "Insecure new password for password reset request."
             ] + messages)
         }
@@ -609,8 +609,8 @@ def verify_password_reset_nosession(
 
             messages.append('Password changed successfully.')
             return {
-                'success':True,
-                'messages':messages
+                'success': True,
+                'messages': messages
             }
 
         else:
@@ -628,9 +628,9 @@ def verify_password_reset_nosession(
 
             messages.append('Password could not be changed.')
             return {
-                'success':False,
-                'failure_reason':(
+                'success': False,
+                'failure_reason': (
                     "password update failed in DB"
                 ),
-                'messages':messages
+                'messages': messages
             }

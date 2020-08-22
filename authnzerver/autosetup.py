@@ -140,7 +140,7 @@ def autogen_secrets_authdb(basedir,
     # otherwise, if there's an SQLite DB URL provided,
     # create it at the specified path
     elif database_url is not None and 'sqlite:///' in database_url:
-        authdb_path = os.path.abspath(database_url.replace('sqlite:///',''))
+        authdb_path = os.path.abspath(database_url.replace('sqlite:///', ''))
         if not os.path.exists(authdb_path):
             create_sqlite_authdb(authdb_path, echo=False, returnconn=False)
 
@@ -206,8 +206,8 @@ def autogen_secrets_authdb(basedir,
                        "Not overwriting...")
 
     elif u and p:
-        with open(creds,'w') as outfd:
-            outfd.write('%s %s\n' % (u,p))
+        with open(creds, 'w') as outfd:
+            outfd.write('%s %s\n' % (u, p))
             os.chmod(creds, 0o100400)
 
         if p:
@@ -219,7 +219,7 @@ def autogen_secrets_authdb(basedir,
     # with them later
     LOGGER.info('Generating server secret tokens...')
     fernet_secret = Fernet.generate_key()
-    fernet_secret_file = os.path.join(basedir,'.authnzerver-secret-key')
+    fernet_secret_file = os.path.join(basedir, '.authnzerver-secret-key')
 
     if os.path.exists(fernet_secret_file):
 
@@ -228,14 +228,14 @@ def autogen_secrets_authdb(basedir,
 
     else:
 
-        with open(fernet_secret_file,'wb') as outfd:
+        with open(fernet_secret_file, 'wb') as outfd:
             outfd.write(fernet_secret)
         os.chmod(fernet_secret_file, 0o100400)
 
     # finally, we'll generate the server PII random salt
     LOGGER.info('Generating server PII random salt...')
     salt = Fernet.generate_key()
-    salt_file = os.path.join(basedir,'.authnzerver-salt')
+    salt_file = os.path.join(basedir, '.authnzerver-salt')
 
     if os.path.exists(salt_file):
 
@@ -244,7 +244,7 @@ def autogen_secrets_authdb(basedir,
 
     else:
 
-        with open(salt_file,'wb') as outfd:
+        with open(salt_file, 'wb') as outfd:
             outfd.write(salt)
         os.chmod(salt_file, 0o100400)
 
@@ -366,7 +366,7 @@ def generate_env(database_path,
 
     env_file = os.path.abspath(os.path.join(basedir, '.env'))
 
-    with open(env_file,'w') as outfd:
+    with open(env_file, 'w') as outfd:
 
         for key, val in confvars.items():
 
