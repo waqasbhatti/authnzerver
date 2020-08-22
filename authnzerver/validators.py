@@ -233,7 +233,7 @@ TENK_PASSWORDS_FILE = os.path.abspath(
     os.path.join(MOD_DIR,
                  'top-10k-passwords.txt')
 )
-with open(TENK_PASSWORDS_FILE,'r') as infd:
+with open(TENK_PASSWORDS_FILE, 'r') as infd:
     TOP_10K_PASSWORDS = {x.strip('\n') for x in infd.readlines()}
 
 # https://github.com/martenson/disposable-email-domains/blob/master/
@@ -242,7 +242,7 @@ DISPOSABLE_EMAIL_DOMAINS_FILE = os.path.abspath(
     os.path.join(MOD_DIR,
                  'disposable_email_blocklist.conf')
 )
-with open(DISPOSABLE_EMAIL_DOMAINS_FILE,'r') as infd:
+with open(DISPOSABLE_EMAIL_DOMAINS_FILE, 'r') as infd:
     DISPOSABLE_EMAIL_DOMAINS = {x.strip('\n') for x in infd.readlines()}
 
 
@@ -350,7 +350,7 @@ def validate_unique_value(value, check_list):
 ## NORMALIZING VALUES ##
 ########################
 
-def normalize_value(value):
+def normalize_value(value, casefold=True):
     """
     This normalizes a given value and casefolds it.
 
@@ -367,13 +367,15 @@ def normalize_value(value):
 
     if len(local_part) > 0:
 
-        local_part = unicodedata.normalize('NFKC',local_part)
-        local_part = local_part.casefold()
+        local_part = unicodedata.normalize('NFKC', local_part)
+        if casefold:
+            local_part = local_part.casefold()
 
     if len(domain) > 0:
 
-        domain = unicodedata.normalize('NFKC',domain)
-        domain = domain.casefold()
+        domain = unicodedata.normalize('NFKC', domain)
+        if casefold:
+            domain = domain.casefold()
 
     if '@' in value:
         return '@'.join([local_part, domain])

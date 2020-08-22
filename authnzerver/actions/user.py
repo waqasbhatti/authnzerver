@@ -238,7 +238,8 @@ def create_new_user(
         }
 
     email = validators.normalize_value(payload['email'])
-    full_name = validators.normalize_value(payload['full_name'])
+    full_name = validators.normalize_value(payload['full_name'],
+                                           casefold=False)
     password = payload['password']
 
     # get extra info if any
