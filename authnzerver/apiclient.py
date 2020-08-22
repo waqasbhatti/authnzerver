@@ -15,6 +15,48 @@ from authnzerver.client import Authnzerver
 
 
 class APIClient:
+    """An API client for the authnzerver.
+
+    This auto-generates class methods to call for each API action available in
+    the authnzerver API schema.
+
+    Parameters
+    ----------
+
+    authnzerver_url : str
+        The URL of the authnzerver to connect to.
+
+    authnzerver_secret : str
+        The shared secret key for the authnzerver.
+
+    asynchronous : bool, optional, default=False
+        If True, generates awaitable async methods for all API actions.
+
+    Notes
+    -----
+
+    Since the API methods and docstrings are dynamically generated, a simple
+    ``help()`` call won't work to show docstrings.
+
+    If you're using IPython or the Jupyter notebook, using a ``?`` at the end of
+    the method name works as expected::
+
+        # create a new client
+        srv = APIClient()
+
+        # get help on the user_new() method
+        srv.user_new?
+
+    In a normal Python shell, however, you must use the following pattern to get
+    help on an APIClient method::
+
+        # create a new client
+        srv = APIClient()
+
+        # get help on the user_new() method
+        print(srv.user_new.__doc__)
+
+    """
 
     def dynamic_api_function(self, api_action, *args, **kwargs):
         """
@@ -103,12 +145,9 @@ class APIClient:
 
             Parameters
             ----------
-
             {param_list}
-
             Returns
             -------
-
             response : AuthnzerverResponse namedtuple
                 Returns an AuthnzerverResponse object, which has the following
                 attributes:
@@ -132,20 +171,33 @@ class APIClient:
 
         param_list = []
         for arg in schema[action]["args"]:
+
+            param_types = arg["type"]
+            if isinstance(param_types, (list, tuple)):
+                param_types = ", ".join(param_types)
+            else:
+                param_types = arg["type"]
+
             param_list.append(
                 param_template.format(
-                    param_name=arg,
-                    param_types=", ".join(arg["type"]),
+                    param_name=arg["name"],
+                    param_types=param_types,
                     param_description=arg["doc"],
                     optional_note="",
                 )
             )
 
         for kwarg in schema[action]["kwargs"]:
+            param_types = arg["type"]
+            if isinstance(param_types, (list, tuple)):
+                param_types = ", ".join(param_types)
+            else:
+                param_types = arg["type"]
+
             param_list.append(
                 param_template.format(
                     param_name=kwarg,
-                    param_types=", ".join(kwarg["type"]),
+                    param_types=param_types,
                     param_description=kwarg["doc"],
                     optional_note=", optional",
                 )
@@ -165,6 +217,18 @@ class APIClient:
         """
         Makes a new APIClient.
 
+        Parameters
+        ----------
+
+        authnzerver_url : str
+            The URL of the authnzerver to connect to.
+
+        authnzerver_secret : str
+            The shared secret key for the authnzerver.
+
+        asynchronous : bool, optional, default=False
+            If True, generates awaitable async methods for all API actions.
+
         """
 
         self.srv = Authnzerver(authnzerver_url=authnzerver_url,
@@ -183,6 +247,7 @@ class APIClient:
                 method_name = action.replace('-', '_')
                 method_docstring = self.dynamic_docstring(action)
                 function_to_use.__doc__ = method_docstring
+                function_to_use.__name__ = method_name
                 setattr(self, method_name, function_to_use)
 
         else:
@@ -194,4 +259,5 @@ class APIClient:
                 method_name = action.replace('-', '_')
                 method_docstring = self.dynamic_docstring(action)
                 function_to_use.__doc__ = method_docstring
+                function_to_use.__name__ = method_name
                 setattr(self, method_name, function_to_use)
