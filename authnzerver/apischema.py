@@ -7,16 +7,13 @@ This contains the API schema for all actions.
 
 """
 
-from . import actions
-
 #
-# this maps request types -> request functions to execute
+# this maps request types to their required args, kwargs
 #
 schema = {
 
     # session actions
     "session-new": {
-        "function": actions.auth_session_new,
         "args": [
             {"name": "ip_address", "type": "str"},
             {"name": "user_agent", "type": "str"},
@@ -34,7 +31,6 @@ schema = {
         }
     },
     "session-exists": {
-        "function": actions.auth_session_exists,
         "args": [
             {"name": "session_token", "type": "str"},
         ],
@@ -42,7 +38,6 @@ schema = {
         ]
     },
     "session-delete": {
-        "function": actions.auth_session_delete,
         "args": [
             {"name": "session_token", "type": "str"},
         ],
@@ -50,7 +45,6 @@ schema = {
         ]
     },
     "session-delete-userid": {
-        "function": actions.auth_delete_sessions_userid,
         "args": [
             {"name": "session_token", "type": "str"},
             {"name": "user_id", "type": "int"},
@@ -60,7 +54,6 @@ schema = {
         ]
     },
     "user-login": {
-        "function": actions.auth_user_login,
         "args": [
             {"name": "session_token", "type": "str"},
             {"name": "email", "type": "str"},
@@ -70,7 +63,6 @@ schema = {
         ]
     },
     "user-logout": {
-        "function": actions.auth_user_logout,
         "args": [
             {"name": "session_token", "type": "str"},
             {"name": "user_id", "type": "int"},
@@ -79,7 +71,6 @@ schema = {
         ]
     },
     "user-passcheck": {
-        "function": actions.auth_password_check,
         "args": [
             {"name": "session_token", "type": "str"},
             {"name": "password", "type": "str"},
@@ -88,7 +79,6 @@ schema = {
         ]
     },
     "user-passcheck-nosession": {
-        "function": actions.auth_password_check_nosession,
         "args": [
             {"name": "email", "type": "str"},
             {"name": "password", "type": "str"},
@@ -100,7 +90,6 @@ schema = {
 
     # user actions
     "user-new": {
-        "function": actions.create_new_user,
         "args": [
             {"name": "full_name", "type": "str"},
             {"name": "email", "type": "str"},
@@ -112,7 +101,6 @@ schema = {
         ]
     },
     "user-changepass": {
-        "function": actions.change_user_password,
         "args": [
             {"name": "user_id", "type": "int"},
             {"name": "session_token", "type": "str"},
@@ -125,7 +113,6 @@ schema = {
         ]
     },
     "user-changepass-nosession": {
-        "function": actions.change_user_password_nosession,
         "args": [
             {"name": "user_id", "type": "int"},
             {"name": "full_name", "type": "str"},
@@ -137,7 +124,6 @@ schema = {
         ]
     },
     "user-delete": {
-        "function": actions.delete_user,
         "args": [
             {"name": "email", "type": "str"},
             {"name": "user_id", "type": "int"},
@@ -147,7 +133,6 @@ schema = {
         ]
     },
     "user-list": {
-        "function": actions.list_users,
         "args": [
             {"name": "user_id", "type": ("int", "None")},
         ],
@@ -155,7 +140,6 @@ schema = {
         ]
     },
     "user-lookup-email": {
-        "function": actions.get_user_by_email,
         "args": [
             {"name": "email", "type": "str"},
         ],
@@ -163,7 +147,6 @@ schema = {
         ]
     },
     "user-lookup-match": {
-        "function": actions.lookup_users,
         "args": [
             {"name": "by", "type": "str"},
             {"name": "match", "type": "Any"},
@@ -172,7 +155,6 @@ schema = {
         ]
     },
     "user-edit": {
-        "function": actions.edit_user,
         "args": [
             {"name": "user_id", "type": "int"},
             {"name": "user_role", "type": "str"},
@@ -184,7 +166,6 @@ schema = {
         ]
     },
     "user-resetpass": {
-        "function": actions.verify_password_reset,
         "args": [
             {"name": "email_address", "type": "str"},
             {"name": "new_password", "type": "str"},
@@ -194,7 +175,6 @@ schema = {
         ]
     },
     "user-resetpass-nosession": {
-        "function": actions.verify_password_reset_nosession,
         "args": [
             {"name": "email_address", "type": "str"},
             {"name": "new_password", "type": "str"},
@@ -204,7 +184,6 @@ schema = {
         ]
     },
     "user-lock": {
-        "function": actions.toggle_user_lock,
         "args": [
             {"name": "user_id", "type": "int"},
             {"name": "user_role", "type": "str"},
@@ -216,7 +195,6 @@ schema = {
         ]
     },
     "user-validatepass": {
-        "function": actions.validate_password,
         "args": [
             {"name": "password", "type": "str"},
             {"name": "email", "type": "str"},
@@ -230,7 +208,6 @@ schema = {
 
     # email actions
     "user-sendemail-signup": {
-        "function": actions.send_signup_verification_email,
         "args": [
             {"name": "email_address", "type": "int"},
             {"name": "session_token", "type": "str"},
@@ -250,7 +227,6 @@ schema = {
         ]
     },
     "user-sendemail-forgotpass": {
-        "function": actions.send_forgotpass_verification_email,
         "args": [
             {"name": "email_address", "type": "int"},
             {"name": "session_token", "type": "str"},
@@ -270,7 +246,6 @@ schema = {
         ]
     },
     "user-set-emailverified": {
-        "function": actions.set_user_emailaddr_verified,
         "args": [
             {"name": "email", "type": "str"},
         ],
@@ -278,7 +253,6 @@ schema = {
         ]
     },
     "user-set-emailsent": {
-        "function": actions.set_user_email_sent,
         "args": [
             {"name": "email", "type": "str"},
             {"name": "email_type", "type": "str"},
@@ -289,7 +263,6 @@ schema = {
 
     # apikey actions
     "apikey-new": {
-        "function": actions.issue_apikey,
         "args": [
             {"name": "issuer", "type": "str"},
             {"name": "audience", "type": "str"},
@@ -307,7 +280,6 @@ schema = {
         ]
     },
     "apikey-verify": {
-        "function": actions.verify_apikey,
         "args": [
             {"name": "apikey_dict", "type": "dict"},
             {"name": "user_id", "type": "int"},
@@ -317,7 +289,6 @@ schema = {
         ]
     },
     "apikey-revoke": {
-        "function": actions.revoke_apikey,
         "args": [
             {"name": "apikey_dict", "type": "dict"},
             {"name": "user_id", "type": "int"},
@@ -327,7 +298,6 @@ schema = {
         ]
     },
     "apikey-new-nosession": {
-        "function": actions.issue_apikey_nosession,
         "args": [
             {"name": "issuer", "type": "str"},
             {"name": "audience", "type": "str"},
@@ -345,7 +315,6 @@ schema = {
         ]
     },
     "apikey-verify-nosession": {
-        "function": actions.verify_apikey_nosession,
         "args": [
             {"name": "apikey_dict", "type": "dict"},
             {"name": "user_id", "type": "int"},
@@ -355,7 +324,6 @@ schema = {
         ]
     },
     "apikey-revoke-nosession": {
-        "function": actions.revoke_apikey_nosession,
         "args": [
             {"name": "apikey_dict", "type": "dict"},
             {"name": "user_id", "type": "int"},
@@ -365,7 +333,6 @@ schema = {
         ]
     },
     "apikey-revokeall-nosession": {
-        "function": actions.revoke_all_apikeys_nosession,
         "args": [
             {"name": "apikey_dict", "type": "dict"},
             {"name": "user_id", "type": "int"},
@@ -375,7 +342,6 @@ schema = {
         ]
     },
     "apikey-refresh-nosession": {
-        "function": actions.refresh_apikey_nosession,
         "args": [
             {"name": "apikey_dict", "type": "dict"},
             {"name": "user_id", "type": "int"},
@@ -393,7 +359,6 @@ schema = {
 
     # access and limit check actions
     "user-check-access": {
-        "function": actions.check_user_access,
         "args": [
             {"name": "user_id", "type": "int"},
             {"name": "user_role", "type": "str"},
@@ -407,7 +372,6 @@ schema = {
         ]
     },
     "user-check-limit": {
-        "function": actions.check_user_limit,
         "args": [
             {"name": "user_id", "type": "int"},
             {"name": "user_role", "type": "str"},
@@ -421,7 +385,6 @@ schema = {
     # actions that should only be used internally by a frontend server, meaning
     # not take or pass along any end-user input
     "internal-user-lock": {
-        "function": actions.internal_toggle_user_lock,
         "args": [
             {"name": "target_userid", "type": "int"},
             {"name": "action", "type": "str"},
@@ -430,7 +393,6 @@ schema = {
         ]
     },
     "internal-user-edit": {
-        "function": actions.internal_edit_user,
         "args": [
             {"name": "target_userid", "type": "int"},
             {"name": "update_dict", "type": "dict"},
@@ -439,7 +401,6 @@ schema = {
         ]
     },
     "internal-session-edit": {
-        "function": actions.internal_edit_session,
         "args": [
             {"name": "target_session_token", "type": "str"},
             {"name": "update_dict", "type": "dict"},
@@ -489,41 +450,28 @@ def apply_typedef(item, typedef):
     return any(typedef_ok)
 
 
-def validate_api_request(request_type,
-                         request_payload,
-                         return_function=True):
+def validate_api_request(request_type, request_payload):
     """Validates the incoming request.
 
     Checks to see if the request_type can be found in the schema, then checks
     its request_payload dict to see if all items required are present and are
     the correct type.
 
-    Returns a 3-element tuple with the first element being the function name if
-    successfully validates, None otherwise. The second element in the tuple is a
-    list of missing or invalid request payload items for the request type. The
+    Returns a 3-element tuple with the first element being True if the request
+    successfully validates, False otherwise. The second element in the tuple is
+    a list of missing or invalid request payload items for the request type. The
     third element in the tuple is a message.
-
-    If return_function is False, will return True/False for the first tuple
-    element based on request validation status. This is useful for client-side
-    validation of an authnzerver API request before sending it off to the
-    server.
 
     """
 
     if request_type not in schema:
 
-        if return_function:
-            return (None,
-                    None,
-                    f"request '{request_type}' is not a valid request type")
-        else:
-            return (False,
-                    None,
-                    f"request '{request_type}' is not a valid request type")
+        return (False,
+                None,
+                f"request '{request_type}' is not a valid request type")
 
     request_args = schema[request_type]["args"]
     request_kwargs = schema[request_type]["kwargs"]
-    request_function = schema[request_type]["function"]
 
     invalid_params = []
     request_valid = True
@@ -584,23 +532,13 @@ def validate_api_request(request_type,
     # return bad if request is not valid
     #
     if not request_valid:
-        if return_function:
-            return (None,
-                    {"problems": invalid_params},
-                    f"request '{request_type}' has invalid parameter types")
-        else:
-            return (False,
-                    {"problems": invalid_params},
-                    f"request '{request_type}' has invalid parameter types")
+        return (False,
+                {"problems": invalid_params},
+                f"request '{request_type}' has invalid parameter types")
 
     #
     # otherwise, the request is valid, return OK
     #
-    if return_function:
-        return (request_function,
-                None,
-                f"request '{request_type}' validated successfully")
-    else:
-        return (True,
-                None,
-                f"request '{request_type}' validated successfully")
+    return (True,
+            None,
+            f"request '{request_type}' validated successfully")
