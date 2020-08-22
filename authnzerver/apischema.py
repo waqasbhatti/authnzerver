@@ -215,7 +215,7 @@ schema = {
         ]
     },
     "user-list": {
-        "doc": "Delete a user.",
+        "doc": "Get info for a user with a specific user_id or list all users.",
         "args": [
             {"name": "user_id",
              "doc": "The IP address of the user to create a session for.",
@@ -225,7 +225,7 @@ schema = {
         ]
     },
     "user-lookup-email": {
-        "doc": "Delete a user.",
+        "doc": "Find a user with the specified email address.",
         "args": [
             {"name": "email",
              "doc": "The IP address of the user to create a session for.",
@@ -235,7 +235,7 @@ schema = {
         ]
     },
     "user-lookup-match": {
-        "doc": "Delete a user.",
+        "doc": "Find a user by arbitrarily matching on their properties.",
         "args": [
             {"name": "by",
              "doc": "The IP address of the user to create a session for.",
@@ -248,7 +248,7 @@ schema = {
         ]
     },
     "user-edit": {
-        "doc": "Delete a user.",
+        "doc": "Edit a user's information.",
         "args": [
             {"name": "user_id",
              "doc": "The IP address of the user to create a session for.",
@@ -270,7 +270,7 @@ schema = {
         ]
     },
     "user-resetpass": {
-        "doc": "Delete a user.",
+        "doc": "Reset a user's password.",
         "args": [
             {"name": "email_address",
              "doc": "The IP address of the user to create a session for.",
@@ -286,7 +286,7 @@ schema = {
         ]
     },
     "user-resetpass-nosession": {
-        "doc": "Delete a user.",
+        "doc": "Reset a user's password (no active session required).",
         "args": [
             {"name": "email_address",
              "doc": "The IP address of the user to create a session for.",
@@ -302,7 +302,7 @@ schema = {
         ]
     },
     "user-lock": {
-        "doc": "Delete a user.",
+        "doc": "Toggle the locked/unlocked state for a user.",
         "args": [
             {"name": "user_id",
              "doc": "The IP address of the user to create a session for.",
@@ -324,7 +324,7 @@ schema = {
         ]
     },
     "user-validatepass": {
-        "doc": "Delete a user.",
+        "doc": "Make sure a password presented by a user is secure.",
         "args": [
             {"name": "password",
              "doc": "The IP address of the user to create a session for.",
@@ -348,7 +348,8 @@ schema = {
 
     # email actions
     "user-sendemail-signup": {
-        "doc": "Delete a user.",
+        "doc": ("Send a verification email to a user who has "
+                "signed up for a new account."),
         "args": [
             {"name": "email_address",
              "doc": "The IP address of the user to create a session for.",
@@ -394,7 +395,8 @@ schema = {
         ]
     },
     "user-sendemail-forgotpass": {
-        "doc": "Delete a user.",
+        "doc": ("Send a verification email to a user who has "
+                "forgotten their password."),
         "args": [
             {"name": "email_address",
              "doc": "The IP address of the user to create a session for.",
@@ -440,7 +442,7 @@ schema = {
         ]
     },
     "user-set-emailverified": {
-        "doc": "Delete a user.",
+        "doc": "Set the email_verified flag for a newly created user.",
         "args": [
             {"name": "email",
              "doc": "The IP address of the user to create a session for.",
@@ -450,7 +452,7 @@ schema = {
         ]
     },
     "user-set-emailsent": {
-        "doc": "Delete a user.",
+        "doc": "Set the email_sent flags for a newly created user.",
         "args": [
             {"name": "email",
              "doc": "The IP address of the user to create a session for.",
@@ -465,7 +467,7 @@ schema = {
 
     # apikey actions
     "apikey-new": {
-        "doc": "Delete a user.",
+        "doc": "Create a new API key tied to a user and session.",
         "args": [
             {"name": "issuer",
              "doc": "The IP address of the user to create a session for.",
@@ -505,7 +507,7 @@ schema = {
         ]
     },
     "apikey-verify": {
-        "doc": "Delete a user.",
+        "doc": "Verify the presented API key.",
         "args": [
             {"name": "apikey_dict",
              "doc": "The IP address of the user to create a session for.",
@@ -521,7 +523,7 @@ schema = {
         ]
     },
     "apikey-revoke": {
-        "doc": "Delete a user.",
+        "doc": "Revoke the presented API key.",
         "args": [
             {"name": "apikey_dict",
              "doc": "The IP address of the user to create a session for.",
@@ -537,7 +539,7 @@ schema = {
         ]
     },
     "apikey-new-nosession": {
-        "doc": "Delete a user.",
+        "doc": "Create a new no-session API key.",
         "args": [
             {"name": "issuer",
              "doc": "The IP address of the user to create a session for.",
@@ -577,7 +579,7 @@ schema = {
         ]
     },
     "apikey-verify-nosession": {
-        "doc": "Delete a user.",
+        "doc": "Verify the presented no-session API key.",
         "args": [
             {"name": "apikey_dict",
              "doc": "The IP address of the user to create a session for.",
@@ -593,7 +595,7 @@ schema = {
         ]
     },
     "apikey-revoke-nosession": {
-        "doc": "Delete a user.",
+        "doc": "Revoke the presented no-session API key.",
         "args": [
             {"name": "apikey_dict",
              "doc": "The IP address of the user to create a session for.",
@@ -609,7 +611,7 @@ schema = {
         ]
     },
     "apikey-revokeall-nosession": {
-        "doc": "Delete a user.",
+        "doc": "Revoke all keys tied to presented no-session API key claims.",
         "args": [
             {"name": "apikey_dict",
              "doc": "The IP address of the user to create a session for.",
@@ -625,34 +627,34 @@ schema = {
         ]
     },
     "apikey-refresh-nosession": {
-        "doc": "Delete a user.",
+        "doc": "Refresh the presented no-session API key.",
         "args": [
             {"name": "apikey_dict",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The existing API key's claims as a dict.",
              "type": "dict"},
             {"name": "user_id",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The user_id of the user presenting the existing API key.",
              "type": "int"},
             {"name": "user_role",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The role of the user.",
              "type": "str"},
             {"name": "refresh_token",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The refresh token of the API key being presented.",
              "type": "str"},
             {"name": "ip_address",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The IP address of the user presenting the API key.",
              "type": "str"},
             {"name": "expires_seconds",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The new API key's expiry time in seconds from now.",
              "type": "int"},
             {"name": "not_valid_before",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "Time in seconds after which the new key becomes valid.",
              "type": ("int", "float")},
             {"name": "refresh_expires",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The new API key's refresh token expiry time in seconds.",
              "type": "int"},
             {"name": "refresh_nbf",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The new key's refresh token not-valid-before time in sec.",
              "type": ("int", "float")},
         ],
         "kwargs": [
@@ -661,47 +663,48 @@ schema = {
 
     # access and limit check actions
     "user-check-access": {
-        "doc": "Delete a user.",
+        "doc": ("Check if an action can be performed on a resource based "
+                "on the permissions policy."),
         "args": [
             {"name": "user_id",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The user_id of the user to check access for.",
              "type": "int"},
             {"name": "user_role",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The role of the user.",
              "type": "str"},
             {"name": "action",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The action being performed on the resource.",
              "type": "str"},
             {"name": "target_name",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The name of the resource the user is acting on.",
              "type": "str"},
             {"name": "target_owner",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The user_id of the resource's owner.",
              "type": "int"},
             {"name": "target_visibility",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The visibility status of the resource.",
              "type": "str"},
             {"name": "target_sharedwith",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "A CSV string of user_ids the resource is shared with.",
              "type": "str"},
         ],
         "kwargs": [
         ]
     },
     "user-check-limit": {
-        "doc": "Delete a user.",
+        "doc": "Check a permissions policy limit for a user.",
         "args": [
             {"name": "user_id",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The user_id of the user to check limit for.",
              "type": "int"},
             {"name": "user_role",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The role of the user.",
              "type": "str"},
             {"name": "limit_name",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The name of the permissions policy limit.",
              "type": "str"},
             {"name": "value_to_check",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The value to check against the limit definition.",
              "type": "Any"},
         ],
         "kwargs": [
@@ -711,39 +714,39 @@ schema = {
     # actions that should only be used internally by a frontend server, meaning
     # not take or pass along any end-user input
     "internal-user-lock": {
-        "doc": "Delete a user.",
+        "doc": "Toggle a lock/unlock for a user.",
         "args": [
             {"name": "target_userid",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The user_id of the user to lock/unlock.",
              "type": "int"},
             {"name": "action",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The toggle action to take, one of 'lock', 'unlock'.",
              "type": "str"},
         ],
         "kwargs": [
         ]
     },
     "internal-user-edit": {
-        "doc": "Delete a user.",
+        "doc": "Edit a user's information.",
         "args": [
             {"name": "target_userid",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The user_id of the user to edit.",
              "type": "int"},
             {"name": "update_dict",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The dict to use for updating the user's information.",
              "type": "dict"},
         ],
         "kwargs": [
         ]
     },
     "internal-session-edit": {
-        "doc": "Delete a user.",
+        "doc": "Edit an active session's extra_info_json dict.",
         "args": [
             {"name": "target_session_token",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The session token of the session to edit.",
              "type": "str"},
             {"name": "update_dict",
-             "doc": "The IP address of the user to create a session for.",
+             "doc": "The dict to use when updating extra_info_json.",
              "type": "dict"},
         ],
         "kwargs": [
