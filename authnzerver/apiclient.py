@@ -8,6 +8,7 @@ This contains an auto-generated API client for the authnzerver.
 """
 
 from functools import partial
+from textwrap import dedent
 
 from authnzerver.apischema import schema, validate_api_request
 from authnzerver.client import Authnzerver
@@ -17,7 +18,7 @@ class APIClient:
 
     def dynamic_api_function(self, api_action, *args, **kwargs):
         """
-        This validates an API action, then fires the API call.
+        Validates an API action, then fires the API call.
 
         """
 
@@ -54,7 +55,9 @@ class APIClient:
 
     async def async_dynamic_api_function(self, api_action, *args, **kwargs):
         """
-        This validates an API action, then fires the API call.
+        Validates an API action, then fires the API call.
+
+        This version is async.
 
         """
 
@@ -88,6 +91,73 @@ class APIClient:
 
         return await self.srv.async_request(api_action, request_payload)
 
+    def dynamic_docstring(self, action):
+        """
+        This adds a docstring to the dynamically generated function.
+
+        """
+
+        docstring_template = dedent(
+            """\
+            {docsentence}
+
+            Parameters
+            ----------
+
+            {param_list}
+
+            Returns
+            -------
+
+            response : AuthnzerverResponse namedtuple
+                Returns an AuthnzerverResponse object, which has the following
+                attributes:
+
+                - success (bool): True if request succeeded, False otherwise.
+                - response (dict, None): The response dict from the authnzerver.
+                - messages (list of str): End-user messages from authnzerver.
+                - headers (dict): Authnzerver HTTP response headers.
+                - status_code (int): The HTTP response code from authnzerver.
+                - failure_reason (str): Internal detailed failure reason.
+
+            """
+        )
+
+        param_template = dedent(
+            """\
+            {param_name} : {param_types}{optional_note}
+                {param_description}
+            """
+        )
+
+        param_list = []
+        for arg in schema[action]["args"]:
+            param_list.append(
+                param_template.format(
+                    param_name=arg,
+                    param_types=", ".join(arg["type"]),
+                    param_description=arg["doc"],
+                    optional_note="",
+                )
+            )
+
+        for kwarg in schema[action]["kwargs"]:
+            param_list.append(
+                param_template.format(
+                    param_name=kwarg,
+                    param_types=", ".join(kwarg["type"]),
+                    param_description=kwarg["doc"],
+                    optional_note=", optional",
+                )
+            )
+
+        docstring = docstring_template.format(
+            docsentence=schema[action]["doc"],
+            param_list="\n".join(param_list)
+        )
+
+        return docstring
+
     def __init__(self,
                  authnzerver_url=None,
                  authnzerver_secret=None,
@@ -106,11 +176,22 @@ class APIClient:
 
         if asynchronous:
             for action in schema:
-                function_to_use = partial(self.async_dynamic_api_function,
-                                          action)
-                setattr(self, action.replace('-', '_'), function_to_use)
+                function_to_use = partial(
+                    self.async_dynamic_api_function,
+                    action
+                )
+                method_name = action.replace('-', '_')
+                method_docstring = self.dynamic_docstring(action)
+                function_to_use.__doc__ = method_docstring
+                setattr(self, method_name, function_to_use)
 
         else:
             for action in schema:
-                function_to_use = partial(self.dynamic_api_function, action)
-                setattr(self, action.replace('-', '_'), function_to_use)
+                function_to_use = partial(
+                    self.dynamic_api_function,
+                    action
+                )
+                method_name = action.replace('-', '_')
+                method_docstring = self.dynamic_docstring(action)
+                function_to_use.__doc__ = method_docstring
+                setattr(self, method_name, function_to_use)
