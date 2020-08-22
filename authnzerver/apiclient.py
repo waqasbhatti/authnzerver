@@ -149,11 +149,10 @@ class APIClient:
             Returns
             -------
             response : AuthnzerverResponse namedtuple
-                Returns an AuthnzerverResponse object, which has the following
-                attributes:
+                Returns a namedtuple object, which has the following attributes:
 
                 - success (bool): True if request succeeded, False otherwise.
-                - response (dict, None): The response dict from the authnzerver.
+                - response (dict or None): The response dict from authnzerver.
                 - messages (list of str): End-user messages from authnzerver.
                 - headers (dict): Authnzerver HTTP response headers.
                 - status_code (int): The HTTP response code from authnzerver.
@@ -196,7 +195,7 @@ class APIClient:
 
             param_list.append(
                 param_template.format(
-                    param_name=kwarg,
+                    param_name=kwarg["name"],
                     param_types=param_types,
                     param_description=kwarg["doc"],
                     optional_note=", optional",
