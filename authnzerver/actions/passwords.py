@@ -113,10 +113,14 @@ def validate_input_password(
         if passpolicy:
             try:
                 pass_minlen, pass_maxsim = passpolicy.split(';')
-                min_pass_length = int(pass_minlen.strip().split(': ')[1])
-                max_unsafe_similarity = int(pass_maxsim.strip().split(': ')[1])
+                min_pass_length = int(
+                    pass_minlen.strip().replace(' ', '').split(':')[1]
+                )
+                max_unsafe_similarity = int(
+                    pass_maxsim.strip().replace(' ', '').split(':')[1]
+                )
             except Exception:
-                LOGGER.error(
+                LOGGER.exception(
                     "[%s] Invalid password policy could not be parsed: '%s'. "
                     "Falling back to kwarg values."
                     % (reqid, passpolicy)
