@@ -35,14 +35,14 @@ class APIClient:
     Notes
     -----
 
-    Since the API methods and docstrings are dynamically generated, a simple
-    ``help()`` call won't work to show docstrings.
+    Since the class methods and their docstrings are dynamically generated, a
+    simple ``help()`` call won't work to show docstrings.
 
     If you're using IPython or the Jupyter notebook, using a ``?`` at the end of
     the method name works as expected::
 
         # create a new client
-        srv = APIClient()
+        srv = APIClient(authnzerver_url=..., authnzerver_secret=...)
 
         # get help on the user_new() method
         srv.user_new?
@@ -51,7 +51,7 @@ class APIClient:
     help on an APIClient method::
 
         # create a new client
-        srv = APIClient()
+        srv = APIClient(authnzerver_url=..., authnzerver_secret=...)
 
         # get help on the user_new() method
         print(srv.user_new.__doc__)
