@@ -17,7 +17,7 @@ from authnzerver.apiclient import APIClient
 )
 def test_user_delete(new_authnzerver):
     '''
-    This tests if the server does rate-limiting correctly.
+    This tests apiclient.user_delete().
 
     '''
 
