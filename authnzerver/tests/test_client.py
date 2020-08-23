@@ -3,7 +3,6 @@ This contains tests for the authnzerver client module.
 
 """
 
-
 import secrets
 import subprocess
 import os.path

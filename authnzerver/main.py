@@ -317,7 +317,7 @@ def main():
         )
 
     else:
-        ratelimits = [x.strip().split(':')
+        ratelimits = [x.strip().replace(' ', '').split(':')
                       for x in loaded_config.ratelimits.split(';')]
         ratelimits = {x[0]: int(x[1]) for x in ratelimits}
         loaded_config.ratelimits = ratelimits
