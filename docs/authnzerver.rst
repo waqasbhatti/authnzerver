@@ -18,6 +18,9 @@ Submodules
 
 .. toctree::
 
+   authnzerver.apiclient
+   authnzerver.apifunctions
+   authnzerver.apischema
    authnzerver.authdb
    authnzerver.autosetup
    authnzerver.client
