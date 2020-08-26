@@ -32,6 +32,11 @@ class APIClient:
     asynchronous : bool, optional, default=False
         If True, generates awaitable async methods for all API actions.
 
+    use_kwargs : bool, option, default=False
+        If this is True, all arguments for the auto-generated API methods
+        will be keyword arguments instead of regular arguments for required
+        parameters and keyword arguments for optional ones.
+
     Notes
     -----
 
@@ -58,7 +63,7 @@ class APIClient:
 
     """
 
-    def dynamic_api_function(self, api_action, *args, **kwargs):
+    def dynamic_api_function(self, api_action, use_kwargs, *args, **kwargs):
         """
         Validates an API action, then fires the API call.
 
@@ -72,8 +77,16 @@ class APIClient:
             )
 
         request_payload = {}
-        for schema_arg, func_arg in zip(request_schema["args"], args):
-            request_payload[schema_arg["name"]] = func_arg
+
+        if use_kwargs:
+            for schema_arg in request_schema["args"]:
+                if schema_arg["name"] in kwargs:
+                    request_payload[schema_arg["name"]] = (
+                        kwargs[schema_arg["name"]]
+                    )
+        else:
+            for schema_arg, func_arg in zip(request_schema["args"], args):
+                request_payload[schema_arg["name"]] = func_arg
 
         for schema_kwarg in request_schema["kwargs"]:
             if schema_kwarg["name"] in kwargs:
@@ -95,7 +108,8 @@ class APIClient:
         resp = self.srv.request(api_action, request_payload)
         return resp
 
-    async def async_dynamic_api_function(self, api_action, *args, **kwargs):
+    async def async_dynamic_api_function(self, api_action, use_kwargs,
+                                         *args, **kwargs):
         """
         Validates an API action, then fires the API call.
 
@@ -111,8 +125,16 @@ class APIClient:
             )
 
         request_payload = {}
-        for schema_arg, func_arg in zip(request_schema["args"], args):
-            request_payload[schema_arg["name"]] = func_arg
+
+        if use_kwargs:
+            for schema_arg in request_schema["args"]:
+                if schema_arg["name"] in kwargs:
+                    request_payload[schema_arg["name"]] = (
+                        kwargs[schema_arg["name"]]
+                    )
+        else:
+            for schema_arg, func_arg in zip(request_schema["args"], args):
+                request_payload[schema_arg["name"]] = func_arg
 
         for schema_kwarg in request_schema["kwargs"]:
             if schema_kwarg["name"] in kwargs:
@@ -133,7 +155,7 @@ class APIClient:
 
         return await self.srv.async_request(api_action, request_payload)
 
-    def dynamic_docstring(self, action):
+    def dynamic_docstring(self, action, use_kwargs=False):
         """
         This adds a docstring to the dynamically generated function.
 
@@ -142,7 +164,7 @@ class APIClient:
         docstring_template = dedent(
             """\
             {docsentence}
-
+            {kwarg_note}
             Parameters
             ----------
             {param_list}
@@ -202,9 +224,17 @@ class APIClient:
                 )
             )
 
+        if use_kwargs:
+            kwarg_note = (
+                "\nAll parameters can be specified as keyword arguments.\n"
+            )
+        else:
+            kwarg_note = ""
+
         docstring = docstring_template.format(
             docsentence=schema[action]["doc"],
-            param_list="\n".join(param_list)
+            param_list="\n".join(param_list),
+            kwarg_note=kwarg_note
         )
 
         return docstring
@@ -212,7 +242,8 @@ class APIClient:
     def __init__(self,
                  authnzerver_url=None,
                  authnzerver_secret=None,
-                 asynchronous=False):
+                 asynchronous=False,
+                 use_kwargs=False):
         """
         Makes a new APIClient.
 
@@ -228,6 +259,11 @@ class APIClient:
         asynchronous : bool, optional, default=False
             If True, generates awaitable async methods for all API actions.
 
+        use_kwargs : bool, option, default=False
+            If this is True, all arguments for the auto-generated API methods
+            will be keyword arguments instead of regular arguments for required
+            parameters and keyword arguments for optional ones.
+
         """
 
         self.srv = Authnzerver(authnzerver_url=authnzerver_url,
@@ -241,10 +277,12 @@ class APIClient:
             for action in schema:
                 function_to_use = partial(
                     self.async_dynamic_api_function,
-                    action
+                    action,
+                    use_kwargs,
                 )
                 method_name = action.replace('-', '_')
-                method_docstring = self.dynamic_docstring(action)
+                method_docstring = self.dynamic_docstring(action,
+                                                          use_kwargs=use_kwargs)
                 function_to_use.__doc__ = method_docstring
                 function_to_use.__name__ = method_name
                 setattr(self, method_name, function_to_use)
@@ -253,10 +291,12 @@ class APIClient:
             for action in schema:
                 function_to_use = partial(
                     self.dynamic_api_function,
-                    action
+                    action,
+                    use_kwargs,
                 )
                 method_name = action.replace('-', '_')
-                method_docstring = self.dynamic_docstring(action)
+                method_docstring = self.dynamic_docstring(action,
+                                                          use_kwargs=use_kwargs)
                 function_to_use.__doc__ = method_docstring
                 function_to_use.__name__ = method_name
                 setattr(self, method_name, function_to_use)
