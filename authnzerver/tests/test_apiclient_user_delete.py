@@ -28,7 +28,7 @@ def test_user_delete(new_authnzerver):
         authnzerver_secret=authnzerver_secret
     )
 
-    password = secrets.token_urlsafe(20)
+    password = "OLvXU7zeeoZEYo2ZH875"
 
     # 1. create the user
     resp = srv.user_new(

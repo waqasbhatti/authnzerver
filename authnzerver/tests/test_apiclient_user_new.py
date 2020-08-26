@@ -28,7 +28,7 @@ def test_user_new(new_authnzerver):
         authnzerver_secret=authnzerver_secret
     )
 
-    password = secrets.token_urlsafe(20)
+    password = "OLvXU7zeeoZEYo2ZH875"
 
     resp = srv.user_new(
         "Test User",
@@ -61,7 +61,7 @@ def test_user_new_with_extra_info(new_authnzerver):
         authnzerver_secret=authnzerver_secret
     )
 
-    password = secrets.token_urlsafe(20)
+    password = "OLvXU7zeeoZEYo2ZH875"
 
     resp = srv.user_new(
         "Test User",
