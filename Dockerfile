@@ -5,6 +5,12 @@ RUN apt-get update \
   && apt-get -y clean && rm -rf /var/lib/apt/lists/* \
   && useradd -m -s /bin/bash authnzerver
 
+# use Tini for self-contained init daemon
+# https://github.com/krallin/tini
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+
 WORKDIR /home/authnzerver
 USER authnzerver
 
@@ -22,4 +28,4 @@ RUN . /home/authnzerver/.env/bin/activate \
 EXPOSE 13431
 
 VOLUME ["/home/authnzerver/basedir"]
-ENTRYPOINT ["/home/authnzerver/docker_entrypoint.sh"]
+ENTRYPOINT ["/tini", "--", "/home/authnzerver/docker_entrypoint.sh"]
