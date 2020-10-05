@@ -28,4 +28,4 @@ RUN . /home/authnzerver/.env/bin/activate \
 EXPOSE 13431
 
 VOLUME ["/home/authnzerver/basedir"]
-ENTRYPOINT ["/tini", "--", "/home/authnzerver/docker_entrypoint.sh"]
+ENTRYPOINT ["/tini", "-s", "-g", "--", "/home/authnzerver/docker_entrypoint.sh"]
