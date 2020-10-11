@@ -1,0 +1,66 @@
+# This is an example docker-compose.yml for an authnzerver deployment
+# with PostgreSQL as the database.
+#
+# The following environment variables should be set before running
+# docker-compose:
+#
+# - POSTGRES_USER
+# - POSTGRES_PASSWORD
+# - POSTGRES_DB
+# - AUTHNZERVER_SECRET
+# - AUTHNZERVER_PIISALT
+#
+# To generate the authnzerver secrets:
+#
+# python3 -c "import secrets, base64; [print('AUTHNZERVER_%s=\"%s\"' % (x, base64.urlsafe_b64encode(secrets.token_bytes()).decode('utf-8'))) for x in ('SECRET','PIISALT')]"
+#
+# To generate a random PostgreSQL password:
+#
+# python3 -c 'import secrets; print(f"POSTGRES_PASSWORD={secrets.token_urlsafe(16)})'
+
+
+volumes:
+  authnzerver_basedir:
+  postgresql_datadir:
+
+services:
+
+  postgres-service:
+    image: postgres:12
+    shm_size: '512m'
+    environment:
+      POSTGRES_USER:
+      POSTGRES_PASSWORD:
+      POSTGRES_DB:
+    volumes:
+      - postgresql_datadir:/var/lib/postgresql/data
+
+  authnzerver-service:
+    depends_on:
+      - postgres-service
+    image: waqasbhatti/authnzerver:latest
+    expose: [13431]
+    volumes:
+      - authnzerver_basedir:/home/authnzerver/basedir
+    environment:
+      AUTHNZERVER_ALLOWEDHOSTS: authnzerver-service;localhost
+      AUTHNZERVER_AUTHDB: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-service:5432/${POSTGRES_DB}"
+      AUTHNZERVER_BASEDIR: "/home/authnzerver/basedir"
+      AUTHNZERVER_DEBUGMODE: 0
+      AUTHNZERVER_LISTEN: "0.0.0.0"
+      AUTHNZERVER_PORT: 13431
+      AUTHNZERVER_SECRET:
+      AUTHNZERVER_PIISALT:
+      AUTHNZERVER_SESSIONEXPIRY: 30
+      AUTHNZERVER_USERLOCKTRIES: 10
+      AUTHNZERVER_USERLOCKTIME: 3600
+      AUTHNZERVER_PASSPOLICY: "min_pass_length:12;max_unsafe_similarity:50"
+      AUTHNZERVER_WORKERS: 4
+      AUTHNZERVER_EMAILSERVER: "localhost"
+      AUTHNZERVER_EMAILPORT: 25
+      AUTHNZERVER_EMAILUSER: "authnzerver"
+      AUTHNZERVER_EMAILPASS:
+      AUTHNZERVER_EMAILSENDER: "Authnzerver <authnzerver@localhost>"
+      AUTHNZERVER_TLSCERTFILE:
+      AUTHNZERVER_TLSCERTKEY:
+      AUTHNZERVER_RATELIMITS: "all:15000;user:480;session:600;apikey:720;burst:150"
