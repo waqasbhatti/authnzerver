@@ -392,6 +392,10 @@ directory. Another database can be specified here by using the appropriate
 every start up, the authnzerver will recreate its database tables only if these
 don't exist already.
 
+.. note:: For an example docker-compose file using PostgreSQL as the auth
+          database, see `example-docker-compose-postgres.yml <https://github.com/waqasbhatti/authnzerver/blob/master/deploy/example-docker-compose-postgres.yml>`_ in the
+          authnzerver Github repository.
+
 Next, the required ``AUTHNZERVER_SECRET`` and ``AUTHNZERVER_PIISALT``
 environment variables are passed in from the host environment. Set these in your
 docker-compose ``.env`` file or in another manner as appropriate.  Make sure to
