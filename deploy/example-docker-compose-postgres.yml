@@ -20,7 +20,6 @@
 
 
 volumes:
-  authnzerver_basedir:
   postgresql_datadir:
 
 services:
@@ -40,8 +39,6 @@ services:
       - postgres-service
     image: waqasbhatti/authnzerver:latest
     expose: [13431]
-    volumes:
-      - authnzerver_basedir:/home/authnzerver/basedir
     environment:
       AUTHNZERVER_ALLOWEDHOSTS: authnzerver-service;localhost
       AUTHNZERVER_AUTHDB: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-service:5432/${POSTGRES_DB}"
