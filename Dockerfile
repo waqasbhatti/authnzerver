@@ -14,6 +14,7 @@ ARG pymysql_version=0.10.1
 FROM python:3.8-slim-buster as builder
 
 # these are required because Docker is weird
+# https://github.com/moby/moby/issues/34129
 ARG tini_version
 ARG psycopg2_version
 ARG pymysql_version
@@ -29,6 +30,7 @@ RUN apt-get update \
 FROM python:3.8-slim-buster
 
 # these are required because Docker is weird
+# https://github.com/moby/moby/issues/34129
 ARG tini_version
 ARG psycopg2_version
 ARG pymysql_version
