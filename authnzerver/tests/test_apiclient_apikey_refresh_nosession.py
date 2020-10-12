@@ -25,17 +25,25 @@ def test_apikey_refresh_nosession(new_authnzerver):
 
     srv = APIClient(
         authnzerver_url=authnzerver_url,
-        authnzerver_secret=authnzerver_secret
+        authnzerver_secret=authnzerver_secret,
+        use_kwargs=True
     )
 
     password = "OLvXU7zeeoZEYo2ZH875"
 
     # 1. create the user
     new_user = srv.user_new(
-        "Test User",
-        "testuser@example.com",
-        password
+        full_name="Test User",
+        email="testuser@example.com",
+        password=password
     )
+
+    assert new_user.success is True
+    assert new_user.response["user_id"] == 4
+    assert new_user.response["send_verification"] is True
+    assert new_user.messages == [
+        "User account created. Please verify your email address to log in."
+    ]
 
     # 2. activate them
     activation = srv.user_set_emailverified(email="testuser@example.com")
