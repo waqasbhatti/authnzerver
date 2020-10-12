@@ -441,4 +441,4 @@ def initial_authdb_inserts(auth_db_path,
     if superuser_pass_auto:
         return superuser_email, superuser_pass
     else:
-        return superuser_email, None
+        return superuser_email, "password-was-user-generated"

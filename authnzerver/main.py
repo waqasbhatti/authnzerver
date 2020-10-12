@@ -419,13 +419,26 @@ def main():
     # running these again won't do anything if they're set up already
     try:
 
+        # get the admin email and password from the env if provided
+        env_admin_email = os.environ.get("AUTHNZERVER_ADMIN_EMAIL", None)
+        env_admin_pass = os.environ.get("AUTHNZERVER_ADMIN_PASSWORD", None)
+
         admin_user, admin_pass = authdb_module.initial_authdb_inserts(
             auth_database_url,
-            permissions_json=permissions
+            permissions_json=permissions,
+            superuser_email=env_admin_email,
+            superuser_pass=env_admin_pass
         )
         LOGGER.warning("Auth DB at the provided URL was not previously "
                        "set up for use with authnzerver and has "
                        "been (re)initialized.")
+
+        if env_admin_email and env_admin_pass:
+            LOGGER.warning(
+                "Admin user email and password were set using the "
+                "provided environment variables."
+            )
+
         creds = os.path.join(basedir,
                              '.authnzerver-admin-credentials')
         if os.path.exists(creds):
@@ -438,8 +451,8 @@ def main():
             outfd.write('%s %s\n' % (admin_user, admin_pass))
             os.chmod(creds, 0o100400)
 
-        LOGGER.warning('Generated random admin password, '
-                       'credentials written to: %s\n' %
+        LOGGER.warning('Generated admin user '
+                       'credentials were written to: %s\n' %
                        creds)
 
     except IntegrityError:
