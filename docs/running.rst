@@ -49,12 +49,55 @@ all the prompts.
    authnzerver is installed as a Python package.
 
 
-cmdline: ``--allowedhosts``, env: ``AUTHNZERVER_ALLOWEDHOSTS``
----------------------------------------------------------------
+Setting the administrator password
+==================================
 
-The allowed HTTP request header "Host" values that the server will respond to,
-other than ``localhost`` and ``127.0.0.1``. Separate values with
-semicolons. Specifying these helps prevent DNS-rebinding attacks.
+Authnzerver sets up an account with a role of **superuser** when it first
+initializes its authentication database. If you use ``--autosetup``, you will be
+asked for an email address and password to use for this account.
+
+If you start the server directly, giving it all the required environment
+variables to do so (``AUTHNZERVER_SECRETKEY``, ``AUTHNZERVER_PIISALT``, and
+``AUTHNZERVER_AUTHDB``), you will not be asked for admin account credentials. To
+provide these credentials in this case, use two more environment variables:
+``AUTHNZERVER_ADMIN_EMAIL``, and ``AUTHNZERVER_ADMIN_PASSWORD``.
+
+If these admin user credentials are not provided, a default admin user email
+address and random password will be generated and written to a file called
+``.authnzerver-admin-credentials`` in server's base directory (by default: the
+directory where it starts from).
+
+.. warning:: If you're running Authnzerver as a Docker container, the generated
+   admin credentials file will be in the ``/home/authnzerver/basedir`` directory
+   inside the container. Make sure to copy this file over to your host machine
+   if you want to save it, since the container filesystem is ephemeral.
+
+
+List of all configuration items
+===============================
+
+cmdline: ``--allowedhosts``, env: ``AUTHNZERVER_ALLOWEDHOSTS``
+--------------------------------------------------------------
+
+The allowed HTTP request header "Host" values that the server will respond
+to. Separate values with semicolons. Specifying these helps prevent
+DNS-rebinding attacks. (*default:* ``'localhost;127.0.0.1'``)
+
+cmdline: None, env: ``AUTHNZERVER_ADMIN_EMAIL``
+-----------------------------------------------
+
+The email address to use for the auto-generated admin user with a role of
+**superuser** upon first startup of the server. If this is not provided, and you
+did not use ``--autosetup`` as a command line argument either, a default email
+address will be generated and used.
+
+cmdline: None, env: ``AUTHNZERVER_ADMIN_PASSWORD``
+--------------------------------------------------
+
+The password to use for the auto-generated admin user with a role of
+**superuser** upon first startup of the server. If this is not provided, and you
+did not use ``--autosetup`` as a command line argument either, a random password
+will be generated and used.
 
 cmdline: ``--authdb``, env: ``AUTHNZERVER_AUTHDB``
 --------------------------------------------------

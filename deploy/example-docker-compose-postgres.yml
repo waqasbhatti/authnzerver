@@ -9,10 +9,12 @@
 # - POSTGRES_DB
 # - AUTHNZERVER_SECRET
 # - AUTHNZERVER_PIISALT
+# - AUTHNZERVER_ADMIN_EMAIL
+# _ AUTHNZERVER_ADMIN_PASSWORD
 #
-# To generate the authnzerver secrets:
+# To generate random authnzerver secrets and admin password:
 #
-# python3 -c "import secrets, base64; [print('AUTHNZERVER_%s=\"%s\"' % (x, base64.urlsafe_b64encode(secrets.token_bytes()).decode('utf-8'))) for x in ('SECRET','PIISALT')]"
+# python3 -c "import secrets, base64; [print('AUTHNZERVER_%s=\"%s\"' % (x, base64.urlsafe_b64encode(secrets.token_bytes()).decode('utf-8'))) for x in ('SECRET','PIISALT','ADMIN_PASSWORD')]"
 #
 # To generate a random PostgreSQL password:
 #
@@ -48,6 +50,8 @@ services:
       AUTHNZERVER_PORT: 13431
       AUTHNZERVER_SECRET:
       AUTHNZERVER_PIISALT:
+      AUTHNZERVER_ADMIN_EMAIL:
+      AUTHNZERVER_ADMIN_PASSWORD:
       AUTHNZERVER_SESSIONEXPIRY: 30
       AUTHNZERVER_USERLOCKTRIES: 10
       AUTHNZERVER_USERLOCKTIME: 3600
