@@ -258,12 +258,16 @@ CONF = {
         'env': '%s_PASSPOLICY' % ENVPREFIX,
         'cmdline': 'passpolicy',
         'type': str,
-        'default': "min_pass_length: 12;max_unsafe_similarity: 50",
-        'help': ("This sets the minimum password length, "
-                 "and the maximum allowed similarity (out of 100) "
+        'default': ("min_pass_length:12; "
+                    "max_unsafe_similarity:50; "
+                    "max_character_frequency:0.3"),
+        'help': ("This sets the minimum password length; "
+                 "the maximum allowed similarity (out of 100) "
                  "between the password and unsafe items like the "
                  "server's domain name, the user's own email address, "
-                 "or their full name."),
+                 "or their full name; and the maximum number of times a "
+                 "character can appear in the password as a "
+                 "fraction of the total number of characters in the password"),
         'readable_from_file': False,
         'postprocess_value': None,
     },
@@ -271,7 +275,7 @@ CONF = {
         'env': '%s_RATELIMITS' % ENVPREFIX,
         'cmdline': 'ratelimits',
         'type': str,
-        'default': "all: 15000;user: 480;session: 600;apikey: 720;burst: 150",
+        'default': "all:15000; user:480; session:600; apikey:720; burst:150",
         'help': ("This sets the rate limit policy for authnzerver actions. "
                  "You can specify values for all actions, user-tied actions "
                  "(based on email/user_id/IP address), session-tied actions "

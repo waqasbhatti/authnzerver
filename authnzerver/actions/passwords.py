@@ -38,6 +38,7 @@ def validate_input_password(
         reqid,
         min_pass_length=12,
         max_unsafe_similarity=20,
+        max_character_frequency=0.3,
         config=None
 ):
     """Validates user input passwords.
@@ -90,6 +91,11 @@ def validate_input_password(
         provided in this kwarg will be overriden by the ``passpolicy`` attribute
         in the config object if that is passed in as well.
 
+    max_character_frequency : float
+        The maximum number of times a character can appear in the password as a
+        fraction of the total number of characters in the password. Upper and
+        lower case characters are counted separately.
+
     config : SimpleNamespace object or None
         An object containing systemwide config variables as attributes. This is
         useful when the wrapping function needs to pass in some settings
@@ -112,12 +118,15 @@ def validate_input_password(
 
         if passpolicy:
             try:
-                pass_minlen, pass_maxsim = passpolicy.split(';')
+                pass_minlen, pass_maxsim, pass_charfreq = passpolicy.split(';')
                 min_pass_length = int(
                     pass_minlen.strip().replace(' ', '').split(':')[1]
                 )
                 max_unsafe_similarity = int(
                     pass_maxsim.strip().replace(' ', '').split(':')[1]
+                )
+                max_character_frequency = int(
+                    pass_charfreq.strip().replace(' ', '').split(':')[2]
                 )
             except Exception:
                 LOGGER.exception(
@@ -202,21 +211,22 @@ def validate_input_password(
     # next, check if the password is complex enough
     histogram = {}
     for char in password:
-        if char.casefold() not in histogram:
-            histogram[char.casefold()] = 1
+        if char not in histogram:
+            histogram[char] = 1
         else:
-            histogram[char.casefold()] = histogram[char.casefold()] + 1
+            histogram[char] = histogram[char] + 1
 
     hist_ok = True
 
     for h in histogram:
-        if (histogram[h] / len(password)) > 0.2:
+        if (histogram[h] / len(password)) > max_character_frequency:
             hist_ok = False
             LOGGER.warning('[%s] Password for new account '
                            'with email: %s does not have enough entropy. '
                            'One character is more than '
-                           '0.2 x length of the password.' %
-                           (reqid, pii_hash(email, pii_salt)))
+                           '%s x length of the password.' %
+                           (reqid, pii_hash(email, pii_salt),
+                            max_character_frequency))
             messages.append(
                 'Your password is not complex enough. '
                 'One or more characters appear appear too frequently.'
