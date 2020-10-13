@@ -258,9 +258,8 @@ CONF = {
         'env': '%s_PASSPOLICY' % ENVPREFIX,
         'cmdline': 'passpolicy',
         'type': str,
-        'default': ("min_pass_length:12; "
-                    "max_unsafe_similarity:50; "
-                    "max_character_frequency:0.3"),
+        'default': ("min_pass_length:12; max_unsafe_similarity:50; "
+                    "max_char_frequency:0.3"),
         'help': ("This sets the minimum password length; "
                  "the maximum allowed similarity (out of 100) "
                  "between the password and unsafe items like the "

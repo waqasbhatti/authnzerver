@@ -125,8 +125,8 @@ def validate_input_password(
                 max_unsafe_similarity = int(
                     pass_maxsim.strip().replace(' ', '').split(':')[1]
                 )
-                max_character_frequency = int(
-                    pass_charfreq.strip().replace(' ', '').split(':')[2]
+                max_character_frequency = float(
+                    pass_charfreq.strip().replace(' ', '').split(':')[1]
                 )
             except Exception:
                 LOGGER.exception(

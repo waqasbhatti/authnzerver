@@ -172,11 +172,13 @@ Bind to this address and serve content. (*default:* ``127.0.0.1``)
 cmdline: ``--passpolicy``, env: ``AUTHNZERVER_PASSPOLICY``
 ----------------------------------------------------------
 
-This sets the minimum number of characters required for passwords, and the
-maximum allowed string similarity (out of 100) between the password and unsafe
-items like the server's domain name, the user's own email address, or their full
-name. This parameter is specified as key:value pairs separated by a
-semicolon. (*default:* ``min_pass_length:12;max_unsafe_similarity:50``)
+This sets the minimum number of characters required for passwords; the maximum
+allowed string similarity (out of 100) between the password and unsafe items
+like the server's domain name, the user's own email address, or their full name;
+and the maximum number of times a character can appear in the password as a
+fraction of the total number of characters in the password. This parameter is
+specified as key:value pairs separated by a semicolon. (*default:*
+``min_pass_length:12; max_unsafe_similarity:50; max_char_frequency:0.3``)
 
 cmdline: ``--ratelimits``, env: ``AUTHNZERVER_RATELIMITS``
 ----------------------------------------------------------
@@ -190,7 +192,7 @@ session_token/IP address) in the ``apikey`` key. The ``burst`` key indicates how
 many requests will be allowed to come in before rate-limits start being
 enforced. All values are in units of max requests allowed per minute. Set this
 parameter to the string 'none' to turn off rate-limiting entirely. (*default:*
-``all:15000;user:480;session:600;apikey:720;burst:150``).
+``all:15000; user:480; session:600; apikey:720; burst:150``).
 
 cmdline: ``--permissions``, env: ``AUTHNZERVER_PERMISSIONS``
 ------------------------------------------------------------
@@ -415,7 +417,7 @@ service.
           AUTHNZERVER_SESSIONEXPIRY: 30
           AUTHNZERVER_USERLOCKTRIES: 10
           AUTHNZERVER_USERLOCKTIME: 3600
-          AUTHNZERVER_PASSPOLICY: "min_pass_length:12;max_unsafe_similarity:50"
+          AUTHNZERVER_PASSPOLICY: "min_pass_length:12;max_unsafe_similarity:50;max_char_frequency:0.3"
           AUTHNZERVER_WORKERS: 4
           AUTHNZERVER_EMAILSERVER: "localhost"
           AUTHNZERVER_EMAILPORT: 25
