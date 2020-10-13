@@ -60,9 +60,6 @@ def test_create_user():
     assert ('Your password is too similar to either '
             'the domain name of this server or your '
             'own name or email address.' in user_created['messages'])
-    assert ('Your password is not complex enough. '
-            'One or more characters appear appear too frequently.'
-            in user_created['messages'])
     assert ('Your password is on the list of the most common '
             'passwords and is vulnerable to guessing.'
             in user_created['messages'])
@@ -97,9 +94,6 @@ def test_create_user():
     assert user_created['user_email'] == 'testuser@test.org'
     assert user_created['user_id'] is None
     assert user_created['send_verification'] is False
-    assert ('Your password is not complex enough. '
-            'One or more characters appear appear too frequently.'
-            in user_created['messages'])
     assert ('Your password is too similar to either '
             'the domain name of this server or your '
             'own name or email address.' in user_created['messages'])
