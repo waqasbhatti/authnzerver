@@ -194,7 +194,7 @@ CONF = {
         'postprocess_value': None,
     },
     'port': {
-        'env': '%s_PORT' % ENVPREFIX,
+        'env': ['PORT', '%s_PORT' % ENVPREFIX],
         'cmdline': 'port',
         'type': int,
         'default': 13431,

@@ -207,8 +207,8 @@ A random value used as a salt when SHA256 hashing personally identifiable
 information (PII), such as user IDs and session tokens, etc. for authnzerver
 logs.
 
-cmdline: ``--port``, env: ``AUTHNZERVER_PORT``
-----------------------------------------------
+cmdline: ``--port``, env: ``PORT`` or ``AUTHNZERVER_PORT``
+----------------------------------------------------------
 
 Run the server on this TCP port. (*default:* 13431)
 

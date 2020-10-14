@@ -419,8 +419,17 @@ def get_conf_item(env_key,
     Parameters
     ----------
 
-    env_key : str
-        The environment variable that specifies the item to get.
+    env_key : str or list/tuple of strings
+        The environment variable that specifies the item to get. This is either
+        a string or a list of strings. In the first instance, the specified
+        environment variable key will be searched for and used if available. In
+        the latter instance, each environment variable key specified as a string
+        in the list will be searched for, left to right, and the first one found
+        will be used as the source of the environment variable's value. This
+        allows you to specify fallback environment variables, e.g., setting
+        ``'env': ['PORT', 'AUTHNZERVER_PORT']`` in a *conf_dict* item will look
+        for the environment variable key ``PORT`` first and fall back to
+        ``AUTHNZERVER_PORT``.
 
     environment : environment object or ConfigParser object
         This is an object similar to that obtained from ``os.environ`` or a
@@ -541,8 +550,18 @@ def get_conf_item(env_key,
         confitem = getattr(options_object, options_key)
 
     # override with the environment value
-    if env_key in environment:
-        confitem = environment.get(env_key)
+
+    # if the env_key is a list, handle that
+    if isinstance(env_key, (list, tuple)):
+        for ekey in env_key:
+            if ekey in environment:
+                confitem = environment.get(ekey)
+                break
+
+    # if it's a single string, handle that
+    else:
+        if env_key in environment:
+            confitem = environment.get(env_key)
 
     #
     # if we got a confitem or a default sub, process it
@@ -798,6 +817,17 @@ def load_config(conf_dict,
                 'readable_from_file':how to retrieve the item (see below),
                 'postprocess_value': 'func to postprocess the item (see below)',
             },
+
+        The ``env`` key in each config item is either a string or a list of
+        strings. In the first instance, the specified environment variable key
+        will be searched for and used if available. In the latter instance, each
+        environment variable key specified as a string in the list will be
+        searched for, left to right, and the first one found will be used as the
+        source of the environment variable's value. This allows you to specify
+        fallback environment variables, e.g., setting ``'env': ['PORT',
+        'AUTHNZERVER_PORT']`` in a *conf_dict* item will look for the
+        environment variable key ``PORT`` first and fall back to
+        ``AUTHNZERVER_PORT``.
 
         The ``'readable_from_file'`` key in each config item's dict indicates
         how the value present in either the environment variable or the
