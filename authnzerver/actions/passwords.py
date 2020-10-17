@@ -101,7 +101,7 @@ def check_password_pwned(password,
 
     except HTTPError as e:
 
-        if e.response.status_code != 200:
+        if e.response and e.response.status_code != 200:
             LOGGER.warning(
                 f"[{reqid}] The haveibeenpwned.com API did not "
                 f"respond with a 200 OK."
