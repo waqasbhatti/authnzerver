@@ -60,9 +60,27 @@ def test_create_user():
     assert ('Your password is too similar to either '
             'the domain name of this server or your '
             'own name or email address.' in user_created['messages'])
-    assert ('Your password is on the list of the most common '
-            'passwords and is vulnerable to guessing.'
-            in user_created['messages'])
+
+    # 1a. 'clever'-dumb password
+    payload = {'full_name':'Test User',
+               'email':'testuser@test.org',
+               'password':'passwordpassword123',
+               'reqid':1,
+               'pii_salt':'super-random-salt'}
+    user_created = actions.create_new_user(
+        payload,
+        override_authdb_path='sqlite:///test-creation.authdb.sqlite'
+    )
+    assert user_created['success'] is False
+    assert user_created['user_email'] == 'testuser@test.org'
+    assert user_created['user_id'] is None
+    assert user_created['send_verification'] is False
+    msg_found = False
+    for msg in user_created["messages"]:
+        if "recently compromised Web account passwords from" in msg:
+            msg_found = True
+            break
+    assert msg_found, f"Pwned message not in {user_created['messages']}"
 
     # 2. all numeric password
     payload = {'full_name':'Test User',

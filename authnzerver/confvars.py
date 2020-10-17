@@ -259,14 +259,16 @@ CONF = {
         'cmdline': 'passpolicy',
         'type': str,
         'default': ("min_pass_length:12; max_unsafe_similarity:50; "
-                    "max_char_frequency:0.3"),
+                    "max_char_frequency:0.3; min_pwned_matches:25"),
         'help': ("This sets the minimum password length; "
                  "the maximum allowed similarity (out of 100) "
                  "between the password and unsafe items like the "
                  "server's domain name, the user's own email address, "
-                 "or their full name; and the maximum number of times a "
+                 "or their full name; the maximum number of times a "
                  "character can appear in the password as a "
-                 "fraction of the total number of characters in the password"),
+                 "fraction of the total number of characters in the password; "
+                 "and the minimum number of matches required against "
+                 "compromised passwords in the haveibeenpwned.com database."),
         'readable_from_file': False,
         'postprocess_value': None,
     },

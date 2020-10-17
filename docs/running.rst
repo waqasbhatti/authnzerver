@@ -172,13 +172,23 @@ Bind to this address and serve content. (*default:* ``127.0.0.1``)
 cmdline: ``--passpolicy``, env: ``AUTHNZERVER_PASSPOLICY``
 ----------------------------------------------------------
 
-This sets the minimum number of characters required for passwords; the maximum
-allowed string similarity (out of 100) between the password and unsafe items
-like the server's domain name, the user's own email address, or their full name;
-and the maximum number of times a character can appear in the password as a
-fraction of the total number of characters in the password. This parameter is
-specified as key:value pairs separated by a semicolon. (*default:*
-``min_pass_length:12; max_unsafe_similarity:50; max_char_frequency:0.3``)
+This sets the password policy enforced by the server. This includes:
+
+1. the minimum number of characters required in the password
+
+2. the maximum allowed string similarity (out of 100) between the password and
+   unsafe items like the server's domain name, the user's own email address, or
+   their full name
+
+3. the maximum number of times any single character can appear in the password
+   as a fraction of the total number of characters in the password
+
+4. the minimum number of matches required against the `Have I Been Pwned
+   <https://haveibeenpwned.com/Passwords>`_ compromised passwords database.
+
+This parameter is specified as key:value pairs separated by a
+semicolon. (*default:* ``min_pass_length:12; max_unsafe_similarity:50;
+max_char_frequency:0.3; min_pwned_matches:25``)
 
 cmdline: ``--ratelimits``, env: ``AUTHNZERVER_RATELIMITS``
 ----------------------------------------------------------
@@ -417,7 +427,7 @@ service.
           AUTHNZERVER_SESSIONEXPIRY: 30
           AUTHNZERVER_USERLOCKTRIES: 10
           AUTHNZERVER_USERLOCKTIME: 3600
-          AUTHNZERVER_PASSPOLICY: "min_pass_length:12;max_unsafe_similarity:50;max_char_frequency:0.3"
+          AUTHNZERVER_PASSPOLICY: "min_pass_length:12;max_unsafe_similarity:50;max_char_frequency:0.3;min_pwned_matches:25"
           AUTHNZERVER_WORKERS: 4
           AUTHNZERVER_EMAILSERVER: "localhost"
           AUTHNZERVER_EMAILPORT: 25

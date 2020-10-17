@@ -21,13 +21,136 @@ LOGGER = logging.getLogger(__name__)
 #############
 
 import socket
+from hashlib import sha1
+import random
+import time
 
 from tornado.escape import squeeze
+import requests
+from requests.exceptions import HTTPError, Timeout
+
 from difflib import SequenceMatcher
 
 from ..permissions import pii_hash
 
 from .. import validators
+
+
+###############
+## functions ##
+###############
+
+def check_password_pwned(password,
+                         email,
+                         reqid,
+                         pii_salt,
+                         min_matches=25):
+    """
+    Checks the password against the haveipwned.com API.
+
+    https://haveibeenpwned.com/API/v3#PwnedPasswords
+
+    Parameters
+    ----------
+
+    password : str
+        The password to check against the haveibeenpwned.com API.
+
+    email : str
+        The email address of the user creating the account.
+
+    reqid : int or str
+        The request ID associated with this password validation request. Used to
+        track and correlate these requests in logs.
+
+    pii_salt : str
+        The PII salt value passed in from a wrapping function. Used to censor
+        personally identifying information in the logs emitted from this
+        function.
+
+    min_matches : int
+        The minimum number of matches required in the matching set returned by
+        the API to consider a password as compromised.
+
+    Returns
+    -------
+
+    (status, msg, sha1_suffix, all_matches) : tuple
+        If the password is considered to be compromised, returns "bad", msg
+        for the first two elements in the tuple. Otherwise, returns "ok", "". If
+        the API does not respond or there's an error, returns "unknown", "".
+
+    """
+
+    # SHA1 hash the password
+    hashed_password = sha1(password.encode('utf-8')).hexdigest()
+    hashed_password_prefix = hashed_password[:5]
+    hashed_password_suffix = hashed_password[5:]
+
+    # send the request
+    try:
+
+        # need to stagger calls to the haveibeenpwned API
+        time.sleep(0.1 + abs(random.random() - 0.4))
+
+        resp = requests.get(
+            f"https://api.pwnedpasswords.com/range/{hashed_password_prefix}",
+            timeout=3.0,
+        )
+        resp.raise_for_status()
+
+    except HTTPError as e:
+
+        if e.response.status_code != 200:
+            LOGGER.warning(
+                f"[{reqid}] The haveibeenpwned.com API did not "
+                f"respond with a 200 OK."
+                f"HTTP response code was: {e.response.status_code}."
+            )
+        return "unknown", "", hashed_password_suffix, None
+
+    except Timeout:
+
+        LOGGER.warning(
+            f"[{reqid}] The haveibeenpwned.com API did not "
+            f"respond within the requested timeout."
+        )
+        return "unknown", "", hashed_password_suffix, None
+
+    except Exception:
+
+        LOGGER.exception(
+            f"[{reqid}] The haveibeenpwned.com API call failed."
+        )
+        return "unknown", "", hashed_password_suffix, None
+
+    # load the resp body
+    respbody = resp.text
+    resp_lines = respbody.split("\n")
+    resp_lines = [tuple(x.strip().split(':')) for x in resp_lines]
+    resp_check = {x[0].casefold(): int(x[1]) for x in resp_lines}
+
+    if (hashed_password_suffix in resp_check and
+        resp_check[hashed_password_suffix] >= min_matches):
+
+        err_msg = (
+            f"Your password was found with "
+            f"{resp_check[hashed_password_suffix]} matches in "
+            f"the database of recently "
+            f"compromised Web account passwords from "
+            f"https://haveibeenpwned.com/Passwords and "
+            f"is not secure."
+        )
+        LOGGER.warning(
+            f"[{reqid}] Password for account with "
+            f"email: {pii_hash(pii_salt, email)} was found in "
+            f"haveibeenpwned.com data with "
+            f"{resp_check[hashed_password_suffix]} matches."
+        )
+
+        return "bad", err_msg, hashed_password_suffix, resp_check
+
+    return "ok", "", hashed_password_suffix, resp_check
 
 
 def validate_input_password(
@@ -39,6 +162,7 @@ def validate_input_password(
         min_pass_length=12,
         max_unsafe_similarity=20,
         max_character_frequency=0.3,
+        min_pwned_matches=25,
         config=None
 ):
     """Validates user input passwords.
@@ -58,6 +182,11 @@ def validate_input_password(
     5. must not be completely numeric
 
     6. must not be in the top 10k passwords list
+
+    If all of the above pass, one last check is done:
+
+    7. must not be in the https://haveibeenpwned.com/Passwords database with at
+       least *min_pwned_matches* matches
 
     Parameters
     ----------
@@ -96,6 +225,11 @@ def validate_input_password(
         fraction of the total number of characters in the password. Upper and
         lower case characters are counted separately.
 
+    min_pwned_matches : int
+        The minimum number of matches required in the matching set returned by
+        the haveibeenpwned.com password compromise database API to consider a
+        password as compromised.
+
     config : SimpleNamespace object or None
         An object containing systemwide config variables as attributes. This is
         useful when the wrapping function needs to pass in some settings
@@ -118,7 +252,8 @@ def validate_input_password(
 
         if passpolicy:
             try:
-                pass_minlen, pass_maxsim, pass_charfreq = passpolicy.split(';')
+                (pass_minlen, pass_maxsim,
+                 pass_charfreq, min_pwned) = passpolicy.split(';')
                 min_pass_length = int(
                     pass_minlen.strip().replace(' ', '').split(':')[1]
                 )
@@ -127,6 +262,9 @@ def validate_input_password(
                 )
                 max_character_frequency = float(
                     pass_charfreq.strip().replace(' ', '').split(':')[1]
+                )
+                min_pwned_matches = int(
+                    min_pwned.strip().replace(' ', '').split(':')[1]
                 )
             except Exception:
                 LOGGER.exception(
@@ -142,7 +280,7 @@ def validate_input_password(
     # is all white space
     if len(squeeze(password.strip())) < min_pass_length:
 
-        LOGGER.warning('[%s] Password for new account '
+        LOGGER.warning('[%s] Password for account '
                        'with email: %s is too short (%s chars < required %s).' %
                        (reqid,
                         pii_hash(email, pii_salt),
@@ -157,7 +295,7 @@ def validate_input_password(
 
     # check if the password is straight-up dumb
     if password.casefold() in validators.TOP_10K_PASSWORDS:
-        LOGGER.warning('[%s] Password for new account '
+        LOGGER.warning('[%s] Password for account '
                        'with email: %s was found in the '
                        'top 10k passwords list.' %
                        (reqid, pii_hash(email, pii_salt)))
@@ -194,7 +332,7 @@ def validate_input_password(
     name_ok = name_match < max_unsafe_similarity
 
     if not fqdn_ok or not email_ok or not name_ok:
-        LOGGER.warning('[%s] Password for new account '
+        LOGGER.warning('[%s] Password for account '
                        'with email: %s matches FQDN '
                        '(similarity: %.1f), their name (similarity: %.1f), '
                        ' or their email address '
@@ -221,7 +359,7 @@ def validate_input_password(
     for h in histogram:
         if (histogram[h] / len(password)) > max_character_frequency:
             hist_ok = False
-            LOGGER.warning('[%s] Password for new account '
+            LOGGER.warning('[%s] Password for account '
                            'with email: %s does not have enough entropy. '
                            'One character is more than '
                            '%s x length of the password.' %
@@ -236,16 +374,34 @@ def validate_input_password(
     # check if the password is all numeric
     if password.isdigit():
         numeric_ok = False
-        LOGGER.warning('[%s] Password for new account '
+        LOGGER.warning('[%s] Password for account '
                        'with email: %s is all numbers.' %
                        (reqid, pii_hash(email, pii_salt)))
         messages.append('Your password cannot be all numbers.')
     else:
         numeric_ok = True
 
+    # check the password against haveibeenbeenpwned.com. only do this check if
+    # all the other ones pass, since this is an external HTTP API call
+    if (passlen_ok and email_ok and name_ok and
+        fqdn_ok and hist_ok and numeric_ok and tenk_ok):
+        pwned_status, pwned_msg, _, _ = check_password_pwned(
+            password,
+            email,
+            reqid,
+            pii_salt,
+            min_matches=min_pwned_matches
+        )
+        is_pwned = pwned_status == "bad"
+        if is_pwned:
+            messages.append(pwned_msg)
+    else:
+        is_pwned = False
+
     return (
         (passlen_ok and email_ok and name_ok and
-         fqdn_ok and hist_ok and numeric_ok and tenk_ok),
+         fqdn_ok and hist_ok and numeric_ok and tenk_ok and
+         not is_pwned),
         messages
     )
 
