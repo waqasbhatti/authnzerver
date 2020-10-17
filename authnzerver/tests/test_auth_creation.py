@@ -60,6 +60,9 @@ def test_create_user():
     assert ('Your password is too similar to either '
             'the domain name of this server or your '
             'own name or email address.' in user_created['messages'])
+    assert ('Your password is on the list of the most common '
+            'passwords and is vulnerable to guessing.'
+            in user_created['messages'])
 
     # 1a. 'clever'-dumb password
     payload = {'full_name':'Test User',
