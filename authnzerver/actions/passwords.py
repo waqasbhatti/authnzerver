@@ -143,7 +143,7 @@ def check_password_pwned(password,
         )
         LOGGER.warning(
             f"[{reqid}] Password for account with "
-            f"email: {pii_hash(pii_salt, email)} was found in "
+            f"email: {pii_hash(email, pii_salt)} was found in "
             f"haveibeenpwned.com data with "
             f"{resp_check[hashed_password_suffix]} matches."
         )
