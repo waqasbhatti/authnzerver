@@ -109,8 +109,11 @@ class RateLimitMixin:
                 request_body.get("email_address", None)
             )
 
-            # need special handling for user-lookup-match
+            # need special handling for some functions
             # FIXME: this should really be an internal- prefixed function
+            if request_type == 'user-list' and user_cache_token is None:
+                user_cache_token = f"user-lookup-{self.request.remote_ip}"
+
             if request_type == 'user-lookup-match':
                 user_cache_token = f"user-lookup-{self.request.remote_ip}"
 
