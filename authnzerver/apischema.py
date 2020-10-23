@@ -725,6 +725,16 @@ schema = {
         "kwargs": [
         ]
     },
+    "internal-user-delete": {
+        "doc": "Delete a user.",
+        "args": [
+            {"name": "target_userid",
+             "doc": "The user_id of the user to delete.",
+             "type": "int"},
+        ],
+        "kwargs": [
+        ]
+    },
     "internal-user-edit": {
         "doc": "Edit a user's information.",
         "args": [

@@ -95,6 +95,7 @@ request_functions = {
     # not take or pass along any end-user input
     'internal-user-lock': actions.internal_toggle_user_lock,
     'internal-user-edit': actions.internal_edit_user,
+    'internal-user-delete': actions.internal_delete_user,
     'internal-session-edit': actions.internal_edit_session,
 }
 

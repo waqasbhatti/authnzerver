@@ -1074,3 +1074,15 @@ Returns a ``response`` with the following items if successful:
 
 - ``user_info`` (dict): user information including the current state of the
   ``is_active`` database column
+
+``internal-user-delete``: Delete a user
+----------------------------------------
+
+Requires the following ``body`` items in a request:
+
+- ``target_userid`` (int): the user ID to delete
+
+Returns a ``response`` with the following items if successful:
+
+- ``user_id`` (int): user ID of the user that was deleted
+  ``is_active`` database column

@@ -502,6 +502,160 @@ def create_new_user(
         }
 
 
+def internal_delete_user(
+        payload,
+        raiseonfail=False,
+        override_authdb_path=None,
+        config=None,
+):
+    """Deletes a user and does not check for permissions.
+
+    Suitable ONLY for internal server use by a frontend. Do NOT expose this
+    function to an end user.
+
+    Parameters
+    ----------
+
+    payload : dict
+        This is a dict with the following required keys:
+
+        - target_userid: int
+
+        In addition to these items received from an authnzerver client, the
+        payload must also include the following keys (usually added in by a
+        wrapping function):
+
+        - reqid: int or str
+        - pii_salt: str
+
+    override_authdb_path : str or None
+        If given as a str, is the alternative path to the auth DB.
+
+    raiseonfail : bool
+        If True, will raise an Exception if something goes wrong.
+
+    config : SimpleNamespace object or None
+        An object containing systemwide config variables as attributes. This is
+        useful when the wrapping function needs to pass in some settings
+        directly from environment variables.
+
+    Returns
+    -------
+
+    dict
+        Returns a dict containing a success key indicating if the user was
+        deleted.
+    """
+
+    for key in ('reqid', 'pii_salt'):
+        if key not in payload:
+            LOGGER.error(
+                "Missing %s in payload dict. Can't process this request." % key
+            )
+            return {
+                'success': False,
+                'failure_reason': (
+                    "invalid request: missing '%s' in request" % key
+                ),
+                'messages': ["Invalid user deletion request."],
+            }
+
+    if 'target_userid' not in payload:
+
+        LOGGER.error(
+            '[%s] Invalid user deletion request, missing %s.' %
+            (payload['reqid'], 'target_userid')
+        )
+
+        return {
+            'success': False,
+            'failure_reason': (
+                "invalid request: missing 'target_userid' in request"
+            ),
+            'messages': ["Invalid user deletion request."],
+        }
+
+    # this checks if the database connection is live
+    currproc = mp.current_process()
+    engine = getattr(currproc, 'authdb_engine', None)
+
+    if override_authdb_path:
+        currproc.auth_db_path = override_authdb_path
+
+    if not engine:
+        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
+            authdb.get_auth_db(
+                currproc.auth_db_path,
+                echo=raiseonfail
+            )
+        )
+
+    users = currproc.authdb_meta.tables['users']
+    sessions = currproc.authdb_meta.tables['sessions']
+
+    # delete the user
+    delete = users.delete().where(
+        users.c.user_id == payload['target_userid']
+    )
+    result = currproc.authdb_conn.execute(delete)
+    result.close()
+
+    # don't forget to delete the sessions as well
+    delete = sessions.delete().where(
+        sessions.c.user_id == payload['target_userid']
+    )
+    result = currproc.authdb_conn.execute(delete)
+    result.close()
+
+    sel = select([
+        users.c.user_id,
+        users.c.email,
+        sessions.c.session_token
+    ]).select_from(
+        users.join(sessions)
+    ).where(
+        users.c.user_id == payload['target_userid']
+    )
+
+    result = currproc.authdb_conn.execute(sel)
+    rows = result.fetchall()
+
+    if rows and len(rows) > 0:
+
+        LOGGER.error(
+            "[%s] User deletion request failed for "
+            "user_id: %s. "
+            "The database rows for this user could not be deleted." %
+            (payload['reqid'],
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']))
+        )
+
+        return {
+            'success': False,
+            'failure_reason': (
+                "user deletion failed in DB"
+            ),
+            'messages': ["Could not delete user from DB."]
+        }
+
+    else:
+
+        LOGGER.warning(
+            "[%s] User deletion request succeeded for "
+            "user_id: %s. " %
+            (payload['reqid'],
+             pii_hash(payload['target_userid'],
+                      payload['pii_salt']))
+        )
+
+        return {
+            'success': True,
+            'user_id': payload['target_userid'],
+            'messages': ["User successfully deleted from DB."]
+        }
+
+
 def delete_user(payload,
                 raiseonfail=False,
                 override_authdb_path=None,

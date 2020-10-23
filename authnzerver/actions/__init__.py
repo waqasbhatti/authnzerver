@@ -33,6 +33,7 @@ logging.basicConfig(
 from .user import (
     create_new_user,
     delete_user,
+    internal_delete_user,
 )
 
 from .session import (

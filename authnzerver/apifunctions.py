@@ -62,6 +62,7 @@ functions = {
     # actions that should only be used internally by a frontend server, meaning
     # not take or pass along any end-user input
     'internal-user-lock': actions.internal_toggle_user_lock,
+    'internal-user-delete': actions.internal_delete_user,
     'internal-user-edit': actions.internal_edit_user,
     'internal-session-edit': actions.internal_edit_session,
 }
