@@ -357,14 +357,23 @@ schema = {
             {"name": "full_name",
              "doc": "The user's full name.",
              "type": "str"},
+        ],
+        "kwargs": [
             {"name": "min_pass_length",
              "doc": "Minimum number of characters needed for password.",
              "type": "int"},
             {"name": "max_unsafe_similarity",
              "doc": "Max allowed similarity between password and unsafe items.",
              "type": "int"},
-        ],
-        "kwargs": [
+            {"name": "max_character_frequency",
+             "doc": ("Max allowed single character frequency as "
+                     "fraction of total password length."),
+             "type": "float"},
+            {"name": "min_pwned_matches",
+             "doc": ("Minimum number of matches in the haveibeenpwned.com "
+                     "compromised password database to consider this "
+                     "password as insecure"),
+             "type": "int"},
         ]
     },
 
