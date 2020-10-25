@@ -7,6 +7,8 @@ This contains the API schema for all actions.
 
 """
 
+from authnzerver.modtools import object_from_string
+
 #
 # this maps request types to their required args, kwargs
 #
@@ -14,6 +16,7 @@ schema = {
 
     # session actions
     "session-new": {
+        "function": "authnzerver.actions.auth_session_new",
         "doc": "Create a new user session.",
         "args": [
             {"name": "ip_address",
@@ -36,6 +39,7 @@ schema = {
         ],
     },
     "session-exists": {
+        "function": "authnzerver.actions.auth_session_exists",
         "doc": "Check if a session exists, and get its info if it does.",
         "args": [
             {"name": "session_token",
@@ -46,6 +50,7 @@ schema = {
         ]
     },
     "session-delete": {
+        "function": "authnzerver.actions.auth_session_delete",
         "doc": "Delete an active session.",
         "args": [
             {"name": "session_token",
@@ -56,6 +61,7 @@ schema = {
         ]
     },
     "session-delete-userid": {
+        "function": "authnzerver.actions.auth_delete_sessions_userid",
         "doc": "Delete all sessions for user_id (optional: skip current).",
         "args": [
             {"name": "session_token",
@@ -72,6 +78,7 @@ schema = {
         ]
     },
     "user-login": {
+        "function": "authnzerver.actions.auth_user_login",
         "doc": "Process log-in for a user.",
         "args": [
             {"name": "session_token",
@@ -88,6 +95,7 @@ schema = {
         ]
     },
     "user-logout": {
+        "function": "authnzerver.actions.auth_user_logout",
         "doc": "Process log-out for a user.",
         "args": [
             {"name": "session_token",
@@ -101,6 +109,7 @@ schema = {
         ]
     },
     "user-passcheck": {
+        "function": "authnzerver.actions.auth_password_check",
         "doc": "Check the password for a user with an active session.",
         "args": [
             {"name": "session_token",
@@ -114,6 +123,7 @@ schema = {
         ]
     },
     "user-passcheck-nosession": {
+        "function": "authnzerver.actions.auth_password_check_nosession",
         "doc": "Check the password for a user (no active session required).",
         "args": [
             {"name": "email",
@@ -130,6 +140,7 @@ schema = {
 
     # user actions
     "user-new": {
+        "function": "authnzerver.actions.create_new_user",
         "doc": "Create a new user given a full_name, email, and password.",
         "args": [
             {"name": "full_name",
@@ -152,6 +163,7 @@ schema = {
         ]
     },
     "user-changepass": {
+        "function": "authnzerver.actions.change_user_password",
         "doc": "Change the password for a user with an active session.",
         "args": [
             {"name": "user_id",
@@ -177,6 +189,7 @@ schema = {
         ]
     },
     "user-changepass-nosession": {
+        "function": "authnzerver.actions.change_user_password_nosession",
         "doc": "Change the password for a user (no active session required).",
         "args": [
             {"name": "user_id",
@@ -199,6 +212,7 @@ schema = {
         ]
     },
     "user-delete": {
+        "function": "authnzerver.actions.delete_user",
         "doc": "Delete a user (called by the user themselves).",
         "args": [
             {"name": "email",
@@ -215,6 +229,7 @@ schema = {
         ]
     },
     "user-list": {
+        "function": "authnzerver.actions.list_users",
         "doc": "Get info for a user with a specific user_id or list all users.",
         "args": [
             {"name": "user_id",
@@ -225,6 +240,7 @@ schema = {
         ]
     },
     "user-lookup-email": {
+        "function": "authnzerver.actions.get_user_by_email",
         "doc": "Find a user with the specified email address.",
         "args": [
             {"name": "email",
@@ -235,6 +251,7 @@ schema = {
         ]
     },
     "user-lookup-match": {
+        "function": "authnzerver.actions.lookup_users",
         "doc": "Find a user by arbitrarily matching on their properties.",
         "args": [
             {"name": "by",
@@ -248,6 +265,7 @@ schema = {
         ]
     },
     "user-edit": {
+        "function": "authnzerver.actions.edit_user",
         "doc": "Edit a user's information.",
         "args": [
             {"name": "user_id",
@@ -270,6 +288,7 @@ schema = {
         ]
     },
     "user-resetpass": {
+        "function": "authnzerver.actions.verify_password_reset",
         "doc": "Reset a user's password.",
         "args": [
             {"name": "email_address",
@@ -286,6 +305,7 @@ schema = {
         ]
     },
     "user-resetpass-nosession": {
+        "function": "authnzerver.actions.verify_password_reset_nosession",
         "doc": "Reset a user's password (no active session required).",
         "args": [
             {"name": "email_address",
@@ -302,6 +322,7 @@ schema = {
         ]
     },
     "user-lock": {
+        "function": "authnzerver.actions.toggle_user_lock",
         "doc": "Toggle the locked/unlocked state for a user.",
         "args": [
             {"name": "user_id",
@@ -324,6 +345,7 @@ schema = {
         ]
     },
     "user-validatepass": {
+        "function": "authnzerver.actions.validate_password",
         "doc": "Make sure a password presented by a user is secure.",
         "args": [
             {"name": "password",
@@ -348,6 +370,7 @@ schema = {
 
     # email actions
     "user-sendemail-signup": {
+        "function": "authnzerver.actions.send_signup_verification_email",
         "doc": ("Send a verification email to a user who has "
                 "signed up for a new account."),
         "args": [
@@ -396,6 +419,7 @@ schema = {
         ]
     },
     "user-sendemail-forgotpass": {
+        "function": "authnzerver.actions.send_forgotpass_verification_email",
         "doc": ("Send a verification email to a user who has "
                 "forgotten their password."),
         "args": [
@@ -441,6 +465,7 @@ schema = {
         ]
     },
     "user-set-emailverified": {
+        "function": "authnzerver.actions.set_user_emailaddr_verified",
         "doc": "Set the email_verified flag for a newly created user.",
         "args": [
             {"name": "email",
@@ -451,6 +476,7 @@ schema = {
         ]
     },
     "user-set-emailsent": {
+        "function": "authnzerver.actions.set_user_email_sent",
         "doc": "Set the email_sent flags for a user.",
         "args": [
             {"name": "email",
@@ -466,6 +492,7 @@ schema = {
 
     # apikey actions
     "apikey-new": {
+        "function": "authnzerver.actions.issue_apikey",
         "doc": "Create a new API key tied to a user and session.",
         "args": [
             {"name": "issuer",
@@ -506,6 +533,7 @@ schema = {
         ]
     },
     "apikey-verify": {
+        "function": "authnzerver.actions.verify_apikey",
         "doc": "Verify the presented API key.",
         "args": [
             {"name": "apikey_dict",
@@ -522,6 +550,7 @@ schema = {
         ]
     },
     "apikey-revoke": {
+        "function": "authnzerver.actions.revoke_apikey",
         "doc": "Revoke the presented API key.",
         "args": [
             {"name": "apikey_dict",
@@ -538,6 +567,7 @@ schema = {
         ]
     },
     "apikey-new-nosession": {
+        "function": "authnzerver.actions.issue_apikey_nosession",
         "doc": "Create a new no-session API key.",
         "args": [
             {"name": "issuer",
@@ -578,6 +608,7 @@ schema = {
         ]
     },
     "apikey-verify-nosession": {
+        "function": "authnzerver.actions.verify_apikey_nosession",
         "doc": "Verify the presented no-session API key.",
         "args": [
             {"name": "apikey_dict",
@@ -594,6 +625,7 @@ schema = {
         ]
     },
     "apikey-revoke-nosession": {
+        "function": "authnzerver.actions.revoke_apikey_nosession",
         "doc": "Revoke the presented no-session API key.",
         "args": [
             {"name": "apikey_dict",
@@ -610,6 +642,7 @@ schema = {
         ]
     },
     "apikey-revokeall-nosession": {
+        "function": "authnzerver.actions.revoke_all_apikeys_nosession",
         "doc": "Revoke all keys tied to presented no-session API key claims.",
         "args": [
             {"name": "apikey_dict",
@@ -626,6 +659,7 @@ schema = {
         ]
     },
     "apikey-refresh-nosession": {
+        "function": "authnzerver.actions.refresh_apikey_nosession",
         "doc": "Refresh the presented no-session API key.",
         "args": [
             {"name": "apikey_dict",
@@ -662,6 +696,7 @@ schema = {
 
     # access and limit check actions
     "user-check-access": {
+        "function": "authnzerver.actions.check_user_access",
         "doc": ("Check if an action can be performed on a resource based "
                 "on the permissions policy."),
         "args": [
@@ -691,6 +726,7 @@ schema = {
         ]
     },
     "user-check-limit": {
+        "function": "authnzerver.actions.check_user_limit",
         "doc": "Check a permissions policy limit for a user.",
         "args": [
             {"name": "user_id",
@@ -713,6 +749,7 @@ schema = {
     # actions that should only be used internally by a frontend server, meaning
     # not take or pass along any end-user input
     "internal-user-lock": {
+        "function": "authnzerver.actions.internal_toggle_user_lock",
         "doc": "Toggle a lock/unlock for a user.",
         "args": [
             {"name": "target_userid",
@@ -726,6 +763,7 @@ schema = {
         ]
     },
     "internal-user-delete": {
+        "function": "authnzerver.actions.internal_delete_user",
         "doc": "Delete a user.",
         "args": [
             {"name": "target_userid",
@@ -736,6 +774,7 @@ schema = {
         ]
     },
     "internal-user-edit": {
+        "function": "authnzerver.actions.internal_edit_user",
         "doc": "Edit a user's information.",
         "args": [
             {"name": "target_userid",
@@ -749,6 +788,7 @@ schema = {
         ]
     },
     "internal-session-edit": {
+        "function": "authnzerver.actions.internal_edit_session",
         "doc": "Edit an active session's extra_info_json dict.",
         "args": [
             {"name": "target_session_token",
@@ -895,3 +935,31 @@ def validate_api_request(request_type, request_payload):
     return (True,
             None,
             f"request '{request_type}' validated successfully")
+
+
+def validate_and_get_function(request_type, request_payload):
+    """Validates the request and returns the function needed to fulfill it.
+
+    Checks to see if the request_type can be found in the schema, then checks
+    its request_payload dict to see if all items required are present and are
+    the correct type.
+
+    Returns a 3-element tuple with the first element being the function name if
+    successfully validates, None otherwise. The second element in the tuple is a
+    list of missing or invalid request payload items for the request type. The
+    third element in the tuple is a message.
+
+    """
+
+    # validate the request
+    request_ok, problems, message = validate_api_request(request_type,
+                                                         request_payload)
+
+    if request_ok:
+        return (
+            object_from_string(schema[request_type]['function']),
+            problems,
+            message
+        )
+    else:
+        return (None, problems, message)

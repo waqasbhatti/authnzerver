@@ -8,7 +8,6 @@ This contains functions that map to API actions.
 """
 
 from . import actions
-from .apischema import validate_api_request
 
 #
 # this maps request types -> request functions to execute
@@ -66,27 +65,3 @@ functions = {
     'internal-user-edit': actions.internal_edit_user,
     'internal-session-edit': actions.internal_edit_session,
 }
-
-
-def validate_and_get_function(request_type, request_payload):
-    """Validates the request and returns the function needed to fulfill it.
-
-    Checks to see if the request_type can be found in the schema, then checks
-    its request_payload dict to see if all items required are present and are
-    the correct type.
-
-    Returns a 3-element tuple with the first element being the function name if
-    successfully validates, None otherwise. The second element in the tuple is a
-    list of missing or invalid request payload items for the request type. The
-    third element in the tuple is a message.
-
-    """
-
-    # validate the request
-    request_ok, problems, message = validate_api_request(request_type,
-                                                         request_payload)
-
-    if request_ok:
-        return (functions[request_type], problems, message)
-    else:
-        return (None, problems, message)

@@ -46,7 +46,7 @@ def check_password_pwned(password,
                          pii_salt,
                          min_matches=25):
     """
-    Checks the password against the haveipwned.com API.
+    Checks the password against the haveibeenpwned.com API.
 
     https://haveibeenpwned.com/API/v3#PwnedPasswords
 
@@ -426,8 +426,13 @@ def validate_password(
         - password: str
         - email: str
         - full_name: str
-        - min_pass_length: int
-        - max_unsafe_similarity: int
+
+        The following keys are optional:
+
+        - min_pass_length: int, default = 12
+        - max_unsafe_similarity: int, default = 30
+        - max_character_frequency: float, default = 0.3
+        - min_pwned_matches: int, default = 25
 
         The *email* and *full_name* are required to check if the password is too
         similar to either of these items.
@@ -441,6 +446,16 @@ def validate_password(
         input password against the server's domain name, the user's email, or
         their name. This value will be overriden by a value in the *config*
         object's *max_unsafe_similarity* attribute.
+
+        *max_character_frequency* is the maximum ratio required to fuzzy-match
+        the input password against the server's domain name, the user's email,
+        or their name. The value provided in this kwarg will be overriden by the
+        ``passpolicy`` attribute in the config object if that is passed in as
+        well.
+
+        *min_pwned_matches* is the minimum number of matches required in the
+        matching set returned by the haveibeenpwned.com password compromise
+        database API to consider a password as compromised.
 
         In addition to these items received from an authnzerver client, the
         payload must also include the following keys (usually added in by a
@@ -516,9 +531,25 @@ def validate_password(
     try:
         max_unsafe_similarity = int(payload.get("max_unsafe_similarity", 30))
         if max_unsafe_similarity < 0:
-            max_unsafe_similarity = 10
+            max_unsafe_similarity = 30
     except Exception:
-        max_unsafe_similarity = 10
+        max_unsafe_similarity = 30
+
+    try:
+        max_character_frequency = float(
+            payload.get("max_character_frequency", 0.3)
+        )
+        if max_character_frequency < 0:
+            max_character_frequency = 0.3
+    except Exception:
+        max_character_frequency = 0.3
+
+    try:
+        min_pwned_matches = int(payload.get("min_pwned_matches", 25))
+        if min_pwned_matches < 0:
+            min_pwned_matches = 25
+    except Exception:
+        min_pwned_matches = 25
 
     password_ok, messages = validate_input_password(
         full_name,
@@ -528,6 +559,8 @@ def validate_password(
         payload["reqid"],
         min_pass_length=min_pass_length,
         max_unsafe_similarity=max_unsafe_similarity,
+        max_character_frequency=max_character_frequency,
+        min_pwned_matches=min_pwned_matches,
         config=config
     )
 
