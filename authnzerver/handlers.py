@@ -177,6 +177,7 @@ class AuthHandler(tornado.web.RequestHandler,
             )
 
             if handler_func is None:
+                problems["failure_reason"] = "invalid request parameters"
                 response = {
                     "success": False,
                     "response": problems,
