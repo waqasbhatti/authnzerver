@@ -861,7 +861,7 @@ def validate_api_request(request_type, request_payload):
 
         return (False,
                 None,
-                f"request '{request_type}' is not a valid request type")
+                f"request '{request_type}' is not a valid request")
 
     request_args = schema[request_type]["args"]
     request_kwargs = schema[request_type]["kwargs"]
@@ -927,7 +927,7 @@ def validate_api_request(request_type, request_payload):
     if not request_valid:
         return (False,
                 {"problems": invalid_params},
-                f"request '{request_type}' has invalid parameter types")
+                f"request '{request_type}' has invalid parameters")
 
     #
     # otherwise, the request is valid, return OK

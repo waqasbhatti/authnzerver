@@ -32,72 +32,10 @@ json._default_encoder = FrontendEncoder()
 import tornado.web
 import tornado.ioloop
 
-from . import actions
 from .messaging import encrypt_message, decrypt_message
 from .permissions import pii_hash
 from .ratelimit import RateLimitMixin, UserLockMixin
-
-
-#####################################
-## AUTH REQUEST HANDLING FUNCTIONS ##
-#####################################
-
-#
-# this maps request types -> request functions to execute
-#
-request_functions = {
-
-    # session actions
-    'session-new': actions.auth_session_new,
-    'session-exists': actions.auth_session_exists,
-    'session-delete': actions.auth_session_delete,
-    'session-delete-userid': actions.auth_delete_sessions_userid,
-    'user-login': actions.auth_user_login,
-    'user-logout': actions.auth_user_logout,
-    'user-passcheck': actions.auth_password_check,
-    'user-passcheck-nosession': actions.auth_password_check_nosession,
-
-    # user actions
-    'user-new': actions.create_new_user,
-    'user-changepass': actions.change_user_password,
-    'user-changepass-nosession': actions.change_user_password_nosession,
-    'user-delete': actions.delete_user,
-    'user-list': actions.list_users,
-    'user-lookup-email': actions.get_user_by_email,
-    'user-lookup-match': actions.lookup_users,
-    'user-edit': actions.edit_user,
-    'user-resetpass': actions.verify_password_reset,
-    'user-resetpass-nosession': actions.verify_password_reset_nosession,
-    'user-lock': actions.toggle_user_lock,
-    'user-validatepass': actions.validate_password,
-
-    # email actions
-    'user-sendemail-signup': actions.send_signup_verification_email,
-    'user-sendemail-forgotpass': actions.send_forgotpass_verification_email,
-    'user-set-emailverified': actions.set_user_emailaddr_verified,
-    'user-set-emailsent': actions.set_user_email_sent,
-
-    # apikey actions
-    'apikey-new': actions.issue_apikey,
-    'apikey-verify': actions.verify_apikey,
-    'apikey-revoke': actions.revoke_apikey,
-    'apikey-new-nosession': actions.issue_apikey_nosession,
-    'apikey-verify-nosession': actions.verify_apikey_nosession,
-    'apikey-refresh-nosession': actions.refresh_apikey_nosession,
-    'apikey-revoke-nosession': actions.revoke_apikey_nosession,
-    'apikey-revokeall-nosession': actions.revoke_all_apikeys_nosession,
-
-    # access and limit check actions
-    'user-check-access': actions.check_user_access,
-    'user-check-limit': actions.check_user_limit,
-
-    # actions that should only be used internally by a frontend server, meaning
-    # not take or pass along any end-user input
-    'internal-user-lock': actions.internal_toggle_user_lock,
-    'internal-user-edit': actions.internal_edit_user,
-    'internal-user-delete': actions.internal_delete_user,
-    'internal-session-edit': actions.internal_edit_session,
-}
+from .apischema import validate_and_get_function
 
 
 #######################
@@ -230,21 +168,35 @@ class AuthHandler(tornado.web.RequestHandler,
             # inject the PII salt into the body of the request as well
             payload['body']['pii_salt'] = self.pii_salt
 
-            # inject the config object into the backend function call
-            # this passes along any secrets or settings from environ
-            # directly to those functions
-            backend_func = partial(
-                request_functions[payload['request']],
-                payload['body'],
-                config=self.config
+            #
+            # validate the request and choose the function to dispatch
+            #
+            handler_func, problems, validate_msgs = validate_and_get_function(
+                payload['request'],
+                payload['body']
             )
 
-            # run the function associated with the request type
-            loop = tornado.ioloop.IOLoop.current()
-            response = await loop.run_in_executor(
-                self.executor,
-                backend_func,
-            )
+            if handler_func is None:
+                response = {
+                    "success": False,
+                    "response": problems,
+                    "messages": [validate_msgs],
+                }
+            else:
+                # inject the config object into the backend function call
+                # this passes along any secrets or settings from environ
+                # directly to those functions
+                backend_func = partial(
+                    handler_func,
+                    payload['body'],
+                    config=self.config
+                )
+                # run the function associated with the request type
+                loop = tornado.ioloop.IOLoop.current()
+                response = await loop.run_in_executor(
+                    self.executor,
+                    backend_func,
+                )
 
             #
             # see if the request was one that requires an email and password. in
