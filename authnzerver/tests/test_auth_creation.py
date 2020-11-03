@@ -139,10 +139,11 @@ def test_create_user():
 
     # 4. password is OK
     payload = {'full_name': 'Test User',
-               'email':'testuser@test.org',
-               'password':'aROwQin9L8nNtPTEMLXd',
-               'reqid':1,
-               'pii_salt':'super-random-salt'}
+               'email': 'testuser@test.org',
+               'password': 'aROwQin9L8nNtPTEMLXd',
+               'system_id': 'totally-random-systemid-1234',
+               'reqid': 1,
+               'pii_salt': 'super-random-salt'}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -150,6 +151,7 @@ def test_create_user():
     assert user_created['success'] is True
     assert user_created['user_email'] == 'testuser@test.org'
     assert user_created['user_id'] == 4
+    assert user_created['system_id'] == 'totally-random-systemid-1234'
     assert user_created['send_verification'] is True
     assert ('User account created. Please verify your email address to log in.'
             in user_created['messages'])

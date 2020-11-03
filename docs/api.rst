@@ -358,14 +358,25 @@ Optional parameters are:
   *verify_retry_wait* hours before they can try to sign up for an account again
   and get a new verification token via email.
 
+- ``system_id`` (str): A (preferably random) string to use as the unique system
+  ID for this user. A system ID is safer to use outside of the
+  frontend/authnzerver system (e.g. by Javascript clients) than the ``user_id``
+  value, which is an integer primary key. If this is not provided, a UUIDv4 will
+  be generated and used for the system ID.
+
 Returns a ``response`` with the following items if successful:
 
 - ``user_email`` (str): the user's email address
 
-- ``user_id`` (int): the user's integer user ID
+- ``user_id`` (int): the user's integer user ID (primary key in the ``users`` DB
+  table)
+
+- ``system_id`` (str): the user's system ID
 
 - ``send_verification`` (bool): whether or not an email for user signup
-  verification should be sent to this user
+  verification should be sent to this user. If the user has signed up already,
+  but has not verified their account email address and *verify_retry_wait*
+  hours have not yet passed, ``send_verificiation`` will be False.
 
 ``user-delete``: Delete an existing user
 ----------------------------------------

@@ -4,7 +4,6 @@ This contains tests for the authnzerver apiclient module.
 """
 
 import os
-import secrets
 
 import pytest
 
@@ -33,11 +32,13 @@ def test_user_new(new_authnzerver):
     resp = srv.user_new(
         "Test User",
         "testuser@example.com",
-        password
+        password,
+        system_id="some-random-system-id",
     )
 
     assert resp.success is True
     assert resp.response["user_id"] == 4
+    assert resp.response["system_id"] == "some-random-system-id"
     assert resp.response["send_verification"] is True
     assert resp.messages == [
         "User account created. Please verify your email address to log in."

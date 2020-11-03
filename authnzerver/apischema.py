@@ -159,7 +159,10 @@ schema = {
              "type": ("dict", "None")},
             {"name": "verify_retry_wait",
              "doc": "Time in hours a user must wait to retry a failed signup.",
-             "type": ("int", "None")}
+             "type": ("int", "None")},
+            {"name": "system_id",
+             "doc": "The system ID to assign to the newly created user.",
+             "type": ("str", "None")}
         ]
     },
     "user-changepass": {

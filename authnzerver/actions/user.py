@@ -100,6 +100,12 @@ def create_new_user(
           action, i.e., responding before expiry of and with the correct
           verification token.
 
+        - system_id: str. If this is provided, must be a unique string that will
+          serve as the system_id for the user. This ID is safe to share with
+          client JS, etc., as opposed to the user_id primary key for the
+          user. If not provided, a UUIDv4 will be generated and used for the
+          system_id.
+
         In addition to these items received from an authnzerver client, the
         payload must also include the following keys (usually added in by a
         wrapping function):
@@ -242,10 +248,14 @@ def create_new_user(
                                            casefold=False)
     password = payload['password']
 
-    # get extra info if any
+    #
+    # optional items
+    #
+
+    # 1. get extra info if any
     extra_info = payload.get("extra_info", None)
 
-    # get the verify_retry_wait time
+    # 2. get the verify_retry_wait time
     verify_retry_wait = payload.get("verify_retry_wait", 6)
     try:
         verify_retry_wait = int(verify_retry_wait)
@@ -254,6 +264,16 @@ def create_new_user(
 
     if verify_retry_wait < 1:
         verify_retry_wait = 1
+
+    # 3. generate or get a system_id for this user
+    if "system_id" in payload and isinstance(payload["system_id"], str):
+        system_id = payload["system_id"]
+    else:
+        system_id = str(uuid.uuid4())
+
+    #
+    # proceed to processing
+    #
 
     # this checks if the database connection is live
     currproc = mp.current_process()
@@ -272,7 +292,10 @@ def create_new_user(
 
     users = currproc.authdb_meta.tables['users']
 
-    input_password = password[: 256]
+    # the password is restricted to 256 characters since that should be enough
+    # (for 2020), and we don't want to kill our own server when hashing absurdly
+    # long passwords through Argon2-id.
+    input_password = password[:256]
 
     # hash the user's password
     hashed_password = pass_hasher.hash(input_password)
@@ -314,9 +337,6 @@ def create_new_user(
     # 'locked', the emailverify_sent_datetime to datetime.utcnow()
 
     try:
-
-        # create a system_id for this user
-        system_id = str(uuid.uuid4())
 
         if not extra_info:
             extra_info = {
@@ -360,6 +380,7 @@ def create_new_user(
     sel = select([
         users.c.email,
         users.c.user_id,
+        users.c.system_id,
         users.c.is_active,
         users.c.emailverify_sent_datetime,
     ]).select_from(users).where(
@@ -390,6 +411,7 @@ def create_new_user(
             'success': True,
             'user_email': rows['email'],
             'user_id': rows['user_id'],
+            'system_id': rows['system_id'],
             'send_verification': True,
             'messages': messages
         }
@@ -447,6 +469,7 @@ def create_new_user(
         sel = select([
             users.c.email,
             users.c.user_id,
+            users.c.system_id,
             users.c.is_active,
             users.c.emailverify_sent_datetime,
         ]).select_from(users).where(
@@ -473,6 +496,7 @@ def create_new_user(
             'success': False,
             'user_email': rows['email'],
             'user_id': rows['user_id'],
+            'system_id': rows['system_id'],
             'send_verification': resend_verification,
             'failure_reason': "user exists",
             'messages': messages
