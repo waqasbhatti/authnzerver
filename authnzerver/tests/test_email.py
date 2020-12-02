@@ -148,7 +148,7 @@ def generate_cert_and_key(tmpdir):
 
 def generate_email_server(tmpdir):
     '''
-    This starts an SMTP server in a new thread, which listens on port 2587.
+    This starts an SMTP server in a new thread, which listens on port 9487.
 
     STARTTLS is enabled using a self-signed certificate.
 
@@ -165,7 +165,7 @@ def generate_email_server(tmpdir):
 
     controller = STARTTLSController(Mailbox(maildir),
                                     hostname='localhost',
-                                    port=2587,
+                                    port=9487,
                                     ssl_context=ctx)
     return controller, maildir
 
@@ -194,7 +194,7 @@ def test_email_works(tmpdir):
         None,
         None,
         'salt',
-        port=2587
+        port=9487
     )
 
     assert email_sent is True
@@ -284,7 +284,7 @@ def test_create_user_with_email(tmpdir):
          'emailuser':None,
          'emailpass':None,
          'emailserver':'localhost',
-         'emailport':2587,
+         'emailport':9487,
          'emailsender':'Authnzerver <authnzerver@test.org>',
          'reqid':1337,
          'pii_salt':'super-secret-salt'},
@@ -380,7 +380,7 @@ def test_create_user_with_email(tmpdir):
     config_obj.emailuser = None
     config_obj.emailpass = None
     config_obj.emailserver = 'localhost'
-    config_obj.emailport = 2587
+    config_obj.emailport = 9487
     config_obj.emailsender = 'Authnzerver <authnzerver@test.org>'
 
     forgotpass_email_info = actions.send_forgotpass_verification_email(
