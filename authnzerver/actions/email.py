@@ -269,7 +269,10 @@ def send_email(
                 server.starttls()
                 server.ehlo()
 
-                if server.has_extn('AUTH'):
+                if (server.has_extn('AUTH') and
+                    user is not None and
+                    password is not None):
+
                     server.login(
                         user,
                         password
