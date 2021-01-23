@@ -97,6 +97,12 @@ class RateLimitMixin:
                 )
                 raise tornado.web.HTTPError(status_code=429)
 
+        #
+        # specific rate-limiting per request type
+        # NOTE: all of these fall back to the IP addr of the authnzerver client
+        # if a required request param for the cache token isn't found
+        #
+
         # check the user- prefixed request
         if request_type.startswith("user-"):
 
@@ -106,16 +112,9 @@ class RateLimitMixin:
                 request_body.get("system_id", None) or
                 request_body.get("session_token", None) or
                 request_body.get("ip_address", None) or
-                request_body.get("email_address", None)
+                request_body.get("email_address", None) or
+                self.request.remote_ip
             )
-
-            # need special handling for some functions
-            # FIXME: this should really be an internal- prefixed function
-            if request_type == 'user-list' and user_cache_token is None:
-                user_cache_token = f"user-lookup-{self.request.remote_ip}"
-
-            if request_type == 'user-lookup-match':
-                user_cache_token = f"user-lookup-{self.request.remote_ip}"
 
             # drop all requests that try to get around rate-limiting
             if not user_cache_token:
@@ -167,7 +166,8 @@ class RateLimitMixin:
             session_cache_token = (
                 request_body.get("user_id", None) or
                 request_body.get("session_token", None) or
-                request_body.get("ip_address", None)
+                request_body.get("ip_address", None) or
+                self.request.remote_ip
             )
             if not session_cache_token:
                 LOGGER.error(
@@ -217,12 +217,10 @@ class RateLimitMixin:
 
             # handle API key issuance
             apikey_cache_token = (
-                request_body.get("ip_address", None)
+                request_body.get("ip_address", None) or
+                request_body.get("apikey_dict", {}).get("uid", None) or
+                self.request.remote_ip
             )
-            # handle all other API key actions
-            if not apikey_cache_token and request_body.get("apikey_dict"):
-                apikey_cache_token = request_body["apikey_dict"].get("uid",
-                                                                     None)
 
             if not apikey_cache_token:
                 LOGGER.error(
