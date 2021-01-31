@@ -9,6 +9,7 @@ include versioneer.py
 include authnzerver/_version.py
 
 include authnzerver/default-permissions-model.json
+include authnzerver/disposable_email_blocklist.conf
 include authnzerver/top-10k-passwords.txt
 
 recursive-include authnzerver/frontend/static/js *.js
