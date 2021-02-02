@@ -41,20 +41,20 @@ class STARTTLSController(Controller):
                  port=0,
                  *,
                  ready_timeout=1.0,
-                 enable_SMTPUTF8=True,
+                 # enable_SMTPUTF8=True,
                  ssl_context=None):
         super().__init__(handler,
                          hostname=hostname,
                          port=port,
                          ready_timeout=ready_timeout,
-                         enable_SMTPUTF8=enable_SMTPUTF8,
+                         # enable_SMTPUTF8=enable_SMTPUTF8,
                          ssl_context=None)
         self.__factory = factory
         self.__ssl_context = ssl_context
 
     def factory(self):
         return self.__factory(self.handler,
-                              enable_SMTPUTF8=self.enable_SMTPUTF8,
+                              # enable_SMTPUTF8=self.enable_SMTPUTF8,
                               hostname=self.hostname,
                               tls_context=self.__ssl_context)
 
