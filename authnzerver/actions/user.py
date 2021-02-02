@@ -452,42 +452,45 @@ def create_new_user(
              resend_verification)
         )
 
-        # if we're going to resend the verification, update the users table with
-        # the latest info sent by the user (they might've changed their password
-        # in the meantime)
-        del new_user_dict["created_on"]
-        del new_user_dict["system_id"]
+        if resend_verification:
 
-        upd = users.update(
-        ).where(
-            users.c.user_id == rows["user_id"]
-        ).values(new_user_dict)
-        result = currproc.authdb_conn.execute(upd)
-        result.close()
+            # if we're going to resend the verification, update the users table
+            # with the latest info sent by the user (they might've changed their
+            # password in the meantime)
+            del new_user_dict["created_on"]
+            del new_user_dict["system_id"]
 
-        # get back the user ID
-        sel = select([
-            users.c.email,
-            users.c.user_id,
-            users.c.system_id,
-            users.c.is_active,
-            users.c.emailverify_sent_datetime,
-        ]).select_from(users).where(
-            users.c.email == email
-        )
-        result = currproc.authdb_conn.execute(sel)
-        rows = result.fetchone()
-        result.close()
+            upd = users.update(
+            ).where(
+                users.c.user_id == rows["user_id"]
+            ).values(new_user_dict)
+            result = currproc.authdb_conn.execute(upd)
+            result.close()
 
-        LOGGER.warning(
-            "[%s] Resending verification to user: %s because timedelta "
-            "between original sign up and retry: %s > "
-            "verify_retry_wait: %s hours. User information has been updated "
-            "with their latest provided sign-up info." %
-            (payload["reqid"],
-             pii_hash(rows["user_id"], payload["pii_salt"]),
-             verification_timedelta, verify_retry_wait)
-        )
+            # get back the user ID
+            sel = select([
+                users.c.email,
+                users.c.user_id,
+                users.c.system_id,
+                users.c.is_active,
+                users.c.emailverify_sent_datetime,
+            ]).select_from(users).where(
+                users.c.email == email
+            )
+            result = currproc.authdb_conn.execute(sel)
+            rows = result.fetchone()
+            result.close()
+
+            LOGGER.warning(
+                "[%s] Resending verification to user: %s because timedelta "
+                "between original sign up and retry: %s > "
+                "verify_retry_wait: %s hours. "
+                "User information has been updated "
+                "with their latest provided sign-up info." %
+                (payload["reqid"],
+                 pii_hash(rows["user_id"], payload["pii_salt"]),
+                 verification_timedelta, verify_retry_wait)
+            )
 
         messages.append(
             'User account created. Please verify your email address to log in.'
