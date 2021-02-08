@@ -286,6 +286,7 @@ Returns a ``response`` with the following items if successful:
 
 - ``user_id`` (int): a user ID associated with the logged-in user or None if
   login failed.
+- ``user_role`` (str): the user's role.
 
 ``user-logout``: Perform a user logout action
 ---------------------------------------------
@@ -315,6 +316,7 @@ Returns a ``response`` with the following items if successful:
 
 - ``user_id`` (int): a user ID associated with the logged-in user or None if
   password check failed.
+- ``user_role`` (str): the user's role.
 
 ``user-passcheck-nosession``: Perform a user password check (without an existing session)
 -----------------------------------------------------------------------------------------
@@ -329,6 +331,7 @@ Returns a ``response`` with the following items if successful:
 
 - ``user_id`` (int): a user ID associated with the logged-in user or None if
   password check failed.
+- ``user_role`` (str): the user's role.
 
 
 User handling

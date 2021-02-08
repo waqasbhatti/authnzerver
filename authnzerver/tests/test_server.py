@@ -615,6 +615,7 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
         assert response_dict['success'] is True
         assert isinstance(response_dict['response'], dict)
         assert response_dict['response']['user_id'] == 1
+        assert response_dict['response']['user_role'] == 'superuser'
 
     finally:
 
@@ -851,6 +852,7 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
         assert response_dict['success'] is True
         assert isinstance(response_dict['response'], dict)
         assert response_dict['response']['user_id'] == 1
+        assert response_dict['response']['user_role'] == 'superuser'
 
     finally:
 

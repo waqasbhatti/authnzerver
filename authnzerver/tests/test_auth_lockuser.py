@@ -92,6 +92,18 @@ def test_user_lock():
     assert emailverify['is_active'] is True
     assert emailverify['user_role'] == 'authenticated'
 
+    # set our user_role to staff -- this tests if the user's user_role is reset
+    # to their original user_role after unlocking
+    user_edit = actions.internal_edit_user(
+        {"target_userid": user_created["user_id"],
+         "update_dict": {"user_role": "staff"},
+         "pii_salt": "super-secret-salt", "reqid": 2},
+        raiseonfail=True,
+        override_authdb_path='sqlite:///test-userlock.authdb.sqlite'
+    )
+    assert user_edit["success"] is True
+    assert user_edit["user_info"]["user_role"] == "staff"
+
     # now make a new session token
     session_payload = {
         'user_id':emailverify['user_id'],
@@ -182,7 +194,7 @@ def test_user_lock():
         raiseonfail=True
     )
     assert user_unlocked['success'] is True
-    assert user_unlocked['user_info']['user_role'] == 'authenticated'
+    assert user_unlocked['user_info']['user_role'] == 'staff'
     assert user_unlocked['user_info']['is_active'] is True
 
     # try to login
