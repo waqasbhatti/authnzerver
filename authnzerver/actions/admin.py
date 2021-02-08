@@ -1241,7 +1241,6 @@ def internal_edit_user(
                 'failure_reason': (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'session_info': None,
                 'messages': ["Invalid edit-user request: "
                              "missing or invalid parameters."],
             }
@@ -1254,7 +1253,6 @@ def internal_edit_user(
             'failure_reason': (
                 "invalid request: missing 'update_dict' in request"
             ),
-            'session_info': None,
             'messages': ["Invalid user-edit request: "
                          "missing or invalid parameters."],
         }
@@ -1280,7 +1278,6 @@ def internal_edit_user(
                 "invalid request: disallowed keys in update_dict: %s" %
                 leftover_keys
             ),
-            'session_info': None,
             'messages': ["Invalid edit-user request: "
                          "invalid update parameters."],
         }
@@ -1322,7 +1319,6 @@ def internal_edit_user(
             return {
                 'success': False,
                 "failure_reason": "no such user",
-                'user_info': None,
                 'messages': ["User info update failed."],
             }
 
@@ -1393,7 +1389,6 @@ def internal_edit_user(
                 'failure_reason': (
                     "user requested for update doesn't exist"
                 ),
-                'user_info': None,
                 'messages': ["User info update failed."],
             }
 
@@ -1413,7 +1408,6 @@ def internal_edit_user(
             'failure_reason': (
                 "DB error when updating user info"
             ),
-            'session_info': None,
             'messages': ["User info update failed."],
         }
 
@@ -1569,12 +1563,94 @@ def internal_toggle_user_lock(payload,
 
         users = currproc.authdb_meta.tables['users']
 
+        #
+        # get the current user_role of the user and save it to
+        # extra_info["previous_user_roles"] in a list
+        #
+        sel = select(user_info_columns(users)).select_from(users).where(
+            users.c.user_id == target_userid
+        )
+        result = currproc.authdb_conn.execute(sel)
+        row = result.first()
+
+        current_user_role = row["user_role"]
+        user_extra_info = row["extra_info"]
+        previous_user_roles = user_extra_info.get("previous_user_roles",
+                                                  ["locked"])
+
+        # if the current user role is already locked and we get a request to
+        # lock the user again, don't do anything
+        if current_user_role == "locked" and payload["action"] == "lock":
+
+            LOGGER.warning(
+                "[%s] User lock toggle requested to set state to "
+                "locked for user_id: %s but user is "
+                "already locked. Ignoring... " %
+                (payload['reqid'],
+                 pii_hash(payload['target_userid'],
+                          payload['pii_salt']))
+            )
+
+            return {
+                'success': True,
+                'user_info': dict(row),
+                'messages': ["User lock toggle successful."],
+            }
+
+        # if the current user role is already unlocked and we get a request to
+        # unlock the user again, don't do anything
+        if current_user_role != "locked" and payload["action"] == "unlock":
+
+            LOGGER.warning(
+                "[%s] User lock toggle requested to set state to "
+                "unlocked for user_id: %s but user is "
+                "already unlocked with user_role: %s. Ignoring... " %
+                (payload['reqid'],
+                 pii_hash(payload['target_userid'],
+                          payload['pii_salt']),
+                 current_user_role)
+            )
+
+            return {
+                'success': True,
+                'user_info': dict(row),
+                'messages': ["User lock toggle successful."],
+            }
+
+        # when we lock, save the current user role to
+        # extra_info["previous_user_roles"]
         if payload['action'] == 'lock':
+
+            previous_user_roles.append(current_user_role)
+            user_extra_info["previous_user_roles"] = previous_user_roles
+
+            LOGGER.info(
+                "[%s] "
+                "User with user_id: %s is being locked. "
+                "Their current user_role is: %s." %
+                (payload['reqid'],
+                 pii_hash(payload['target_userid'], payload['pii_salt']),
+                 previous_user_roles[-1])
+            )
             update_dict = {'is_active': False,
-                           'user_role': 'locked'}
+                           'user_role': 'locked',
+                           'extra_info': user_extra_info}
+
+        # when we unlock, get back the very last previous user role
         elif payload['action'] == 'unlock':
+
+            LOGGER.info(
+                "[%s] "
+                "User with user_id: %s is being unlocked. "
+                "Their previous user_role was: %s." %
+                (payload['reqid'],
+                 pii_hash(payload['target_userid'], payload['pii_salt']),
+                 previous_user_roles[-1])
+            )
+
             update_dict = {'is_active': True,
-                           'user_role': 'authenticated'}
+                           'user_role': previous_user_roles[-1]}
+
         else:
             LOGGER.error(
                 "[%s] Invalid user lock toggle request for user_id: %s. "
@@ -1603,12 +1679,8 @@ def internal_toggle_user_lock(payload,
         result = currproc.authdb_conn.execute(upd)
 
         # check the update and return new values
-        sel = select(user_info_columns(users)).select_from(users).where(
-            users.c.user_id == target_userid
-        )
         result = currproc.authdb_conn.execute(sel)
-        rows = result.fetchone()
-        result.close()
+        rows = result.first()
 
         # delete all the sessions belonging to this user if the action to
         # perform is 'lock'
