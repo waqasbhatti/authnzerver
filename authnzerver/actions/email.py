@@ -755,7 +755,8 @@ def set_user_emailaddr_verified(payload,
 
     This is called by the frontend after it verifies that the token challenge to
     verify the user's email succeeded and has not yet expired. This will set the
-    user_role to 'authenticated' and the is_active column to True.
+    user_role to 'authenticated' (or the previous user role before locking) and
+    the is_active column to True.
 
     Parameters
     ----------
@@ -842,6 +843,52 @@ def set_user_emailaddr_verified(payload,
 
     users = currproc.authdb_meta.tables['users']
 
+    sel = select(
+        [users.c.user_id, users.c.user_role, users.c.extra_info]
+    ).select_from(
+        users
+    ).where(
+        users.c.email == payload["email"]
+    )
+    result = currproc.authdb_conn.execute(sel)
+    row = result.first()
+
+    if row is None:
+        LOGGER.error(
+            '[%s] Email verification toggle request failed for '
+            'email: %s.'
+            'The database rows corresponding to '
+            'the user do not exist.' %
+            (payload['reqid'],
+             pii_hash(payload['email'], payload['pii_salt']))
+        )
+
+        return {
+            'success': False,
+            'failure_reason': (
+                "could not find user in DB by email"
+            ),
+            'user_id': None,
+            'is_active': False,
+            'user_role': 'locked',
+            'messages': ["Email verification toggle request failed."]
+        }
+
+    #
+    # get the previous user_role if any
+    #
+    current_user_role = row["user_role"]
+    user_extra_info = row["extra_info"]
+    previous_user_roles = user_extra_info.get("previous_user_roles",
+                                              ["locked"])
+
+    if current_user_role != "locked":
+        user_role_to_set = current_user_role
+    elif previous_user_roles[-1] != "locked":
+        user_role_to_set = previous_user_roles[-1]
+    else:
+        user_role_to_set = "authenticated"
+
     # update the table for this user
     upd = users.update(
     ).where(
@@ -851,7 +898,7 @@ def set_user_emailaddr_verified(payload,
     ).values({
         'is_active': True,
         'email_verified': True,
-        'user_role': 'authenticated'
+        'user_role': user_role_to_set
     })
     currproc.authdb_conn.execute(upd)
 
@@ -874,7 +921,7 @@ def set_user_emailaddr_verified(payload,
             (payload['reqid'],
              pii_hash(rows['user_id'], payload['pii_salt']),
              pii_hash(payload['email'], payload['pii_salt']),
-             pii_hash(rows['user_role'], payload['pii_salt']),
+             rows['user_role'],
              rows['is_active'])
         )
 
@@ -894,7 +941,7 @@ def set_user_emailaddr_verified(payload,
             'The database rows corresponding to '
             'the user could not be updated.' %
             (payload['reqid'],
-             pii_hash(rows['user_id'], payload['pii_salt']))
+             pii_hash(payload['email'], payload['pii_salt']))
         )
 
         return {
