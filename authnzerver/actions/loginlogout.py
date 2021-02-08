@@ -465,6 +465,7 @@ def auth_user_login(payload,
                     return {
                         'success': True,
                         'user_id': user_info['user_id'],
+                        'user_role': user_info['user_role'],
                         'messages': ["Login successful."]
                     }
 

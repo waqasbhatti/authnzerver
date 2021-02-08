@@ -363,6 +363,7 @@ def auth_password_check(payload,
                     return {
                         'success': True,
                         'user_id': user_info['user_id'],
+                        'user_role': user_info['user_role'],
                         'messages': ["Verification successful."]
                     }
 
@@ -628,6 +629,7 @@ def auth_password_check_nosession(payload,
                 return {
                     'success': True,
                     'user_id': user_info['user_id'],
+                    'user_role': user_info['user_role'],
                     'messages': ["Verification successful."]
                 }
 
