@@ -918,6 +918,8 @@ def load_config(conf_dict,
     # get the environ from the envfile as priority 1
     if isinstance(envfile, str) and os.path.exists(envfile):
 
+        LOGGER.warning(f"Using .env file at: {envfile}")
+
         # inspired by: https://stackoverflow.com/a/26859985
         with open(envfile, 'r') as infd:
             envfd = chain(('[DEFAULT]',), infd)

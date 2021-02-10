@@ -393,6 +393,11 @@ def generate_env(database_path,
             else:
                 env_key, env_val = val['env'], val['default']
 
-            outfd.write("%s=%s\n" % (env_key, env_val))
+            # handle multiple env keys by assigning them all to the value
+            if isinstance(env_key, (list, tuple)):
+                for key_item in env_key:
+                    outfd.write("%s=%s\n" % (key_item, env_val))
+            else:
+                outfd.write("%s=%s\n" % (env_key, env_val))
 
     return env_file
