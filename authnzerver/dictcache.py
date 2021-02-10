@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 # dictcache.py - Waqas Bhatti (waqas.afzal.bhatti@gmail.com) - Jul 2020
 # License: MIT - see the LICENSE file for the full text.
-"""This contains a simple dict-based in-memory cache.
+"""This contains a simple dict-based in-memory key-value store.
+
+Suitable for light-duty caching purposes.
 
 """
 
