@@ -57,8 +57,9 @@ def autogen_secrets_authdb(basedir,
           authnzerver options, and users will be written to
           ``.authnzerver-admin-credentials`` in this directory.
 
-        - A random salt value will be written to ``.authnzerver-random-salt`` in
-          this directory. This is used to hash user IDs and other PII in logs.
+        - A random salt value will be written to ``.authnzerver-random-salt``
+          in this directory. This is used to hash user IDs and other PII in
+          logs.
 
     database_url : str or None
         If this is a str, must be a valid SQLAlchemy database URL to use to
@@ -82,6 +83,9 @@ def autogen_secrets_authdb(basedir,
         tuple of strings.
 
     """
+
+    if not os.path.exists(basedir):
+        os.makedirs(os.path.abspath(basedir))
 
     import getpass
     from .authdb import (
