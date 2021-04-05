@@ -83,7 +83,8 @@ Users = Table(
     # system_id is also used for autocompletes on the frontend to map to
     # full_name if a user indicates their name can be public or is shared in a
     # group.
-    Column('system_id', String(length=50), index=True, nullable=False),
+    Column('system_id', String(length=50),
+           index=True, nullable=False, unique=True),
 
     # This is what the user calls themselves, freeform. Never exposed to other
     # users unless we have explicit permission.
