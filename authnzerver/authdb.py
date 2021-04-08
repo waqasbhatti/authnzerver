@@ -394,11 +394,11 @@ def initial_authdb_inserts(auth_db_path,
 
     hashed_password = hasher.hash(superuser_pass)
 
-    result = conn.execute(
+    transaction = conn.begin()
+    conn.execute(
         users.insert().values([
             # the superuser
-            {'user_id': 1,
-             'password': hashed_password,
+            {'password': hashed_password,
              'email': superuser_email,
              'system_id': str(uuid.uuid4()),
              'email_verified': True,
@@ -410,8 +410,7 @@ def initial_authdb_inserts(auth_db_path,
              "extra_info": {"provenance": "auto-created",
                             "type": "system-user"}},
             # the anonuser,
-            {'user_id': 2,
-             'password': hasher.hash(secrets.token_urlsafe(32)),
+            {'password': hasher.hash(secrets.token_urlsafe(32)),
              'email': 'anonuser@localhost',
              'system_id': str(uuid.uuid4()),
              'email_verified': True,
@@ -423,8 +422,7 @@ def initial_authdb_inserts(auth_db_path,
              "extra_info": {"provenance": "auto-created",
                             "type": "system-user"}},
             # the dummyuser to fail passwords for nonexistent users against
-            {'user_id': 3,
-             'password': hasher.hash(secrets.token_urlsafe(32)),
+            {'password': hasher.hash(secrets.token_urlsafe(32)),
              'email': 'dummyuser@localhost',
              'system_id': str(uuid.uuid4()),
              'email_verified': True,
@@ -437,7 +435,7 @@ def initial_authdb_inserts(auth_db_path,
                             "type": "locked-user"}},
         ])
     )
-    result.close()
+    transaction.commit()
 
     if superuser_pass_auto:
         return superuser_email, superuser_pass
