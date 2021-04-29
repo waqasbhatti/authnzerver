@@ -625,8 +625,12 @@ def test_item_from_url(monkeypatch, requests_mock):
     #
 
     # GET URL
+    # NOTE: the z-access here should technically be z:access
+    # but request-mock=1.9.1 quotes the ':' character differently
+    # from actual requests, so the URL doesn't match and the assert fails
+    # see: https://github.com/jamielennox/requests-mock/pull/167
     get_url = ("https://secretmanager.googleapis.com/v1/"
-               "projects/abcproj/secrets/abc/versions/z:access")
+               "projects/abcproj/secrets/abc/versions/z-access")
     get_expect_headers = {'Authorization':'Bearer super-secret-token',
                           'Content-Type':'application/json',
                           'x-goog-user-project': 'abcproj'}
@@ -678,7 +682,7 @@ def test_item_from_url(monkeypatch, requests_mock):
     #
 
     get_url = ("https://secretmanager.googleapis.com/v1/"
-               "projects/abcproj/secrets/abc/versions/z:access")
+               "projects/abcproj/secrets/abc/versions/z-access")
     get_expect_headers = {'Authorization':'Bearer super-secret-token',
                           'Content-Type':'application/json',
                           'x-goog-user-project': 'abcproj'}
@@ -728,7 +732,7 @@ def test_get_conf_item_postprocess(monkeypatch, requests_mock, tmpdir):
 
     # GET URL
     get_url = ("https://secretmanager.googleapis.com/v1/"
-               "projects/abcproj/secrets/abc/versions/z:access")
+               "projects/abcproj/secrets/abc/versions/z-access")
     get_expect_headers = {'Authorization':'Bearer super-secret-token',
                           'Content-Type':'application/json',
                           'x-goog-user-project': 'abcproj'}
