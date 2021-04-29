@@ -160,7 +160,7 @@ def validate_input_password(
         pii_salt,
         reqid,
         min_pass_length=12,
-        max_unsafe_similarity=20,
+        max_unsafe_similarity=33,
         max_character_frequency=0.3,
         min_pwned_matches=25,
         config=None
@@ -430,7 +430,7 @@ def validate_password(
         The following keys are optional:
 
         - min_pass_length: int, default = 12
-        - max_unsafe_similarity: int, default = 30
+        - max_unsafe_similarity: int, default = 33
         - max_character_frequency: float, default = 0.3
         - min_pwned_matches: int, default = 25
 
@@ -529,11 +529,11 @@ def validate_password(
         min_pass_length = 12
 
     try:
-        max_unsafe_similarity = int(payload.get("max_unsafe_similarity", 30))
+        max_unsafe_similarity = int(payload.get("max_unsafe_similarity", 33))
         if max_unsafe_similarity < 0:
-            max_unsafe_similarity = 30
+            max_unsafe_similarity = 33
     except Exception:
-        max_unsafe_similarity = 30
+        max_unsafe_similarity = 33
 
     try:
         max_character_frequency = float(

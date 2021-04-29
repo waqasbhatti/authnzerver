@@ -43,7 +43,7 @@ def change_user_password(payload,
                          override_authdb_path=None,
                          raiseonfail=False,
                          min_pass_length=12,
-                         max_unsafe_similarity=30,
+                         max_unsafe_similarity=33,
                          config=None):
     """Changes the user's password.
 
@@ -397,7 +397,7 @@ def change_user_password_nosession(payload,
                                    override_authdb_path=None,
                                    raiseonfail=False,
                                    min_pass_length=12,
-                                   max_unsafe_similarity=30,
+                                   max_unsafe_similarity=33,
                                    config=None):
     """Changes the user's password.
 

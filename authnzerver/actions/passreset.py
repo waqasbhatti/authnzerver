@@ -43,7 +43,7 @@ def verify_password_reset(payload,
                           raiseonfail=False,
                           override_authdb_path=None,
                           min_pass_length=12,
-                          max_unsafe_similarity=30,
+                          max_unsafe_similarity=33,
                           config=None):
     """
     Verifies a password reset request.

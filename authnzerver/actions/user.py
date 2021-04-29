@@ -71,7 +71,7 @@ pass_hasher = PasswordHasher()
 def create_new_user(
         payload,
         min_pass_length=12,
-        max_unsafe_similarity=30,
+        max_unsafe_similarity=33,
         override_authdb_path=None,
         raiseonfail=False,
         config=None
