@@ -6,7 +6,7 @@ ARG tini_version=v0.19.0
 ARG psycopg2_version=2.8.6
 
 # get PyMySQL
-ARG pymysql_version=0.10.1
+ARG pymysql_version=1.0.2
 
 #
 # stage 1: build psycopg2 for Postgres interface
@@ -43,7 +43,7 @@ RUN apt-get update \
 # copy over the built psycopg2 wheel from the builder
 COPY --chown=authnzerver:authnzerver \
   --from=builder \
-    /psycopg2-${psycopg2_version}-cp38-cp38-linux_x86_64.whl /home/authnzerver
+    /psycopg2-${psycopg2_version}-cp38-cp38-linux_*.whl /home/authnzerver
 
 ADD https://github.com/krallin/tini/releases/download/${tini_version}/tini /tini
 RUN chmod +x /tini
@@ -57,8 +57,8 @@ RUN python3 -m venv /home/authnzerver/.env \
   && pip install --no-cache-dir pip setuptools wheel -U \
   && pip install --no-cache-dir -r requirements.txt \
   && pip install --no-cache-dir \
-       /home/authnzerver/psycopg2-${psycopg2_version}-cp38-cp38-linux_x86_64.whl \
-  && rm /home/authnzerver/psycopg2-${psycopg2_version}-cp38-cp38-linux_x86_64.whl \
+       /home/authnzerver/psycopg2-${psycopg2_version}-cp38-cp38-linux_*.whl \
+  && rm /home/authnzerver/psycopg2-${psycopg2_version}-cp38-cp38-linux_*.whl \
   && pip install --no-cache-dir install PyMySQL==${pymysql_version}
 
 COPY --chown=authnzerver:authnzerver . .
