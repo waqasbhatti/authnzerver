@@ -105,7 +105,10 @@ class Authnzerver:
         self.tls_certfile = tls_certfile
         self.tls_keyfile = tls_keyfile
 
-    def request(self, request_type, request_body, request_id=None):
+    def request(self,
+                request_type,
+                request_body,
+                request_id=None):
         """This does a synchronous request to the authnzerver.
 
         Parameters
@@ -116,7 +119,10 @@ class Authnzerver:
             `HTTP API <https://authnzerver.readthedocs.io/en/latest/api.html>`_.
 
         request_body : dict
-            A dict with the appropriate items needed for *request_type*.
+            A dict with the appropriate items needed for *request_type*. This
+            should also contain a key: "client_ipaddr" with the IP address of
+            the frontend server's client. This is used for rate-limiting
+            authnzerver API actions per IP address per minute.
 
         request_id : str or int, optional
             If *request_id* is None, a random 8-byte request ID will be
@@ -162,11 +168,18 @@ class Authnzerver:
         if request_id is None:
             request_id = token_urlsafe(8)
 
+        if "client_ipaddr" not in request_body:
+            raise KeyError(
+                "Expected key 'client_ipaddr' in request_body. "
+                "Set this to the frontend client's IP address "
+                "to enable rate-limiting."
+            )
+
         message_dict = {
             "request": request_type,
             "body": request_body,
-            "reqid": request_id
-
+            "reqid": request_id,
+            "client_ipaddr": request_body["client_ipaddr"]
         }
 
         # encrypt the message
@@ -280,7 +293,9 @@ class Authnzerver:
         finally:
             httpclient.close()
 
-    async def async_request(self, request_type, request_body,
+    async def async_request(self,
+                            request_type,
+                            request_body,
                             request_id=None):
         """This does an  asynchronous request to the authnzerver.
 
@@ -292,7 +307,10 @@ class Authnzerver:
             `HTTP API <https://authnzerver.readthedocs.io/en/latest/api.html>`_.
 
         request_body : dict
-            A dict with the appropriate items needed for *request_type*.
+            A dict with the appropriate items needed for *request_type*. This
+            should also contain a key: "client_ipaddr" with the IP address of
+            the frontend server's client. This is used for rate-limiting
+            authnzerver API actions per IP address per minute.
 
         request_id : str or int, optional
             If *request_id* is None, a random 8-byte request ID will be
@@ -338,11 +356,18 @@ class Authnzerver:
         if request_id is None:
             request_id = token_urlsafe(8)
 
+        if "client_ipaddr" not in request_body:
+            raise KeyError(
+                "Expected key 'client_ipaddr' in request_body. "
+                "Set this to the frontend client's IP address "
+                "to enable rate-limiting."
+            )
+
         message_dict = {
             "request": request_type,
             "body": request_body,
-            "reqid": request_id
-
+            "reqid": request_id,
+            "client_ipaddr": request_body["client_ipaddr"],
         }
 
         # encrypt the message

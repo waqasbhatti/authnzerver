@@ -63,7 +63,11 @@ class APIClient:
 
     """
 
-    def dynamic_api_function(self, api_action, use_kwargs, *args, **kwargs):
+    def dynamic_api_function(self,
+                             api_action,
+                             use_kwargs,
+                             *args,
+                             **kwargs):
         """
         Validates an API action, then fires the API call.
 
