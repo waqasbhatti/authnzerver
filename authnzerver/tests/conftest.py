@@ -69,7 +69,7 @@ def new_authnzerver(monkeypatch, tmpdir):
 
     # set the session request rate-limit to 120 per 60 seconds
     monkeypatch.setenv("AUTHNZERVER_RATELIMITS",
-                       "all:15000;user:360;session:120;apikey:720;burst:150")
+                       "ipaddr:720;user:360;session:120;apikey:720;burst:150")
 
     # launch the server subprocess
     p = subprocess.Popen("authnzrv", shell=True)
