@@ -107,6 +107,18 @@ def create_new_user(
           user. If not provided, a UUIDv4 will be generated and used for the
           system_id.
 
+        - public_suffix_list: list of str. If this is provided as a payload
+          item, it must be a list of domain name suffixes sources from the
+          Mozilla Public Suffix list: https://publicsuffix.org/list/. This is
+          used to check if the full name of the user may possibly be a spam
+          link intended to be used when the authnzerver emails out verification
+          tokens for new users. If the full name contains a suffix in this list,
+          the user creation request will fail. If this item is not provided in
+          the payload, this function will look up the current process's
+          namespace to see if it was loaded there and use it from there if so.
+          If the public suffix list can't be found in either item, new user
+          creation will fail.
+
         In addition to these items received from an authnzerver client, the
         payload must also include the following keys (usually added in by a
         wrapping function):
