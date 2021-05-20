@@ -43,6 +43,24 @@ from .permissions import pii_hash
 from . import actions
 
 
+# rate-limit sensitive actions more agressively (these are all per minute)
+# these can be overriden by specifying these specific request types in the
+# server's ratelimits config variable
+AGGRESSIVE_RATE_LIMITS = {
+    "user-new": 5,
+    "user-login": 10,
+    "user-logout": 10,
+    "user-edit": 10,
+    "user-resetpass": 5,
+    "user-changepass": 5,
+    "user-sendemail-signup": 2,
+    "user-sendemail-forgotpass": 2,
+    "apikey-new": 30,
+    "apikey-new-nosession": 30,
+    "apikey-refresh-nosession": 30,
+}
+
+
 class RateLimitMixin:
     """
     This class contains a method that rate-limits the authnzerver's own API.
@@ -56,256 +74,145 @@ class RateLimitMixin:
 
     """
 
-    def ratelimit_request(self, reqid, request_type, request_body):
+    def ratelimit_request(self, reqid, request_type, frontend_client_ipaddr):
         """
         This rate-limits the request based on the request type and the
         set ratelimits passed in the config object.
 
         """
 
-        # increment the global request each time
-        all_reqcount = self.cacheobj.counter_increment(
-            "all_request_count",
+        #
+        # rate limit per request_type:client_ipaddr key
+        #
+        client_ipaddr_key = f"{request_type}-{frontend_client_ipaddr}"
+        client_req_count = self.cacheobj.counter_increment(
+            client_ipaddr_key,
         )
 
-        # check the global request rate
-        if all_reqcount > self.ratelimits['burst']:
+        # apply agressive rate limiting to sensitive actions
+        if request_type in AGGRESSIVE_RATE_LIMITS:
 
-            (all_reqrate,
-             all_reqcount,
-             all_reqcount0,
-             all_req_tnow,
-             all_req_t0) = (
+            (client_ipaddr_reqrate,
+             client_ipaddr_reqcount,
+             client_ipaddr_reqcount0,
+             client_ipaddr_req_tnow,
+             client_ipaddr_req_t0) = (
                 self.cacheobj.counter_rate(
-                    "all_request_count",
+                    client_ipaddr_key,
                     60.0,
                     return_allinfo=True
                 )
             )
 
-            if all_reqrate > self.ratelimits['all']:
+            limit_applied = AGGRESSIVE_RATE_LIMITS[request_type]
+
+            if (client_req_count > limit_applied
+                    and client_ipaddr_reqrate > limit_applied):
                 LOGGER.error(
                     "[%s] request '%s' is being rate-limited. "
-                    "Cache token: 'all_request_count', count: %s. "
-                    "Rate: %.3f > limit specified for '%s': %s"
+                    "Cache token: '%s', count: %s. "
+                    "Rate: %.3f per minute > limit specified for '%s': %s"
                     % (reqid,
                        request_type,
-                       all_reqcount,
-                       all_reqrate,
-                       'all',
-                       self.ratelimits['all'])
+                       pii_hash(client_ipaddr_key, self.pii_salt),
+                       client_ipaddr_reqcount,
+                       client_ipaddr_reqrate,
+                       request_type,
+                       limit_applied)
                 )
                 raise tornado.web.HTTPError(status_code=429)
 
-        #
-        # specific rate-limiting per request type
-        # NOTE: all of these fall back to the IP addr of the authnzerver client
-        # if a required request param for the cache token isn't found
-        #
+        # apply specific rate limiting to explicitly specified
+        # API actions in the ratelimits config var
+        elif request_type in self.ratelimits:
 
-        # check the user- prefixed request
-        if request_type.startswith("user-"):
-
-            user_cache_token = (
-                request_body.get("email", None) or
-                request_body.get("user_id", None) or
-                request_body.get("system_id", None) or
-                request_body.get("session_token", None) or
-                request_body.get("ip_address", None) or
-                request_body.get("email_address", None) or
-                self.request.remote_ip
+            (client_ipaddr_reqrate,
+             client_ipaddr_reqcount,
+             client_ipaddr_reqcount0,
+             client_ipaddr_req_tnow,
+             client_ipaddr_req_t0) = (
+                self.cacheobj.counter_rate(
+                    client_ipaddr_key,
+                    60.0,
+                    return_allinfo=True
+                )
             )
 
-            # drop all requests that try to get around rate-limiting
-            if not user_cache_token:
+            limit_applied = self.ratelimits[request_type]
+
+            if (client_req_count > limit_applied
+                    and client_ipaddr_reqrate > limit_applied):
                 LOGGER.error(
-                    "[%s] request: '%s' is missing a payload value "
-                    "needed to calculate rate, dropping this request."
-                    % (reqid, request_type)
+                    "[%s] request '%s' is being rate-limited. "
+                    "Cache token: '%s', count: %s. "
+                    "Rate: %.3f per minute > limit specified for '%s': %s"
+                    % (reqid,
+                       request_type,
+                       pii_hash(client_ipaddr_key, self.pii_salt),
+                       client_ipaddr_reqcount,
+                       client_ipaddr_reqrate,
+                       request_type,
+                       limit_applied)
                 )
-                raise tornado.web.HTTPError(status_code=400)
+                raise tornado.web.HTTPError(status_code=429)
 
-            user_cache_key = f"user-request-{user_cache_token}"
+        # all other ratelimits are applied according to the
+        # API action groups defined in the ratelimits config var
+        else:
 
-            user_reqcount = self.cacheobj.counter_increment(
-                user_cache_key,
-            )
+            # only apply rate-limits after burst is exceeded
+            if client_req_count > self.ratelimits['burst']:
 
-            if user_reqcount > self.ratelimits["burst"]:
-
-                (user_reqrate,
-                 user_reqcount,
-                 user_reqcount0,
-                 user_req_tnow,
-                 user_req_t0) = (
+                (client_ipaddr_reqrate,
+                 client_ipaddr_reqcount,
+                 client_ipaddr_reqcount0,
+                 client_ipaddr_req_tnow,
+                 client_ipaddr_req_t0) = (
                     self.cacheobj.counter_rate(
-                        user_cache_key,
+                        client_ipaddr_key,
                         60.0,
                         return_allinfo=True
                     )
                 )
 
-                if user_reqrate > self.ratelimits['user']:
+                #
+                # specific rate-limiting per request type
+                #
+                if request_type.startswith('user-'):
+                    limit_name, limit_applied = (
+                        'user', self.ratelimits['user']
+                    )
+                elif request_type.startswith('session-'):
+                    limit_name, limit_applied = (
+                        'session', self.ratelimits['session']
+                    )
+                elif request_type.startswith('apikey-'):
+                    limit_name, limit_applied = (
+                        'apikey', self.ratelimits['apikey']
+                    )
+                # internal- prefixed requests have a more generous ratelimit
+                elif request_type.startswith('internal-'):
+                    limit_name, limit_applied = (
+                        'internal', 3000
+                    )
+                # all other requests are limited by frontend client IP addr
+                else:
+                    limit_name, limit_applied = (
+                        'ipaddr', self.ratelimits['ipaddr']
+                    )
+
+                if client_ipaddr_reqrate > limit_applied:
                     LOGGER.error(
                         "[%s] request '%s' is being rate-limited. "
                         "Cache token: '%s', count: %s. "
-                        "Rate: %.3f > limit specified for '%s': %s"
+                        "Rate: %.3f per minute > limit specified for '%s': %s"
                         % (reqid,
                            request_type,
-                           pii_hash(user_cache_key, self.pii_salt),
-                           user_reqcount,
-                           user_reqrate,
-                           'user',
-                           self.ratelimits['user'])
-                    )
-                    raise tornado.web.HTTPError(status_code=429)
-
-        # check the session- prefixed request
-        elif request_type.startswith("session-"):
-
-            session_cache_token = (
-                request_body.get("user_id", None) or
-                request_body.get("session_token", None) or
-                request_body.get("ip_address", None) or
-                self.request.remote_ip
-            )
-            if not session_cache_token:
-                LOGGER.error(
-                    "[%s] request: '%s' is missing a payload value "
-                    "needed to calculate rate, dropping this request."
-                    % (reqid, request_type)
-                )
-                raise tornado.web.HTTPError(status_code=400)
-
-            session_cache_key = f"session-request-{session_cache_token}"
-
-            session_reqcount = self.cacheobj.counter_increment(
-                session_cache_key,
-            )
-
-            if session_reqcount > self.ratelimits["burst"]:
-
-                (session_reqrate,
-                 session_reqcount,
-                 session_reqcount0,
-                 session_req_tnow,
-                 session_req_t0) = (
-                    self.cacheobj.counter_rate(
-                        session_cache_key,
-                        60.0,
-                        return_allinfo=True
-                    )
-                )
-
-                if session_reqrate > self.ratelimits['session']:
-                    LOGGER.error(
-                        "[%s] request '%s' is being rate-limited. "
-                        "Cache token: '%s', count: %s. "
-                        "Rate: %.3f > limit specified for '%s': %s"
-                        % (reqid,
-                           request_type,
-                           pii_hash(session_cache_key, self.pii_salt),
-                           session_reqcount,
-                           session_reqrate,
-                           'session',
-                           self.ratelimits['session'])
-                    )
-                    raise tornado.web.HTTPError(status_code=429)
-
-        # check the apikey- prefixed request
-        elif request_type.startswith("apikey-"):
-
-            # handle API key issuance
-            apikey_cache_token = (
-                request_body.get("ip_address", None) or
-                request_body.get("apikey_dict", {}).get("uid", None) or
-                self.request.remote_ip
-            )
-
-            if not apikey_cache_token:
-                LOGGER.error(
-                    "[%s] request: '%s' is missing a payload value "
-                    "needed to calculate rate, dropping this request."
-                    % (reqid, request_type)
-                )
-                raise tornado.web.HTTPError(status_code=400)
-
-            apikey_cache_key = f"apikey-request-{apikey_cache_token}"
-
-            apikey_reqcount = self.cacheobj.counter_increment(
-                apikey_cache_key,
-            )
-
-            if apikey_reqcount > self.ratelimits["burst"]:
-
-                (apikey_reqrate,
-                 apikey_reqcount,
-                 apikey_reqcount0,
-                 apikey_req_now,
-                 apikey_req_t0) = (
-                    self.cacheobj.counter_rate(
-                        apikey_cache_key,
-                        60.0,
-                        return_allinfo=True
-                    )
-                )
-
-                if apikey_reqrate > self.ratelimits['apikey']:
-                    LOGGER.error(
-                        "[%s] request '%s' is being rate-limited. "
-                        "Cache token: '%s', count: %s. "
-                        "Rate: %.3f > limit specified for '%s': %s"
-                        % (reqid,
-                           request_type,
-                           pii_hash(apikey_cache_key, self.pii_salt),
-                           apikey_reqcount,
-                           apikey_reqrate,
-                           'apikey',
-                           self.ratelimits['apikey'])
-                    )
-                    raise tornado.web.HTTPError(status_code=429)
-
-        # check the internal- prefixed request
-        elif request_type.startswith("internal-"):
-
-            # the internal request cache token is the request_type and the
-            # originating IP address of the internal request
-            internal_cache_token = f"{request_type}-{self.request.remote_ip}"
-            internal_cache_key = f"internal-request-{internal_cache_token}"
-
-            internal_reqcount = self.cacheobj.counter_increment(
-                internal_cache_key,
-            )
-
-            # more generous burst allowance for internal requests
-            if internal_reqcount > 500:
-
-                (internal_reqrate,
-                 internal_reqcount,
-                 internal_reqcount0,
-                 internal_req_tnow,
-                 internal_req_t0) = (
-                    self.cacheobj.counter_rate(
-                        internal_cache_key,
-                        60.0,
-                        return_allinfo=True
-                    )
-                )
-
-                # more generous rate allowance for internal requests
-                # 50 reqs/sec/IP address
-                if internal_reqrate > 3000:
-                    LOGGER.error(
-                        "[%s] request '%s' is being rate-limited. "
-                        "Cache token: '%s', count: %s. "
-                        "Rate: %.3f > limit specified for '%s': %s"
-                        % (reqid,
-                           request_type,
-                           pii_hash(internal_cache_key, self.pii_salt),
-                           internal_reqcount,
-                           internal_reqrate,
-                           'internal',
-                           3000)
+                           pii_hash(client_ipaddr_key, self.pii_salt),
+                           client_ipaddr_reqcount,
+                           client_ipaddr_reqrate,
+                           limit_name,
+                           limit_applied)
                     )
                     raise tornado.web.HTTPError(status_code=429)
 

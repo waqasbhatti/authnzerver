@@ -15,7 +15,6 @@ import logging
 # get a logger
 LOGGER = logging.getLogger(__name__)
 
-
 #############
 ## IMPORTS ##
 #############
@@ -27,6 +26,7 @@ from functools import partial
 # thing when it converts dicts to JSON when a
 # tornado.web.RequestHandler.write(dict) is called.
 from .jsonencoder import FrontendEncoder
+
 json._default_encoder = FrontendEncoder()
 
 import tornado.web
@@ -149,9 +149,23 @@ class AuthHandler(tornado.web.RequestHandler,
             raise ValueError("No request ID provided. "
                              "Ignoring this request.")
 
-        # rate limit the request
+        # rate limit the request if this is turned on
         if self.ratelimits:
-            self.ratelimit_request(reqid, payload['request'], payload['body'])
+            # get the frontend client IP addr
+            frontend_client_ipaddr = payload.get('client_ipaddr')
+
+            if not frontend_client_ipaddr:
+                LOGGER.error(
+                    "[%s] request: '%s' is missing a payload "
+                    "value: 'client_ipaddr' "
+                    "needed to calculate rate, dropping this request."
+                    % (reqid, payload['request'])
+                )
+                raise tornado.web.HTTPError(status_code=400)
+
+            self.ratelimit_request(reqid,
+                                   payload['request'],
+                                   frontend_client_ipaddr)
 
         # if we successfully got past host, decryption, rate-limit validation,
         # then process the request
@@ -207,7 +221,7 @@ class AuthHandler(tornado.web.RequestHandler,
             passcheck_requests = {'user-login', 'user-passcheck-nosession'}
 
             if (payload['request'] in passcheck_requests and
-                response['success'] is False):
+                    response['success'] is False):
 
                 failure_status, failure_count, failure_wait = (
                     await self.handle_failed_logins(payload)
@@ -248,7 +262,7 @@ class AuthHandler(tornado.web.RequestHandler,
                 )
 
             #
-            # form and send the the response
+            # form and send the response
             #
             await self.send_response(response, reqid)
 
