@@ -31,19 +31,12 @@ import signal
 import time
 import re
 from functools import partial
+from concurrent.futures import ProcessPoolExecutor
+import random
 
 from sqlalchemy.exc import IntegrityError
 
 from . import dictcache
-
-
-# setup signal trapping on SIGINT
-def _recv_sigint(signum, stack):
-    """
-    handler function to receive and process a SIGINT
-
-    """
-    raise KeyboardInterrupt
 
 
 #####################
@@ -71,6 +64,15 @@ import multiprocessing as mp
 ## UTILITY FUNCTIONS ##
 #######################
 
+def _handle_mainproc_sigterm(signum, sigframe):
+    """
+    raises a KeyboardInterrupt for a SIGTERM so we can exit cleanly.
+
+    """
+
+    raise KeyboardInterrupt
+
+
 def _setup_auth_worker(authdb_path,
                        fernet_secret,
                        permissions_json,
@@ -80,38 +82,18 @@ def _setup_auth_worker(authdb_path,
     The worker will then open the DB and set up its Fernet instance by itself.
 
     """
-    # unregister interrupt signals so they don't get to the worker
+
+    # unregister interrupt signals so they don't get to the workers
     # and the executor can kill them cleanly (hopefully)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     currproc = mp.current_process()
+    currproc.name = 'Authnzrv-Worker-' + currproc.name
+
     currproc.auth_db_path = authdb_path
     currproc.fernet_secret = fernet_secret
     currproc.permissions_json = permissions_json
     currproc.public_suffix_list = public_suffix_list
-
-
-def _close_authentication_database():
-
-    """This is used to close the authentication database when the worker loop
-    exits.
-
-    """
-
-    currproc = mp.current_process()
-    if getattr(currproc, 'authdb_meta', None):
-        del currproc.authdb_meta
-
-    if getattr(currproc, 'authdb_conn', None):
-        currproc.authdb_conn.close()
-        del currproc.authdb_conn
-
-    if getattr(currproc, 'authdb_engine', None):
-        currproc.authdb_engine.dispose()
-        del currproc.authdb_engine
-
-    print('Shutting down database engine in process: %s' % currproc.name,
-          file=sys.stdout)
 
 
 ########################################################
@@ -171,7 +153,7 @@ def main():
     """
 
     # parse the command line
-    options.parse_command_line()
+    tornado.options.parse_command_line()
     DEBUG = True if options.debugmode == 1 else False
 
     # get a logger
@@ -185,7 +167,6 @@ def main():
     ## LOCAL IMPORTS ##
     ###################
 
-    from .external.futures37.process import ProcessPoolExecutor
     from .autosetup import autogen_secrets_authdb
     from .confload import load_config
     from . import authdb as authdb_module
@@ -282,6 +263,10 @@ def main():
     secret = loaded_config.secret
     permissions = loaded_config.permissions
 
+    ############################
+    # SPIN UP WORKER PROCESSES #
+    ############################
+
     #
     # this is the background executor we'll pass over to the handler
     #
@@ -289,8 +274,21 @@ def main():
         max_workers=maxworkers,
         initializer=_setup_auth_worker,
         initargs=(auth_database_url, secret, permissions, public_suffix_list),
-        finalizer=_close_authentication_database
     )
+
+    #
+    # NOTE: we've switched to the usual concurrent.futures instead of our own
+    # bundled version in external.futures
+    #
+    # NOTE: from Python 3.9+, ProcessPoolExecutor processes are spawned on
+    # demand. we now map a sleep call to all processes so all of them are
+    # ready at server start.
+    #
+    sleep_times = [random.random()/2.0 for x in range(maxworkers)]
+    executor.map(time.sleep, sleep_times)
+
+    # handle SIGTERM so we exit cleanly
+    signal.signal(signal.SIGTERM, _handle_mainproc_sigterm)
 
     ##########################
     ## SET UP ALLOWED HOSTS ##
@@ -484,10 +482,6 @@ def main():
     ## start the server ##
     ######################
 
-    # register the signal callbacks
-    signal.signal(signal.SIGINT, _recv_sigint)
-    signal.signal(signal.SIGTERM, _recv_sigint)
-
     try:
         http_server.listen(port, listen)
     except socket.error:
@@ -497,9 +491,9 @@ def main():
         sys.exit(1)
 
     # start the IOLoop and begin serving requests
-    try:
+    loop = tornado.ioloop.IOLoop.current()
 
-        loop = tornado.ioloop.IOLoop.current()
+    try:
 
         # add our periodic callback for the session-killer
         # runs daily
@@ -527,28 +521,20 @@ def main():
 
     except KeyboardInterrupt:
 
-        LOGGER.info('Received Ctrl-C: shutting down...')
+        LOGGER.warning('Received Ctrl-C: shutting down...')
+
+        # stop the server
+        http_server.stop()
+        LOGGER.info('HTTP server shut down.')
 
         # close down the processpool
         executor.shutdown()
         time.sleep(2)
+        LOGGER.info('Worker processes shut down.')
 
-        tornado.ioloop.IOLoop.instance().stop()
-
-        currproc = mp.current_process()
-        if getattr(currproc, 'authdb_meta', None):
-            del currproc.authdb_meta
-
-        if getattr(currproc, 'connection', None):
-            currproc.authdb_conn.close()
-            del currproc.authdb_conn
-
-        if getattr(currproc, 'authdb_engine', None):
-            currproc.authdb_engine.dispose()
-            del currproc.authdb_engine
-
-        print('Shutting down database engine in process: %s' % currproc.name,
-              file=sys.stdout)
+        # stop the loop
+        loop.stop()
+        LOGGER.info('IOLoop shut down.')
 
 
 # run the server
