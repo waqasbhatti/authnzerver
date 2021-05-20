@@ -59,6 +59,10 @@ def pii_hash(item, key):
 
     """
 
+    # turn off PII hashing if the key is set to 'none'
+    if key == "none":
+        return item
+
     return pii_blake2b_hash(item, key)
 
 
