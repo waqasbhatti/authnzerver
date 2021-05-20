@@ -64,4 +64,4 @@ services:
       AUTHNZERVER_EMAILSENDER: "Authnzerver <authnzerver@localhost>"
       AUTHNZERVER_TLSCERTFILE:
       AUTHNZERVER_TLSCERTKEY:
-      AUTHNZERVER_RATELIMITS: "all:15000;user:480;session:600;apikey:720;burst:150"
+      AUTHNZERVER_RATELIMITS: "ipaddr:720; user:480; session:600; apikey:720; burst:150"

@@ -14,7 +14,9 @@ A request is of the form::
   {'request': one of the request names below,
    'body': a dict containing the arguments for the request,
    'reqid': any integer or string (preferably a UUID) used to keep track
-            of the request flow}
+            of the request flow,
+   'client_ipaddr': the IP address of the frontend server's
+                    client to use in rate-limiting}
 
 A response, when decrypted and deserialized to a dict, is of the form::
 
@@ -85,9 +87,10 @@ Example
 
    # fire a synchronous request
    response = client.request("user-new",
-                             {"email":"hello@test.org",
-                              "password":"super-strong-password",
-                              "full_name":"Test User"})
+                             {"email": "hello@test.org",
+                              "password": "super-strong-password",
+                              "full_name": "Test User",
+                              "client_ipaddr": "1.2.3.4"})
 
    # check if the request was successful
    print(response.success)
@@ -115,9 +118,10 @@ Example
    # a runner function to demonstrate await syntax
    async def run_request():
        return await client.async_request("user-new",
-                                         {"email":"hello2@test.org",
-                                          "password":"superb-strong-password",
-                                          "full_name":"Test User 2"})
+                                         {"email": "hello2@test.org",
+                                          "password": "superb-strong-password",
+                                          "full_name": "Test User 2",
+                                          "client_ipaddr": "1.2.3.4"})
    # execute the asynchronous request
    async_response = asyncio.run(run_request())
 
@@ -155,15 +159,16 @@ Request example
     reqid = random.randint(0,10000)
 
     # this is the request that will be sent to the authnzerver
-    req = {'request':request_type,
-           'body':request_body,
-           'reqid':reqid}
+    req = {'request': request_type,
+           'body': request_body,
+           'reqid': reqid,
+           'client_ipaddr': '1.1.1.1'}
 
     # encrypt the request
     encrypted_request = encrypt_request(req, FERNET_KEY)
 
     # send the request and get the response
-    response = requests.post('http://127.0.0.1:13431',data=encrypted_request)
+    response = requests.post('http://127.0.0.1:13431', data=encrypted_request)
 
 
 Response example

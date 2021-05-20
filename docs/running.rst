@@ -194,15 +194,40 @@ cmdline: ``--ratelimits``, env: ``AUTHNZERVER_RATELIMITS``
 ----------------------------------------------------------
 
 This sets the rate limit policy for authnzerver actions. This parameter is
-specified as key:value pairs separated by a semicolon. You can specify values
-for all actions in the ``all`` key, user-tied actions (based on email/user_id/IP
-address) in the ``user`` key, session-tied actions (based on session_token/IP
-address) in the ``session`` key, and apikey-tied actions (based on
-session_token/IP address) in the ``apikey`` key. The ``burst`` key indicates how
-many requests will be allowed to come in before rate-limits start being
-enforced. All values are in units of max requests allowed per minute. Set this
-parameter to the string 'none' to turn off rate-limiting entirely. (*default:*
-``all:15000; user:480; session:600; apikey:720; burst:150``).
+specified as key:value pairs separated by a semicolon. Specify values for all
+actions (tied to the IP address of the frontend server's client) in the
+``ipaddr`` key, user-tied actions (based on email/user_id/IP address) in the
+``user`` key, session-tied actions (based on session_token/IP address) in the
+``session`` key, and apikey-tied actions (based on session_token/IP address) in
+the ``apikey`` key. The ``burst`` key indicates how many requests will be
+allowed to come in before rate-limits start being enforced.
+
+All values are in units of max requests allowed per minute. Set this parameter
+to the string 'none' to turn off rate-limiting entirely.
+
+(*default:* ``ipaddr:720; user:480; session:600; apikey:720; burst:150``).
+
+Some individual API actions are more aggressively rate-limited per IP address by
+the authnzerver. Currently, these include (all values in requests/minute)::
+
+  AGGRESSIVE_RATE_LIMITS = {
+    "user-new": 5,
+    "user-login": 10,
+    "user-logout": 10,
+    "user-edit": 10,
+    "user-resetpass": 5,
+    "user-changepass": 5,
+    "user-sendemail-signup": 2,
+    "user-sendemail-forgotpass": 2,
+    "apikey-new": 30,
+    "apikey-new-nosession": 30,
+    "apikey-refresh-nosession": 30,
+ }
+
+You may also override the rate-limit for an individual API action by specifying
+it as a key-value pair in this configuration variable. For example, to set a
+custom rate limit of 20 requests/minute for the ``user-login`` action, add
+``user-login:20`` to the ``ratelimits`` configuration variable string.
 
 cmdline: ``--permissions``, env: ``AUTHNZERVER_PERMISSIONS``
 ------------------------------------------------------------
