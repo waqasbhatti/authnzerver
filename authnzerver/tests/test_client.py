@@ -94,7 +94,8 @@ def test_client(monkeypatch, tmpdir):
             "user-new",
             {"email":"test-user@test.org",
              "password":"atYSE6m3bsBL",
-             "full_name":"New User"}
+             "full_name":"New User",
+             "client_ipaddr": "1.2.3.4"}
         )
         assert resp.success is True
         assert resp.response["user_id"] == 4
@@ -104,6 +105,7 @@ def test_client(monkeypatch, tmpdir):
         resp = client.request(
             "internal-user-edit",
             {"target_userid":4,
+             "client_ipaddr": "1.2.3.4",
              "update_dict":{"email_verified":True,
                             "is_active":True,
                             "extra_info":{"provenance":"pytest-user",

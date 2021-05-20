@@ -72,6 +72,11 @@ def test_server_with_env(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_EMAILPORT", "25")
     monkeypatch.setenv("AUTHNZERVER_EMAILUSER", "testuser")
     monkeypatch.setenv("AUTHNZERVER_EMAILPASS", "testpass")
+    monkeypatch.setenv(
+        "AUTHNZERVER_RATELIMITS",
+        "ipaddr:300;user:360;session:120;apikey:720;burst:150;"
+        "user-new:50;user-login:50"
+    )
 
     # launch the server subprocess
     p = subprocess.Popen("authnzrv", shell=True)
@@ -94,9 +99,12 @@ def test_server_with_env(monkeypatch, tmpdir):
             'extra_info_json':{'pref_datasets_always_private':True}
         }
 
-        request_dict = {'request':'session-new',
-                        'body':session_payload,
-                        'reqid':101}
+        request_dict = {
+            'request':'session-new',
+            'body':session_payload,
+            'reqid':101,
+            'client_ipaddr': '1.2.3.4'
+        }
 
         encrypted_request = encrypt_message(request_dict, secret)
 
@@ -126,7 +134,8 @@ def test_server_with_env(monkeypatch, tmpdir):
                 'email':useremail,
                 'password':password
             },
-            'reqid':102
+            'reqid':102,
+            'client_ipaddr': '1.2.3.4'
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
@@ -224,6 +233,11 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_EMAILPORT", "25")
     monkeypatch.setenv("AUTHNZERVER_EMAILUSER", "testuser")
     monkeypatch.setenv("AUTHNZERVER_EMAILPASS", "testpass")
+    monkeypatch.setenv(
+        "AUTHNZERVER_RATELIMITS",
+        "ipaddr:300;user:360;session:120;apikey:720;burst:150;"
+        "user-new:50;user-login:50"
+    )
 
     # launch the server subprocess
     p = subprocess.Popen("authnzrv", shell=True)
@@ -250,9 +264,12 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
                 'extra_info_json':{'pref_datasets_always_private':True}
             }
 
-            request_dict = {'request':'session-new',
-                            'body':session_payload,
-                            'reqid':i}
+            request_dict = {
+                'request':'session-new',
+                'body':session_payload,
+                'reqid':i,
+                'client_ipaddr': '1.2.3.4'
+            }
 
             encrypted_request = encrypt_message(request_dict, secret)
 
@@ -279,7 +296,8 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
                     'email':useremail,
                     'password':'%s-%i' % (password,i)
                 },
-                'reqid':10*i + 10
+                'reqid':10*i + 10,
+                'client_ipaddr': '1.2.3.4'
             }
 
             encrypted_request = encrypt_message(request_dict, secret)
@@ -321,9 +339,12 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
             'extra_info_json':{'pref_datasets_always_private':True}
         }
 
-        request_dict = {'request':'session-new',
-                        'body':session_payload,
-                        'reqid':1004}
+        request_dict = {
+            'request':'session-new',
+            'body':session_payload,
+            'reqid':1004,
+            'client_ipaddr': '1.2.3.4'
+        }
 
         encrypted_request = encrypt_message(request_dict, secret)
 
@@ -350,7 +371,8 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
                 'email':useremail,
                 'password':password
             },
-            'reqid':1005
+            'reqid':1005,
+            'client_ipaddr': '1.2.3.4'
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
@@ -459,6 +481,11 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_EMAILPASS", "testpass")
     monkeypatch.setenv("AUTHNZERVER_USERLOCKTRIES", "2")
     monkeypatch.setenv("AUTHNZERVER_USERLOCKTIME", "20")
+    monkeypatch.setenv(
+        "AUTHNZERVER_RATELIMITS",
+        "ipaddr:300;user:360;session:120;apikey:720;burst:150;"
+        "user-new:50;user-login:50"
+    )
 
     # launch the server subprocess
     p = subprocess.Popen("authnzrv", shell=True)
@@ -485,9 +512,12 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
                 'extra_info_json':{'pref_datasets_always_private':True}
             }
 
-            request_dict = {'request':'session-new',
-                            'body':session_payload,
-                            'reqid':i}
+            request_dict = {
+                'request':'session-new',
+                'body':session_payload,
+                'reqid':i,
+                'client_ipaddr': '1.2.3.4'
+            }
 
             encrypted_request = encrypt_message(request_dict, secret)
 
@@ -514,7 +544,8 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
                     'email':useremail,
                     'password':'%s-%i' % (password,i)
                 },
-                'reqid':10*i + 10
+                'reqid':10*i + 10,
+                'client_ipaddr': '1.2.3.4'
             }
 
             encrypted_request = encrypt_message(request_dict, secret)
@@ -562,9 +593,12 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
             'extra_info_json':{'pref_datasets_always_private':True}
         }
 
-        request_dict = {'request':'session-new',
-                        'body':session_payload,
-                        'reqid':1004}
+        request_dict = {
+            'request':'session-new',
+            'body':session_payload,
+            'reqid':1004,
+            'client_ipaddr': '1.2.3.4'
+        }
 
         encrypted_request = encrypt_message(request_dict, secret)
 
@@ -591,7 +625,8 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
                 'email':useremail,
                 'password':password
             },
-            'reqid':1005
+            'reqid':1005,
+            'client_ipaddr': '1.2.3.4'
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
@@ -698,6 +733,11 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_EMAILPASS", "testpass")
     monkeypatch.setenv("AUTHNZERVER_USERLOCKTRIES", "2")
     monkeypatch.setenv("AUTHNZERVER_USERLOCKTIME", "20")
+    monkeypatch.setenv(
+        "AUTHNZERVER_RATELIMITS",
+        "ipaddr:300;user:360;session:120;apikey:720;burst:150;"
+        "user-new:50;user-login:50"
+    )
 
     # launch the server subprocess
     p = subprocess.Popen("authnzrv", shell=True)
@@ -724,9 +764,12 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
                 'extra_info_json':{'pref_datasets_always_private':True}
             }
 
-            request_dict = {'request':'session-new',
-                            'body':session_payload,
-                            'reqid':i}
+            request_dict = {
+                'request':'session-new',
+                'body':session_payload,
+                'reqid':i,
+                'client_ipaddr': '1.2.3.4'
+            }
 
             encrypted_request = encrypt_message(request_dict, secret)
 
@@ -752,7 +795,8 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
                     'email':useremail,
                     'password':'%s-%i' % (password,i)
                 },
-                'reqid':10*i + 10
+                'reqid':10*i + 10,
+                'client_ipaddr': '1.2.3.4'
             }
 
             encrypted_request = encrypt_message(request_dict, secret)
@@ -800,9 +844,12 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
             'extra_info_json':{'pref_datasets_always_private':True}
         }
 
-        request_dict = {'request':'session-new',
-                        'body':session_payload,
-                        'reqid':1004}
+        request_dict = {
+            'request':'session-new',
+            'body':session_payload,
+            'reqid':1004,
+            'client_ipaddr': '1.2.3.4'
+        }
 
         encrypted_request = encrypt_message(request_dict, secret)
 
@@ -828,7 +875,8 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
                 'email':useremail,
                 'password':password
             },
-            'reqid':1005
+            'reqid':1005,
+            'client_ipaddr': '1.2.3.4'
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
