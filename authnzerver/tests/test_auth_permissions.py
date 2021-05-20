@@ -9,6 +9,7 @@ from .. import authdb, actions
 import os.path
 import os
 import multiprocessing as mp
+from .test_support import get_public_suffix_list
 
 
 def get_test_authdb():
@@ -40,6 +41,7 @@ def test_role_permissions():
         pass
 
     get_test_authdb()
+    get_public_suffix_list()
 
     # create the user
     user_payload = {'full_name': 'Test User',
@@ -290,6 +292,7 @@ def test_role_limits():
         pass
 
     get_test_authdb()
+    get_public_suffix_list()
 
     # create the user
     user_payload = {'full_name': 'Test User',

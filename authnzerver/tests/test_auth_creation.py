@@ -11,6 +11,8 @@ import os
 from datetime import datetime, timedelta
 import time
 
+from .test_support import get_public_suffix_list
+
 
 def get_test_authdb():
     '''This just makes a new test auth DB for each test function.
@@ -40,13 +42,65 @@ def test_create_user():
         pass
 
     get_test_authdb()
+    suff_list = get_public_suffix_list()
+
+    # 0a. full name spam with no http://
+    payload = {'full_name': 'Test User bIt.Ly/hahaspam',
+               'email': 'testuser@test.org',
+               'password': 'password',
+               'reqid': 1,
+               'pii_salt': 'super-random-salt',
+               'public_suffix_list': suff_list}
+    user_created = actions.create_new_user(
+        payload,
+        override_authdb_path='sqlite:///test-creation.authdb.sqlite'
+    )
+    assert user_created['success'] is False
+    assert user_created['user_email'] is None
+    assert user_created['user_id'] is None
+    assert user_created['send_verification'] is False
+    assert user_created['failure_reason'] == 'invalid full name'
+
+    # 0b. full name spam with http://
+    payload = {'full_name': 'Test User HttPs://BIT.lY/hahaspam',
+               'email': 'testuser@test.org',
+               'password': 'password',
+               'reqid': 1,
+               'pii_salt': 'super-random-salt',
+               'public_suffix_list': suff_list}
+    user_created = actions.create_new_user(
+        payload,
+        override_authdb_path='sqlite:///test-creation.authdb.sqlite'
+    )
+    assert user_created['success'] is False
+    assert user_created['user_email'] is None
+    assert user_created['user_id'] is None
+    assert user_created['send_verification'] is False
+    assert user_created['failure_reason'] == 'invalid full name'
+
+    # 0c. full name spam with http:// and checking if currproc works OK
+    payload = {'full_name': 'Test User HttPs://BIT.lY/hahaspam',
+               'email': 'testuser@test.org',
+               'password': 'password',
+               'reqid': 1,
+               'pii_salt': 'super-random-salt'}
+    user_created = actions.create_new_user(
+        payload,
+        override_authdb_path='sqlite:///test-creation.authdb.sqlite'
+    )
+    assert user_created['success'] is False
+    assert user_created['user_email'] is None
+    assert user_created['user_id'] is None
+    assert user_created['send_verification'] is False
+    assert user_created['failure_reason'] == 'invalid full name'
 
     # 1. dumb password
     payload = {'full_name':'Test User',
                'email':'testuser@test.org',
                'password':'password',
                'reqid':1,
-               'pii_salt':'super-random-salt'}
+               'pii_salt':'super-random-salt',
+               'public_suffix_list': suff_list}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -90,7 +144,8 @@ def test_create_user():
                'email':'testuser@test.org',
                'password':'239420349823904802398402375025',
                'reqid':1,
-               'pii_salt':'super-random-salt'}
+               'pii_salt':'super-random-salt',
+               'public_suffix_list': suff_list}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -124,7 +179,8 @@ def test_create_user():
                'email':'testuser@test.org',
                'password':'TestUser123',
                'reqid':1,
-               'pii_salt':'super-random-salt'}
+               'pii_salt':'super-random-salt',
+               'public_suffix_list': suff_list}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'
@@ -161,7 +217,8 @@ def test_create_user():
                'email':'testuser@test.org',
                'password':'aROwQin9L8nNtPTEMLXd',
                'reqid':1,
-               'pii_salt':'super-random-salt'}
+               'pii_salt':'super-random-salt',
+               'public_suffix_list': suff_list}
     user_created = actions.create_new_user(
         payload,
         override_authdb_path='sqlite:///test-creation.authdb.sqlite'

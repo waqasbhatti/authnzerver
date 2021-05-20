@@ -11,6 +11,7 @@ import multiprocessing as mp
 import py.path
 
 from authnzerver import authdb, actions
+from .test_support import get_public_suffix_list
 
 
 this_dir = os.path.abspath(os.path.dirname(__file__))
@@ -77,6 +78,8 @@ def test_issue_apikey(tmpdir):
     delete_test_authdb(tmpdir)
     test_authdb_url = get_test_authdb(tmpdir)
     teardown()
+
+    get_public_suffix_list()
 
     # 1. create a new user
     payload = {'full_name': 'Test User',
@@ -163,6 +166,8 @@ def test_verify_apikey(tmpdir):
     delete_test_authdb(tmpdir)
     test_authdb_url = get_test_authdb(tmpdir)
     teardown()
+
+    get_public_suffix_list()
 
     # 1. create a couple of new users
     payload = {'full_name': 'Test User',
@@ -318,6 +323,8 @@ def test_revoke_apikey(tmpdir):
     test_authdb_url = get_test_authdb(tmpdir)
     teardown()
 
+    get_public_suffix_list()
+
     # 1. create a couple of new users
     payload = {'full_name': 'Test User',
                'email':'testuser@test.org',
@@ -469,6 +476,8 @@ def test_revoke_all_apikeys(tmpdir):
     delete_test_authdb(tmpdir)
     test_authdb_url = get_test_authdb(tmpdir)
     teardown()
+
+    get_public_suffix_list()
 
     # 1. create a new user
     payload = {'full_name': 'Test User',
@@ -625,6 +634,8 @@ def test_refresh_apikey(tmpdir):
     delete_test_authdb(tmpdir)
     test_authdb_url = get_test_authdb(tmpdir)
     teardown()
+
+    get_public_suffix_list()
 
     # 1. create a new user
     payload = {'full_name': 'Test User',

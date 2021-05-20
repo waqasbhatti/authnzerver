@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import time
 import secrets
 import statistics
+from .test_support import get_public_suffix_list
 
 from pytest import mark
 
@@ -53,6 +54,7 @@ def test_login_timing():
         pass
 
     get_test_authdb()
+    get_public_suffix_list()
 
     # create the user
     user_payload = {'full_name':'Test User',

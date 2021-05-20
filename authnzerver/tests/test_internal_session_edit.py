@@ -11,7 +11,7 @@ import os.path
 import os
 from datetime import datetime, timedelta
 import multiprocessing as mp
-
+from .test_support import get_public_suffix_list
 
 def get_test_authdb():
     '''This just makes a new test auth DB for each test function.
@@ -42,6 +42,7 @@ def test_internal_session_edit():
         pass
 
     get_test_authdb()
+    get_public_suffix_list()
 
     # create the user
     user_payload = {'full_name':'Test User',

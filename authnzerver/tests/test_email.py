@@ -31,6 +31,8 @@ from cryptography.fernet import Fernet
 from authnzerver import authdb, actions
 from authnzerver import tokens
 
+from .test_support import get_public_suffix_list
+
 
 # from https://github.com/aio-libs/aiosmtpd/issues/179#issuecomment-570917671
 class STARTTLSController(Controller):
@@ -219,6 +221,7 @@ def test_create_user_with_email(tmpdir):
     '''
 
     test_authdb_url = get_test_authdb(tmpdir)
+    get_public_suffix_list()
 
     # 0. start the email server
     email_server, maildir = generate_email_server(tmpdir)
