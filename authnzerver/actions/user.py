@@ -49,6 +49,7 @@ import uuid
 
 from sqlalchemy import select
 from argon2 import PasswordHasher
+from tornado.escape import xhtml_escape, squeeze
 
 from .. import authdb
 from ..permissions import pii_hash
@@ -246,6 +247,68 @@ def create_new_user(
     email = validators.normalize_value(payload['email'])
     full_name = validators.normalize_value(payload['full_name'],
                                            casefold=False)
+
+    # sanitize the full name
+    full_name = squeeze(xhtml_escape(full_name))
+    if "http" in full_name.casefold() or "://" in full_name:
+        LOGGER.error(
+            f"[{payload['reqid']}] Full name provided contains "
+            f"a link or is close to one: {full_name} "
+            f"and is likely suspicious."
+        )
+        return {
+            'success': False,
+            'user_email': None,
+            'user_id': None,
+            'send_verification': False,
+            'failure_reason': "invalid full name",
+            'messages': ["The full name provided appears to contain "
+                         "an HTTP link, and cannot be used "
+                         "to sign up for an account on this server."]
+        }
+
+    # check if the full name contains a valid public suffix domain
+    # it's probably suspicious if so
+    currproc = mp.current_process()
+    public_suffix_list = getattr(currproc, "public_suffix_list", None)
+    if not public_suffix_list:
+        public_suffix_list = payload.get("public_suffix_list", None)
+
+    if not public_suffix_list:
+        LOGGER.error(
+            f"[{payload['reqid']}] Could not validate full name "
+            f"because the public suffix list is not provided in "
+            f"either the payload or in the current process namespace."
+        )
+        return {
+            'success': False,
+            'user_email': None,
+            'user_id': None,
+            'send_verification': False,
+            'failure_reason': "public suffix list not present",
+            'messages': ["Full name could not be validated "
+                         "because of an internal server error"]
+        }
+
+    for domain_suffix in public_suffix_list:
+        if domain_suffix in full_name.casefold():
+            LOGGER.error(
+                f"[{payload['reqid']}] Full name provided contains "
+                f"a link or is close to one: {full_name} "
+                f"and is likely suspicious."
+            )
+            return {
+                'success': False,
+                'user_email': None,
+                'user_id': None,
+                'send_verification': False,
+                'failure_reason': "invalid full name",
+                'messages': ["The full name provided appears to contain "
+                             "an HTTP link, and cannot be used "
+                             "to sign up for an account on this server."]
+            }
+
+    # get the password
     password = payload['password']
 
     #
@@ -276,7 +339,6 @@ def create_new_user(
     #
 
     # this checks if the database connection is live
-    currproc = mp.current_process()
     engine = getattr(currproc, 'authdb_engine', None)
 
     if override_authdb_path:
