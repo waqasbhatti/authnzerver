@@ -93,6 +93,6 @@ def new_authnzerver(monkeypatch, tmpdir):
     # make sure to kill authnzrv on some Linux machines.  use lsof and the
     # port number to find the remaining authnzrv processes and kill them
     subprocess.call(
-        "lsof | grep 18158 | awk '{ print $2 }' | sort | uniq | xargs kill",
+        "lsof | grep 18158 | awk '{ print $2 }' | sort | uniq | xargs kill -2",
         shell=True
     )

@@ -206,16 +206,16 @@ def test_ratelimits(monkeypatch, tmpdir):
 
     finally:
 
-        p.kill()
+        p.terminate()
         try:
-            p.communicate(timeout=2.0)
+            p.communicate(timeout=3.0)
             p.kill()
         except Exception:
             pass
 
         # make sure to kill authnzrv on some Linux machines.  use lsof and the
         # port number to find the remaining authnzrv processes and kill them
-        subprocess.call(
-            "lsof | grep 18158 | awk '{ print $2 }' | sort | uniq | xargs kill",
-            shell=True
-        )
+        # subprocess.call(
+        #     "lsof | grep 18158 | awk '{ print $2 }' | sort | uniq | xargs kill -2",
+        #     shell=True
+        # )
