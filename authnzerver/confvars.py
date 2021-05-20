@@ -219,9 +219,14 @@ CONF = {
         'cmdline': 'piisalt',
         'type': str,
         'default': None,
-        'help': ('A random value used as a salt when SHA256 hashing personally '
+        'help': ('A random value used as a salt when hashing personally '
                  'identifiable information (PII), such as user IDs and '
-                 'session tokens, etc. for authnzerver logs.'),
+                 'session tokens, etc. for display and request correlation in '
+                 'the authnzerver logs. '
+                 'NOTE: if this is set to \'none\', '
+                 'PII hashing is disabled and all IP addresses, '
+                 'emails, etc. in the authnzerver logs will be '
+                 'shown in plaintext.'),
         'readable_from_file': 'string',
         'postprocess_value': None,
     },
@@ -276,16 +281,23 @@ CONF = {
         'env': '%s_RATELIMITS' % ENVPREFIX,
         'cmdline': 'ratelimits',
         'type': str,
-        'default': "all:15000; user:480; session:600; apikey:720; burst:150",
+        'default': "ipaddr:720; user:480; session:600; apikey:720; burst:150",
         'help': ("This sets the rate limit policy for authnzerver actions. "
-                 "You can specify values for all actions, user-tied actions "
-                 "(based on email/user_id/IP address), session-tied actions "
-                 "(based on session token/IP address), and apikey-tied actions "
-                 "(based on session token/IP address). The values are in units "
-                 "of max requests allowed per minute. The burst value "
-                 "indicates how many requests will be allowed to come "
-                 "in before rate-limits start being enforced. "
-                 "Set this to 'none' to turn off rate-limiting entirely."),
+                 "You can specify key-value pairs (semi-colon separated) for: "
+                 "all actions per IP address (of the frontend server client), "
+                 "user-tied actions (based on email/user_id/IP address), "
+                 "session-tied actions (based on session token/IP address), "
+                 "and apikey-tied actions (based on session token/IP address). "
+                 "The values are in units of max requests allowed per minute. "
+                 "The burst value indicates how many requests will be "
+                 "allowed to come in before rate-limits start being enforced. "
+                 "Set this to 'none' to turn off rate-limiting entirely. "
+                 "You can also override rate and burst limits for "
+                 "individual authnzerver API actions by specifying their names "
+                 "and the limit to use. "
+                 "For example, to set a max burst and limit of "
+                 "5 requests per minute for the "
+                 "API action 'user-new', add 'user-new:5' to the string here."),
         'readable_from_file': False,
         'postprocess_value': None,
     },

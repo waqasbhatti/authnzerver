@@ -235,7 +235,8 @@ def main():
             "start authnzerver with the following command:\n\n%s\n" %
             ("authnzrv --basedir=\"%s\" --confvars=\"%s\" --envfile=\"%s\"" %
              (os.path.abspath(options.basedir),
-              os.path.join(os.path.abspath(options.basedir), 'confvars.py'),
+              os.path.join(os.path.abspath(options.basedir),
+                           'confvars.py'),
               os.path.abspath(env_file)))
         )
         sys.exit(0)
