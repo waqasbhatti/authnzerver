@@ -56,9 +56,17 @@ LOGGER = logging.getLogger(__name__)
 import unicodedata
 import re
 import os.path
+import requests
+import multiprocessing as mp
+import time
 
 from confusable_homoglyphs import confusables
 
+############################
+## PUBLIC SUFFIX LIST URL ##
+############################
+
+SUFFIX_LIST_URL = "https://publicsuffix.org/list/public_suffix_list.dat"
 
 ####################
 ## RESERVED NAMES ##
@@ -381,3 +389,69 @@ def normalize_value(value, casefold=True):
         return '@'.join([local_part, domain])
     else:
         return local_part
+
+
+####################################
+## PUBLIC SUFFIX LIST FOR DOMAINS ##
+####################################
+
+def public_suffix_list(return_set=False):
+    """
+    Retrieves the Internet names public suffix list and loads it into a set.
+
+    """
+
+    list_resp = requests.get(SUFFIX_LIST_URL, timeout=5.0)
+    list_txt = list_resp.text
+
+    list_lines = list_txt.split('\n')
+
+    suffixes = {
+        f".{x}" for x in list_lines if not x.startswith('//') and len(x) > 0
+    }
+
+    if return_set:
+        return suffixes
+    else:
+        return list(suffixes)
+
+
+def get_public_suffix_list(return_set=False, save_to_currproc=False):
+    """
+    Gets the public suffix list and caches it if necessary.
+
+    """
+
+    # check if this exists already
+    list_file = os.path.join(
+        os.path.expanduser("~"),
+        ".cache",
+        "authnzerver",
+        "public-suffixes.txt"
+    )
+
+    suff_list = None
+
+    if os.path.exists(list_file):
+
+        out_of_date = (time.time() - os.stat(list_file).st_ctime) > 604800.0
+
+        if not out_of_date:
+            with open(list_file, "r") as infd:
+                suff_list = [x.strip("\n") for x in infd.readlines()]
+
+    if not suff_list:
+        suff_list = public_suffix_list(return_set=return_set)
+        if not os.path.exists(os.path.dirname(list_file)):
+            os.makedirs(os.path.dirname(list_file))
+
+        with open(list_file, "w") as outfd:
+            for suff in suff_list:
+                outfd.write(f"{suff}\n")
+
+    # also set this in the current process's namespace so we can test that
+    if save_to_currproc:
+        currproc = mp.current_process()
+        currproc.public_suffix_list = suff_list
+
+    return suff_list
