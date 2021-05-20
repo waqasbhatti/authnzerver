@@ -11,7 +11,7 @@ ARG pymysql_version=1.0.2
 #
 # stage 1: build psycopg2 for Postgres interface
 #
-FROM python:3.8-slim-buster as builder
+FROM python:3.9-slim-buster as builder
 
 # these are required because Docker is weird
 # https://github.com/moby/moby/issues/34129
@@ -27,7 +27,7 @@ RUN apt-get update \
 #
 # stage 2: copy over built psycopg2 from previous container
 #
-FROM python:3.8-slim-buster
+FROM python:3.9-slim-buster
 
 # these are required because Docker is weird
 # https://github.com/moby/moby/issues/34129
@@ -43,7 +43,7 @@ RUN apt-get update \
 # copy over the built psycopg2 wheel from the builder
 COPY --chown=authnzerver:authnzerver \
   --from=builder \
-    /psycopg2-${psycopg2_version}-cp38-cp38-linux_*.whl /home/authnzerver
+    /psycopg2-${psycopg2_version}-*-linux_*.whl /home/authnzerver
 
 ADD https://github.com/krallin/tini/releases/download/${tini_version}/tini /tini
 RUN chmod +x /tini
@@ -57,8 +57,8 @@ RUN python3 -m venv /home/authnzerver/.env \
   && pip install --no-cache-dir pip setuptools wheel -U \
   && pip install --no-cache-dir -r requirements.txt \
   && pip install --no-cache-dir \
-       /home/authnzerver/psycopg2-${psycopg2_version}-cp38-cp38-linux_*.whl \
-  && rm /home/authnzerver/psycopg2-${psycopg2_version}-cp38-cp38-linux_*.whl \
+       /home/authnzerver/psycopg2-${psycopg2_version}-*-linux_*.whl \
+  && rm /home/authnzerver/psycopg2-${psycopg2_version}-*-linux_*.whl \
   && pip install --no-cache-dir install PyMySQL==${pymysql_version}
 
 COPY --chown=authnzerver:authnzerver . .
