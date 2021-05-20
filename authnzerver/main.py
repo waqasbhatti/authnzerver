@@ -73,7 +73,8 @@ import multiprocessing as mp
 
 def _setup_auth_worker(authdb_path,
                        fernet_secret,
-                       permissions_json):
+                       permissions_json,
+                       public_suffix_list):
     """This stores secrets and the auth DB path in the worker loop's context.
 
     The worker will then open the DB and set up its Fernet instance by itself.
@@ -87,6 +88,7 @@ def _setup_auth_worker(authdb_path,
     currproc.auth_db_path = authdb_path
     currproc.fernet_secret = fernet_secret
     currproc.permissions_json = permissions_json
+    currproc.public_suffix_list = public_suffix_list
 
 
 def _close_authentication_database():
@@ -187,6 +189,7 @@ def main():
     from .autosetup import autogen_secrets_authdb
     from .confload import load_config
     from . import authdb as authdb_module
+    from .validators import get_public_suffix_list
 
     ##############
     ## HANDLERS ##
@@ -268,6 +271,9 @@ def main():
     sessionexpiry = loaded_config.sessionexpiry
     LOGGER.info('Session token expiry is set to: %s days' % sessionexpiry)
 
+    # get the public suffix list for spam-checking full names of users
+    public_suffix_list = get_public_suffix_list()
+
     #
     # set up the authdb, secret, and permissions model
     #
@@ -281,7 +287,7 @@ def main():
     executor = ProcessPoolExecutor(
         max_workers=maxworkers,
         initializer=_setup_auth_worker,
-        initargs=(auth_database_url, secret, permissions),
+        initargs=(auth_database_url, secret, permissions, public_suffix_list),
         finalizer=_close_authentication_database
     )
 
