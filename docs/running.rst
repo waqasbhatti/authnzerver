@@ -217,8 +217,9 @@ the authnzerver. Currently, these include (all values in requests/minute)::
     "user-edit": 10,
     "user-resetpass": 5,
     "user-changepass": 5,
-    "user-sendemail-signup": 2,
-    "user-sendemail-forgotpass": 2,
+    "user-sendemail-signup": 2,      # also rate-limited per email address
+    "user-sendemail-forgotpass": 2,  # also rate-limited per email address
+    "user-set-emailsent": 2,         # also rate-limited per email address
     "apikey-new": 30,
     "apikey-new-nosession": 30,
     "apikey-refresh-nosession": 30,
