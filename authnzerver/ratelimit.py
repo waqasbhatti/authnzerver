@@ -20,7 +20,6 @@ import logging
 # get a logger
 LOGGER = logging.getLogger(__name__)
 
-
 #############
 ## IMPORTS ##
 #############
@@ -34,6 +33,7 @@ import asyncio
 # thing when it converts dicts to JSON when a
 # tornado.web.RequestHandler.write(dict) is called.
 from .jsonencoder import FrontendEncoder
+
 json._default_encoder = FrontendEncoder()
 
 import tornado.web
@@ -41,7 +41,6 @@ import tornado.ioloop
 
 from .permissions import pii_hash
 from . import actions
-
 
 # rate-limit sensitive actions more agressively (these are all per minute)
 # these can be overriden by specifying these specific request types in the
@@ -55,6 +54,7 @@ AGGRESSIVE_RATE_LIMITS = {
     "user-changepass": 5,
     "user-sendemail-signup": 2,
     "user-sendemail-forgotpass": 2,
+    "user-set-emailsent": 2,
     "apikey-new": 30,
     "apikey-new-nosession": 30,
     "apikey-refresh-nosession": 30,
@@ -74,7 +74,11 @@ class RateLimitMixin:
 
     """
 
-    def ratelimit_request(self, reqid, request_type, frontend_client_ipaddr):
+    def ratelimit_request(self,
+                          reqid,
+                          request_type,
+                          frontend_client_ipaddr,
+                          request_body=None):
         """
         This rate-limits the request based on the request type and the
         set ratelimits passed in the config object.
@@ -88,6 +92,82 @@ class RateLimitMixin:
         client_req_count = self.cacheobj.counter_increment(
             client_ipaddr_key,
         )
+
+        #
+        # email-tied request types are additionally checked per
+        # email_addr:request_type pair
+        #
+        if "email" in request_type and request_body is not None:
+
+            email_addr = request_body.get("email")
+            if not email_addr:
+                email_addr = request_body.get("email_address")
+
+            if not email_addr:
+                LOGGER.error(f"email-tied request type: {request_type} could "
+                             f"not be rate-limited because no "
+                             f"'email' or 'email_address' key found in "
+                             f"request body. failing this request...")
+                raise tornado.web.HTTPError(status_code=429)
+
+            client_email_key = f"{request_type}-{email_addr}"
+            client_email_count = self.cacheobj.counter_increment(
+                client_email_key
+            )
+
+            (client_email_reqrate,
+             client_email_reqcount,
+             client_email_reqcount0,
+             client_email_req_tnow,
+             client_email_req_t0) = (
+                self.cacheobj.counter_rate(
+                    client_email_key,
+                    60.0,
+                    return_allinfo=True
+                )
+            )
+
+            if request_type in AGGRESSIVE_RATE_LIMITS:
+
+                limit_applied = AGGRESSIVE_RATE_LIMITS[request_type]
+                if (client_email_count > limit_applied
+                        and client_email_reqrate > limit_applied):
+                    LOGGER.error(
+                        "[%s] request '%s' is being rate-limited. "
+                        "Cache token: '%s', count: %s. "
+                        "Rate: %.3f per minute > limit specified for '%s': %s"
+                        % (reqid,
+                           request_type,
+                           pii_hash(client_email_key, self.pii_salt),
+                           client_email_reqcount,
+                           client_email_reqrate,
+                           request_type,
+                           limit_applied)
+                    )
+                    raise tornado.web.HTTPError(status_code=429)
+
+            else:
+
+                limit_applied = self.ratelimits["user"]
+                if (client_email_count > limit_applied
+                        and client_email_reqrate > limit_applied):
+                    LOGGER.error(
+                        "[%s] request '%s' is being rate-limited. "
+                        "Cache token: '%s', count: %s. "
+                        "Rate: %.3f per minute > limit specified for '%s': %s"
+                        % (reqid,
+                           request_type,
+                           pii_hash(client_email_key, self.pii_salt),
+                           client_email_reqcount,
+                           client_email_reqrate,
+                           request_type,
+                           limit_applied)
+                    )
+                    raise tornado.web.HTTPError(status_code=429)
+
+        #
+        # all other rate-limits are checked per IP address:request_type pair
+        #
 
         # apply agressive rate limiting to sensitive actions
         if request_type in AGGRESSIVE_RATE_LIMITS:
@@ -251,7 +331,7 @@ class UserLockMixin:
         if 0 < failed_pass_count <= self.config.userlocktries:
             # asyncio.sleep for an exponentially increasing period of time
             # until 40.0 seconds ~= 10 tries
-            wait_time = 1.5**(failed_pass_count - 1.0)
+            wait_time = 1.5 ** (failed_pass_count - 1.0)
             if wait_time > 40.0:
                 wait_time = 40.0
             await asyncio.sleep(wait_time)
@@ -319,7 +399,6 @@ class UserLockMixin:
             )
 
             if locked_info['success']:
-
                 unlock_after_dt = (datetime.utcnow() +
                                    timedelta(seconds=unlock_after_seconds))
 
@@ -380,8 +459,7 @@ class UserLockMixin:
             config=self.config
         )
 
-        locked_info = await loop.run_in_executor(
+        await loop.run_in_executor(
             self.executor,
             backend_func
         )
-        return locked_info

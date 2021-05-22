@@ -222,7 +222,7 @@ the authnzerver. Currently, these include (all values in requests/minute)::
     "apikey-new": 30,
     "apikey-new-nosession": 30,
     "apikey-refresh-nosession": 30,
- }
+  }
 
 You may also override the rate-limit for an individual API action by specifying
 it as a key-value pair in this configuration variable. For example, to set a
@@ -461,7 +461,7 @@ service.
           AUTHNZERVER_EMAILSENDER: "Authnzerver <authnzerver@localhost>"
           AUTHNZERVER_TLSCERTFILE:
           AUTHNZERVER_TLSCERTKEY:
-          AUTHNZERVER_RATELIMITS: "all:15000;user:480;session:600;apikey:720;burst:150"
+          AUTHNZERVER_RATELIMITS: "ipaddr:720; user:480; session:600; apikey:720; burst:150"
 
 Some things to note about the snippet:
 

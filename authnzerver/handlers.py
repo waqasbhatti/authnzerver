@@ -165,7 +165,8 @@ class AuthHandler(tornado.web.RequestHandler,
 
             self.ratelimit_request(reqid,
                                    payload['request'],
-                                   frontend_client_ipaddr)
+                                   frontend_client_ipaddr,
+                                   request_body=payload['body'])
 
         # if we successfully got past host, decryption, rate-limit validation,
         # then process the request

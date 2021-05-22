@@ -322,9 +322,26 @@ def main():
         )
 
     else:
+
+        default_ratelimits = {
+            "ipaddr": 720,
+            "user": 480,
+            "session": 600,
+            "apikey": 720,
+            "burst": 150
+        }
+
         ratelimits = [x.strip().replace(' ', '').split(':')
                       for x in loaded_config.ratelimits.split(';')]
         ratelimits = {x[0]: int(x[1]) for x in ratelimits}
+
+        # override defaults with provided values and use defaults for any
+        # missing items in the ratelimit spec
+        ratelimits = {
+            **default_ratelimits,
+            **ratelimits
+        }
+
         loaded_config.ratelimits = ratelimits
         LOGGER.info(
             "HTTP request rate-limiting (requests/minute) "
