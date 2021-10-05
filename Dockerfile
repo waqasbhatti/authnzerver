@@ -11,7 +11,7 @@ ARG pymysql_version=1.0.2
 #
 # stage 1: build psycopg2 for Postgres interface
 #
-FROM python:3.9-slim-buster as builder
+FROM python:3.9-slim-bullseye as builder
 
 # these are required because Docker is weird
 # https://github.com/moby/moby/issues/34129
@@ -27,7 +27,7 @@ RUN apt-get update \
 #
 # stage 2: copy over built psycopg2 from previous container
 #
-FROM python:3.9-slim-buster
+FROM python:3.9-slim-bullseye
 
 # these are required because Docker is weird
 # https://github.com/moby/moby/issues/34129
