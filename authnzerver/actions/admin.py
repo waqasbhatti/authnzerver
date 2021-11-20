@@ -1791,7 +1791,7 @@ def toggle_user_lock(
     raiseonfail: bool = False,
     override_authdb_path: str = None,
     config: SimpleNamespace = None,
-):
+) -> dict:
     """Locks/unlocks user accounts.
 
     Can only be run by superusers and is suitable for use when called from a
