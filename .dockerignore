@@ -112,3 +112,6 @@ sandbox
 
 TODO-local.md
 **/htmlcov
+
+.git
+.gitignore
