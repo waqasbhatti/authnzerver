@@ -7,9 +7,9 @@ This contains simple default verification email templates.
 """
 
 SIGNUP_VERIFICATION_EMAIL_SUBJECT = (
-    '[{server_name}] Please verify your account sign up request'
+    "[{server_name}] Please verify your account sign up request"
 )
-SIGNUP_VERIFICATION_EMAIL_TEMPLATE = '''\
+SIGNUP_VERIFICATION_EMAIL_TEMPLATE = """\
 Hello,
 
 This is an automated message from the {server_name} at: {server_baseurl}.
@@ -43,13 +43,13 @@ You can see your IP address here: https://www.google.com/search?q=my+ip+address
 Thanks,
 {server_name} admins
 {server_baseurl}
-'''
+"""
 
 
 FORGOTPASS_VERIFICATION_EMAIL_SUBJECT = (
-    '[{server_name}] Please verify your password reset request'
+    "[{server_name}] Please verify your password reset request"
 )
-FORGOTPASS_VERIFICATION_EMAIL_TEMPLATE = '''\
+FORGOTPASS_VERIFICATION_EMAIL_TEMPLATE = """\
 Hello,
 
 This is an automated message from the {server_name} at: {server_baseurl}.
@@ -80,13 +80,13 @@ You can see your IP address here: https://www.google.com/search?q=my+ip+address
 Thanks,
 {server_name} admins
 {server_baseurl}
-'''
+"""
 
 
 CHANGEPASS_VERIFICATION_EMAIL_SUBJECT = (
-    '[{server_name}] Please verify your password change request'
+    "[{server_name}] Please verify your password change request"
 )
-CHANGEPASS_VERIFICATION_EMAIL_TEMPLATE = '''\
+CHANGEPASS_VERIFICATION_EMAIL_TEMPLATE = """\
 Hello,
 
 This is an automated message from the {server_name} at: {server_baseurl}.
@@ -117,4 +117,4 @@ You can see your IP address here: https://www.google.com/search?q=my+ip+address
 Thanks,
 {server_name} admins
 {server_baseurl}
-'''
+"""
