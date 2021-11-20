@@ -42,19 +42,14 @@ from .apischema import validate_and_get_function
 ## MAIN AUTH HANDLER ##
 #######################
 
-class AuthHandler(tornado.web.RequestHandler,
-                  RateLimitMixin,
-                  UserLockMixin):
+
+class AuthHandler(tornado.web.RequestHandler, RateLimitMixin, UserLockMixin):
     """
     This handles the actual auth requests.
 
     """
 
-    def initialize(self,
-                   config,
-                   executor,
-                   cacheobj,
-                   failed_passchecks):
+    def initialize(self, config, executor, cacheobj, failed_passchecks):
         """
         This sets up stuff.
 
@@ -84,24 +79,23 @@ class AuthHandler(tornado.web.RequestHandler,
 
         """
 
-        response_dict = {"success": response['success'],
-                         "response": response,
-                         "messages": response['messages'],
-                         "reqid": reqid}
+        response_dict = {
+            "success": response["success"],
+            "response": response,
+            "messages": response["messages"],
+            "reqid": reqid,
+        }
 
         # add the failure reason as a top level item in the response dict
         # if the action failed
-        if not response['success'] and 'failure_reason' in response:
-            response_dict['failure_reason'] = response['failure_reason']
+        if not response["success"] and "failure_reason" in response:
+            response_dict["failure_reason"] = response["failure_reason"]
 
-        encrypted_base64 = encrypt_message(
-            response_dict,
-            self.fernet_secret
-        )
+        encrypted_base64 = encrypt_message(response_dict, self.fernet_secret)
 
-        self.set_header('content-type', 'text/plain; charset=UTF-8')
+        self.set_header("content-type", "text/plain; charset=UTF-8")
         self.write(encrypted_base64)
-        self.finish()
+        await self.finish()
 
     def write_error(self, status_code, **kwargs):
         """
@@ -109,18 +103,24 @@ class AuthHandler(tornado.web.RequestHandler,
 
         """
 
-        self.set_header('content-type', 'text/plain; charset=UTF-8')
+        self.set_header("content-type", "text/plain; charset=UTF-8")
         if status_code == 400:
-            self.write(f"HTTP {status_code}: Could not service this request "
-                       f"because of invalid request parameters.")
+            self.write(
+                f"HTTP {status_code}: Could not service this request "
+                f"because of invalid request parameters."
+            )
         elif status_code == 401:
-            self.write(f"HTTP {status_code}: Could not service this request "
-                       f"because of invalid request authentication token or "
-                       f"violation of host restriction.")
+            self.write(
+                f"HTTP {status_code}: Could not service this request "
+                f"because of invalid request authentication token or "
+                f"violation of host restriction."
+            )
         elif status_code == 429:
             self.set_header("Retry-After", "180")
-            self.write(f"HTTP {status_code}: Could not service this request "
-                       f"because the set rate limit has been exceeded.")
+            self.write(
+                f"HTTP {status_code}: Could not service this request "
+                f"because the set rate limit has been exceeded."
+            )
         else:
             self.write(f"HTTP {status_code}: Could not service this request.")
 
@@ -139,34 +139,37 @@ class AuthHandler(tornado.web.RequestHandler,
             raise tornado.web.HTTPError(status_code=401)
 
         # ignore all requests for echo to this handler
-        if payload['request'] == 'echo':
+        if payload["request"] == "echo":
             LOGGER.error("This handler can't echo things.")
             raise tornado.web.HTTPError(status_code=400)
 
         # get the request ID
-        reqid = payload.get('reqid')
+        reqid = payload.get("reqid")
         if reqid is None:
-            raise ValueError("No request ID provided. "
-                             "Ignoring this request.")
+            raise ValueError(
+                "No request ID provided. " "Ignoring this request."
+            )
 
         # rate limit the request if this is turned on
         if self.ratelimits:
             # get the frontend client IP addr
-            frontend_client_ipaddr = payload.get('client_ipaddr')
+            frontend_client_ipaddr = payload.get("client_ipaddr")
 
             if not frontend_client_ipaddr:
                 LOGGER.error(
                     "[%s] request: '%s' is missing a payload "
                     "value: 'client_ipaddr' "
                     "needed to calculate rate, dropping this request."
-                    % (reqid, payload['request'])
+                    % (reqid, payload["request"])
                 )
                 raise tornado.web.HTTPError(status_code=400)
 
-            self.ratelimit_request(reqid,
-                                   payload['request'],
-                                   frontend_client_ipaddr,
-                                   request_body=payload['body'])
+            self.ratelimit_request(
+                reqid,
+                payload["request"],
+                frontend_client_ipaddr,
+                request_body=payload["body"],
+            )
 
         # if we successfully got past host, decryption, rate-limit validation,
         # then process the request
@@ -178,17 +181,16 @@ class AuthHandler(tornado.web.RequestHandler,
 
             # inject the request ID into the body of the request so the backend
             # function can report on it
-            payload['body']['reqid'] = reqid
+            payload["body"]["reqid"] = reqid
 
             # inject the PII salt into the body of the request as well
-            payload['body']['pii_salt'] = self.pii_salt
+            payload["body"]["pii_salt"] = self.pii_salt
 
             #
             # validate the request and choose the function to dispatch
             #
             handler_func, problems, validate_msgs = validate_and_get_function(
-                payload['request'],
-                payload['body']
+                payload["request"], payload["body"]
             )
 
             if handler_func is None:
@@ -203,9 +205,7 @@ class AuthHandler(tornado.web.RequestHandler,
                 # this passes along any secrets or settings from environ
                 # directly to those functions
                 backend_func = partial(
-                    handler_func,
-                    payload['body'],
-                    config=self.config
+                    handler_func, payload["body"], config=self.config
                 )
                 # run the function associated with the request type
                 loop = tornado.ioloop.IOLoop.current()
@@ -219,48 +219,50 @@ class AuthHandler(tornado.web.RequestHandler,
             # this case, we'll apply backoff to slow down repeated failed
             # passwords
             #
-            passcheck_requests = {'user-login', 'user-passcheck-nosession'}
+            passcheck_requests = {"user-login", "user-passcheck-nosession"}
 
-            if (payload['request'] in passcheck_requests and
-                    response['success'] is False):
+            if (
+                payload["request"] in passcheck_requests
+                and response["success"] is False
+            ):
 
-                failure_status, failure_count, failure_wait = (
-                    await self.handle_failed_logins(payload)
-                )
+                (
+                    failure_status,
+                    failure_count,
+                    failure_wait,
+                ) = await self.handle_failed_logins(payload)
 
                 # if the user is locked for repeated login failures, handle that
-                if failure_status == 'locked':
+                if failure_status == "locked":
                     response = await self.lockuser_repeated_login_failures(
-                        payload,
-                        unlock_after_seconds=self.config.userlocktime
+                        payload, unlock_after_seconds=self.config.userlocktime
                     )
-                elif failure_status == 'wait':
+                elif failure_status == "wait":
                     LOGGER.warning(
                         "[%s] User with email: %s is being rate-limited "
                         "after %s failed login attempts. "
-                        "Current wait time: %.1f seconds." %
-                        (reqid,
-                         pii_hash(payload['body']['email'], self.pii_salt),
-                         failure_count,
-                         failure_wait)
+                        "Current wait time: %.1f seconds."
+                        % (
+                            reqid,
+                            pii_hash(payload["body"]["email"], self.pii_salt),
+                            failure_count,
+                            failure_wait,
+                        )
                     )
 
             # reset the failed counter to zero for each successful attempt
-            elif (payload['request'] in passcheck_requests and
-                  response['success'] is True):
+            elif (
+                payload["request"] in passcheck_requests
+                and response["success"] is True
+            ):
 
-                self.failed_passchecks.pop(
-                    payload['body']['email'],
-                    None
-                )
+                self.failed_passchecks.pop(payload["body"]["email"], None)
 
             #
             # trim the failed_passchecks dict
             #
             if len(self.failed_passchecks) > 1000:
-                self.failed_passchecks.pop(
-                    self.failed_passchecks.keys()[0]
-                )
+                self.failed_passchecks.pop(self.failed_passchecks.keys()[0])
 
             #
             # form and send the response
@@ -269,5 +271,5 @@ class AuthHandler(tornado.web.RequestHandler,
 
         except Exception:
 
-            LOGGER.exception('Failed to understand request.')
+            LOGGER.exception("Failed to understand request.")
             raise tornado.web.HTTPError(status_code=400)
