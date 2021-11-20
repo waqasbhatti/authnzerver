@@ -409,6 +409,7 @@ def create_new_user(
 
     # insert stuff into the user's table, set is_active = False, user_role =
     # 'locked', the emailverify_sent_datetime to datetime.utcnow()
+    new_user_dict = None
 
     try:
 
@@ -531,8 +532,9 @@ def create_new_user(
             # if we're going to resend the verification, update the users table
             # with the latest info sent by the user (they might've changed their
             # password in the meantime)
-            del new_user_dict["created_on"]
-            del new_user_dict["system_id"]
+            if new_user_dict is not None:
+                del new_user_dict["created_on"]
+                del new_user_dict["system_id"]
 
             upd = users.update(
             ).where(

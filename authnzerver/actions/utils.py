@@ -16,7 +16,7 @@ def get_procdb_permjson(
     override_authdb_path: str = None,
     override_permissions_json: str = None,
     raiseonfail: bool = False,
-) -> Tuple[Engine, MetaData, str]:
+) -> Tuple[Engine, MetaData, str, str]:
     """
     Gets the DB and permissions JSON path in the current process namespace.
 
@@ -42,4 +42,5 @@ def get_procdb_permjson(
         currproc.authdb_engine,
         currproc.authdb_meta,
         currproc.permissions_json,
+        currproc.auth_db_path,
     )
