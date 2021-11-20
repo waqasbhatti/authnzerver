@@ -100,7 +100,7 @@ def check_user_access(
 
     """
 
-    engine, meta, permjson = get_procdb_permjson(
+    engine, meta, permjson, dbpath = get_procdb_permjson(
         override_authdb_path=override_authdb_path,
         override_permissions_json=override_permissions_json,
         raiseonfail=raiseonfail,
@@ -441,7 +441,7 @@ def check_user_limit(
 
     """
 
-    engine, meta, permjson = get_procdb_permjson(
+    engine, meta, permjson, dbpath = get_procdb_permjson(
         override_authdb_path=override_authdb_path,
         override_permissions_json=override_permissions_json,
         raiseonfail=raiseonfail,
