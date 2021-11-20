@@ -982,8 +982,8 @@ Requires the following ``body`` items in a request:
 
 Returns a ``response`` with the following items:
 
-- None, check the value of ``success`` to see if the API key revocation was
-  successful
+- ``deleted_keys``, the number of API keys that were revoked for this user after
+  this action.
 
 ``apikey-refresh-nosession``: Refresh a previously issued no-session API key
 ----------------------------------------------------------------------------

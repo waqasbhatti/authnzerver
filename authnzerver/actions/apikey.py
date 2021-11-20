@@ -579,7 +579,7 @@ def verify_apikey(
             "messages": [
                 (
                     "API key verified successfully. Expires: %s."
-                    % row["expires"].isoformat()
+                    % row.expires.isoformat()
                 )
             ],
         }
