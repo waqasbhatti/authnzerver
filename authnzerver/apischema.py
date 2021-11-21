@@ -12,7 +12,7 @@ from authnzerver.modtools import object_from_string
 #
 # this maps request types to their required args, kwargs
 #
-schema = {
+SCHEMA = {
     # session actions
     "session-new": {
         "function": "authnzerver.actions.auth_session_new",
@@ -1206,7 +1206,7 @@ def apply_typedef(item, typedef):
     return any(typedef_ok)
 
 
-def validate_api_request(request_type, request_payload):
+def validate_api_request(request_type: str, request_payload: dict):
     """Validates the incoming request.
 
     Checks to see if the request_type can be found in the schema, then checks
@@ -1220,7 +1220,7 @@ def validate_api_request(request_type, request_payload):
 
     """
 
-    if request_type not in schema:
+    if request_type not in SCHEMA:
 
         return (
             False,
@@ -1228,8 +1228,8 @@ def validate_api_request(request_type, request_payload):
             f"request '{request_type}' is not a valid request",
         )
 
-    request_args = schema[request_type]["args"]
-    request_kwargs = schema[request_type]["kwargs"]
+    request_args = SCHEMA[request_type]["args"]
+    request_kwargs = SCHEMA[request_type]["kwargs"]
 
     invalid_params = []
     request_valid = True
@@ -1308,10 +1308,10 @@ def validate_api_request(request_type, request_payload):
     return True, None, f"request '{request_type}' validated successfully"
 
 
-def validate_and_get_function(request_type, request_payload):
+def validate_and_get_function(request_type: str, request_payload: dict):
     """Validates the request and returns the function needed to fulfill it.
 
-    Checks to see if the request_type can be found in the schema, then checks
+    Checks to see if the request_type can be found in the SCHEMA, then checks
     its request_payload dict to see if all items required are present and are
     the correct type.
 
@@ -1329,7 +1329,7 @@ def validate_and_get_function(request_type, request_payload):
 
     if request_ok:
         return (
-            object_from_string(schema[request_type]["function"]),
+            object_from_string(SCHEMA[request_type]["function"]),
             problems,
             message,
         )

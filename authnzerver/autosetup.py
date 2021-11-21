@@ -12,6 +12,7 @@ first-start.
 #############
 
 import logging
+from typing import Optional
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
@@ -33,7 +34,10 @@ modpath = os.path.abspath(os.path.dirname(__file__))
 
 
 def autogen_secrets_authdb(
-    basedir, database_url=None, interactive=False, generate_envfile=True
+    basedir: str,
+    database_url: str = None,
+    interactive: bool = False,
+    generate_envfile: bool = True,
 ):
     """This automatically generates secrets files and an authentication DB.
 
@@ -299,7 +303,12 @@ def autogen_secrets_authdb(
         return authdb_path, creds, fernet_secret_file, salt_file, envfile
 
 
-def generate_env(database_path, fernet_secret_file, salt_file, basedir):
+def generate_env(
+    database_path: str,
+    fernet_secret_file: str,
+    salt_file: str,
+    basedir: str,
+) -> Optional[str]:
     """This generates environment variables containing the required items for
     authnzrv start up after autosetup is complete.
 
