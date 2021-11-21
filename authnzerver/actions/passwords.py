@@ -11,6 +11,7 @@
 #############
 
 import logging
+from types import SimpleNamespace
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
@@ -40,11 +41,14 @@ from .. import validators
 ## functions ##
 ###############
 
-def check_password_pwned(password,
-                         email,
-                         reqid,
-                         pii_salt,
-                         min_matches=25):
+
+def check_password_pwned(
+    password: str,
+    email: str,
+    reqid: str,
+    pii_salt: str,
+    min_matches: int = 25,
+) -> tuple:
     """
     Checks the password against the haveibeenpwned.com API.
 
@@ -83,7 +87,7 @@ def check_password_pwned(password,
     """
 
     # SHA1 hash the password
-    hashed_password = sha1(password.encode('utf-8')).hexdigest()
+    hashed_password = sha1(password.encode("utf-8")).hexdigest()
     hashed_password_prefix = hashed_password[:5]
     hashed_password_suffix = hashed_password[5:]
 
@@ -95,7 +99,7 @@ def check_password_pwned(password,
 
         resp = requests.get(
             f"https://api.pwnedpasswords.com/range/{hashed_password_prefix}",
-            timeout=3.0,
+            timeout=5.0,
         )
         resp.raise_for_status()
 
@@ -119,19 +123,19 @@ def check_password_pwned(password,
 
     except Exception:
 
-        LOGGER.exception(
-            f"[{reqid}] The haveibeenpwned.com API call failed."
-        )
+        LOGGER.exception(f"[{reqid}] The haveibeenpwned.com API call failed.")
         return "unknown", "", hashed_password_suffix, None
 
     # load the resp body
     respbody = resp.text
     resp_lines = respbody.split("\n")
-    resp_lines = [tuple(x.strip().split(':')) for x in resp_lines]
+    resp_lines = [tuple(x.strip().split(":")) for x in resp_lines]
     resp_check = {x[0].casefold(): int(x[1]) for x in resp_lines}
 
-    if (hashed_password_suffix in resp_check and
-        resp_check[hashed_password_suffix] >= min_matches):
+    if (
+        hashed_password_suffix in resp_check
+        and resp_check[hashed_password_suffix] >= min_matches
+    ):
 
         err_msg = (
             f"Your password was found with "
@@ -154,17 +158,17 @@ def check_password_pwned(password,
 
 
 def validate_input_password(
-        full_name,
-        email,
-        password,
-        pii_salt,
-        reqid,
-        min_pass_length=12,
-        max_unsafe_similarity=33,
-        max_character_frequency=0.3,
-        min_pwned_matches=25,
-        config=None
-):
+    full_name: str,
+    email: str,
+    password: str,
+    pii_salt: str,
+    reqid: str,
+    min_pass_length: int = 12,
+    max_unsafe_similarity: int = 33,
+    max_character_frequency: float = 0.3,
+    min_pwned_matches: int = 25,
+    config: SimpleNamespace = None,
+) -> tuple:
     """Validates user input passwords.
 
     Password rules are:
@@ -247,30 +251,36 @@ def validate_input_password(
     """
 
     # handle kwargs passed via config object
+    server_fqdn = socket.getfqdn()
+
     if config is not None:
         passpolicy = getattr(config, "passpolicy", None)
+        server_fqdn = getattr(config, "fqdn", None)
 
         if passpolicy:
             try:
-                (pass_minlen, pass_maxsim,
-                 pass_charfreq, min_pwned) = passpolicy.split(';')
+                (
+                    pass_minlen,
+                    pass_maxsim,
+                    pass_charfreq,
+                    min_pwned,
+                ) = passpolicy.split(";")
                 min_pass_length = int(
-                    pass_minlen.strip().replace(' ', '').split(':')[1]
+                    pass_minlen.strip().replace(" ", "").split(":")[1]
                 )
                 max_unsafe_similarity = int(
-                    pass_maxsim.strip().replace(' ', '').split(':')[1]
+                    pass_maxsim.strip().replace(" ", "").split(":")[1]
                 )
                 max_character_frequency = float(
-                    pass_charfreq.strip().replace(' ', '').split(':')[1]
+                    pass_charfreq.strip().replace(" ", "").split(":")[1]
                 )
                 min_pwned_matches = int(
-                    min_pwned.strip().replace(' ', '').split(':')[1]
+                    min_pwned.strip().replace(" ", "").split(":")[1]
                 )
             except Exception:
                 LOGGER.exception(
                     "[%s] Invalid password policy could not be parsed: '%s'. "
-                    "Falling back to kwarg values."
-                    % (reqid, passpolicy)
+                    "Falling back to kwarg values." % (reqid, passpolicy)
                 )
                 pass
 
@@ -280,27 +290,35 @@ def validate_input_password(
     # is all white space
     if len(squeeze(password.strip())) < min_pass_length:
 
-        LOGGER.warning('[%s] Password for account '
-                       'with email: %s is too short (%s chars < required %s).' %
-                       (reqid,
-                        pii_hash(email, pii_salt),
-                        len(password),
-                        min_pass_length))
-        messages.append('Your password is too short. '
-                        'It must have at least %s characters.' %
-                        min_pass_length)
+        LOGGER.warning(
+            "[%s] Password for account "
+            "with email: %s is too short (%s chars < required %s)."
+            % (
+                reqid,
+                pii_hash(email, pii_salt),
+                len(password),
+                min_pass_length,
+            )
+        )
+        messages.append(
+            "Your password is too short. "
+            "It must have at least %s characters." % min_pass_length
+        )
         passlen_ok = False
     else:
         passlen_ok = True
 
     # check if the password is straight-up dumb
     if password.casefold() in validators.TOP_10K_PASSWORDS:
-        LOGGER.warning('[%s] Password for account '
-                       'with email: %s was found in the '
-                       'top 10k passwords list.' %
-                       (reqid, pii_hash(email, pii_salt)))
-        messages.append('Your password is on the list of the '
-                        'most common passwords and is vulnerable to guessing.')
+        LOGGER.warning(
+            "[%s] Password for account "
+            "with email: %s was found in the "
+            "top 10k passwords list." % (reqid, pii_hash(email, pii_salt))
+        )
+        messages.append(
+            "Your password is on the list of the "
+            "most common passwords and is vulnerable to guessing."
+        )
         tenk_ok = False
     else:
         tenk_ok = True
@@ -309,16 +327,12 @@ def validate_input_password(
     # like 'passwordpasswordpassword'
 
     # check the match against the FQDN, user name, and email address
-    fqdn = socket.getfqdn()
-
     password_to_match = squeeze(password.casefold().strip())
 
     fqdn_matcher = SequenceMatcher(
-        None, password_to_match, fqdn.casefold()
+        None, password_to_match, server_fqdn.casefold()
     )
-    email_matcher = SequenceMatcher(
-        None, password_to_match, email.casefold()
-    )
+    email_matcher = SequenceMatcher(None, password_to_match, email.casefold())
     name_matcher = SequenceMatcher(
         None, password_to_match, full_name.casefold()
     )
@@ -332,19 +346,25 @@ def validate_input_password(
     name_ok = name_match < max_unsafe_similarity
 
     if not fqdn_ok or not email_ok or not name_ok:
-        LOGGER.warning('[%s] Password for account '
-                       'with email: %s matches FQDN '
-                       '(similarity: %.1f), their name (similarity: %.1f), '
-                       ' or their email address '
-                       '(similarity: %.1f).' %
-                       (reqid,
-                        pii_hash(email, pii_salt),
-                        fqdn_match,
-                        name_match,
-                        email_match))
-        messages.append('Your password is too similar to either '
-                        'the domain name of this server or your '
-                        'own name or email address.')
+        LOGGER.warning(
+            "[%s] Password for account "
+            "with email: %s matches FQDN "
+            "(similarity: %.1f), their name (similarity: %.1f), "
+            " or their email address "
+            "(similarity: %.1f)."
+            % (
+                reqid,
+                pii_hash(email, pii_salt),
+                fqdn_match,
+                name_match,
+                email_match,
+            )
+        )
+        messages.append(
+            "Your password is too similar to either "
+            "the domain name of this server or your "
+            "own name or email address."
+        )
 
     # next, check if the password is complex enough
     histogram = {}
@@ -359,38 +379,44 @@ def validate_input_password(
     for h in histogram:
         if (histogram[h] / len(password)) > max_character_frequency:
             hist_ok = False
-            LOGGER.warning('[%s] Password for account '
-                           'with email: %s does not have enough entropy. '
-                           'One character is more than '
-                           '%s x length of the password.' %
-                           (reqid, pii_hash(email, pii_salt),
-                            max_character_frequency))
+            LOGGER.warning(
+                "[%s] Password for account "
+                "with email: %s does not have enough entropy. "
+                "One character is more than "
+                "%s x length of the password."
+                % (reqid, pii_hash(email, pii_salt), max_character_frequency)
+            )
             messages.append(
-                'Your password is not complex enough. '
-                'One or more characters appear appear too frequently.'
+                "Your password is not complex enough. "
+                "One or more characters appear appear too frequently."
             )
             break
 
     # check if the password is all numeric
     if password.isdigit():
         numeric_ok = False
-        LOGGER.warning('[%s] Password for account '
-                       'with email: %s is all numbers.' %
-                       (reqid, pii_hash(email, pii_salt)))
-        messages.append('Your password cannot be all numbers.')
+        LOGGER.warning(
+            "[%s] Password for account "
+            "with email: %s is all numbers."
+            % (reqid, pii_hash(email, pii_salt))
+        )
+        messages.append("Your password cannot be all numbers.")
     else:
         numeric_ok = True
 
     # check the password against haveibeenbeenpwned.com. only do this check if
     # all the other ones pass, since this is an external HTTP API call
-    if (passlen_ok and email_ok and name_ok and
-        fqdn_ok and hist_ok and numeric_ok and tenk_ok):
+    if (
+        passlen_ok
+        and email_ok
+        and name_ok
+        and fqdn_ok
+        and hist_ok
+        and numeric_ok
+        and tenk_ok
+    ):
         pwned_status, pwned_msg, _, _ = check_password_pwned(
-            password,
-            email,
-            reqid,
-            pii_salt,
-            min_matches=min_pwned_matches
+            password, email, reqid, pii_salt, min_matches=min_pwned_matches
         )
         is_pwned = pwned_status == "bad"
         if is_pwned:
@@ -399,19 +425,26 @@ def validate_input_password(
         is_pwned = False
 
     return (
-        (passlen_ok and email_ok and name_ok and
-         fqdn_ok and hist_ok and numeric_ok and tenk_ok and
-         not is_pwned),
-        messages
+        (
+            passlen_ok
+            and email_ok
+            and name_ok
+            and fqdn_ok
+            and hist_ok
+            and numeric_ok
+            and tenk_ok
+            and not is_pwned
+        ),
+        messages,
     )
 
 
 def validate_password(
-        payload,
-        raiseonfail=False,
-        override_authdb_path=None,
-        config=None
-):
+    payload: dict,
+    raiseonfail: bool = False,
+    override_authdb_path: str = None,
+    config: SimpleNamespace = None,
+) -> dict:
     """External interface to password validation.
 
     Use this in a frontend server or client to validate any passwords sent by
@@ -486,17 +519,17 @@ def validate_password(
 
     """
 
-    for key in ('reqid', 'pii_salt'):
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid password validation request."],
+                "messages": ["Invalid password validation request."],
             }
 
     for key in {"password", "email", "full_name"}:
@@ -504,21 +537,25 @@ def validate_password(
         if key not in payload:
 
             LOGGER.error(
-                '[%s] Invalid password validation request, missing %s.' %
-                (payload['reqid'], key)
+                "[%s] Invalid password validation request, missing %s."
+                % (payload["reqid"], key)
             )
 
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid password validation request. "
-                             "Some required parameters are missing."]
+                "messages": [
+                    "Invalid password validation request. "
+                    "Some required parameters are missing."
+                ],
             }
 
     password, email, full_name = (
-        payload["password"], payload["email"], payload["full_name"]
+        payload["password"],
+        payload["email"],
+        payload["full_name"],
     )
 
     try:
@@ -561,13 +598,10 @@ def validate_password(
         max_unsafe_similarity=max_unsafe_similarity,
         max_character_frequency=max_character_frequency,
         min_pwned_matches=min_pwned_matches,
-        config=config
+        config=config,
     )
 
-    retdict = {
-        "success": password_ok,
-        "messages": messages
-    }
+    retdict = {"success": password_ok, "messages": messages}
 
     if not password_ok:
         retdict["failure_reason"] = "password is insecure or invalid"
