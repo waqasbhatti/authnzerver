@@ -901,8 +901,8 @@ def set_user_emailaddr_verified(
     #
     # get the previous user_role if any
     #
-    current_user_role = row["user_role"]
-    user_extra_info = row["extra_info"]
+    current_user_role = row.user_role
+    user_extra_info = row.extra_info
     previous_user_roles = user_extra_info.get(
         "previous_user_roles", ["locked"]
     )
@@ -948,18 +948,18 @@ def set_user_emailaddr_verified(
             "user_id: %s, email: %s, role: %s, is_active: %s."
             % (
                 payload["reqid"],
-                pii_hash(rows["user_id"], payload["pii_salt"]),
+                pii_hash(rows.user_id, payload["pii_salt"]),
                 pii_hash(payload["email"], payload["pii_salt"]),
-                rows["user_role"],
-                rows["is_active"],
+                rows.user_role,
+                rows.is_active,
             )
         )
 
         return {
             "success": True,
-            "user_id": rows["user_id"],
-            "is_active": rows["is_active"],
-            "user_role": rows["user_role"],
+            "user_id": rows.user_id,
+            "is_active": rows.is_active,
+            "user_role": rows.user_role,
             "messages": ["Email verification toggle request succeeded."],
         }
 
@@ -1126,23 +1126,23 @@ def set_user_email_sent(
             "user_id: %s, email: %s, role: %s, is_active: %s."
             % (
                 payload["reqid"],
-                pii_hash(rows["user_id"], payload["pii_salt"]),
+                pii_hash(rows.user_id, payload["pii_salt"]),
                 pii_hash(payload["email"], payload["pii_salt"]),
-                pii_hash(rows["user_role"], payload["pii_salt"]),
-                rows["is_active"],
+                pii_hash(rows.user_role, payload["pii_salt"]),
+                rows.is_active,
             )
         )
 
         return {
             "success": True,
-            "email": rows["email"],
-            "emailverify_sent_datetime": rows["emailverify_sent_datetime"],
+            "email": rows.email,
+            "emailverify_sent_datetime": rows.emailverify_sent_datetime,
             "emailforgotpass_sent_datetime": (
-                rows["emailforgotpass_sent_datetime"]
+                rows.emailforgotpass_sent_datetime
             ),
-            "user_id": rows["user_id"],
-            "is_active": rows["is_active"],
-            "user_role": rows["user_role"],
+            "user_id": rows.user_id,
+            "is_active": rows.is_active,
+            "user_role": rows.user_role,
             "messages": ["Email sent notification request succeeded."],
         }
 
@@ -1155,7 +1155,7 @@ def set_user_email_sent(
             "the user could not be updated."
             % (
                 payload["reqid"],
-                pii_hash(rows["user_id"], payload["pii_salt"]),
+                pii_hash(rows.user_id, payload["pii_salt"]),
             )
         )
 
@@ -1546,8 +1546,8 @@ def send_forgotpass_verification_email(
 
         return {
             "success": True,
-            "user_id": user_info["user_id"],
-            "email_address": user_info["email"],
+            "user_id": user_info.user_id,
+            "email_address": user_info.email,
             "emailforgotpass_sent_datetime": emailforgotpass_sent_datetime,
             "messages": (
                 ["Password reset request sent successfully to %s" % recipients]

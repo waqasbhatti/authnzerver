@@ -21,11 +21,8 @@ LOGGER = logging.getLogger(__name__)
 ## IMPORTS ##
 #############
 
-import multiprocessing as mp
-
 from sqlalchemy import select
 
-from .. import authdb
 from .session import auth_delete_sessions_userid
 from authnzerver.actions.utils import get_procdb_permjson
 from ..permissions import pii_hash
@@ -188,11 +185,11 @@ def change_user_password(
 
         return {
             "success": False,
-            "failure_reason": ("user does not exist"),
+            "failure_reason": "user does not exist",
             "user_id": payload["user_id"],
             "email": payload["email"],
             "messages": [
-                "Your current password did " "not match the stored password."
+                "Your current password did not match the stored password."
             ],
         }
 
@@ -222,11 +219,11 @@ def change_user_password(
 
         return {
             "success": False,
-            "failure_reason": ("user password does not match"),
+            "failure_reason": "user password does not match",
             "user_id": payload["user_id"],
             "email": payload["email"],
             "messages": [
-                "Your current password did " "not match the stored password."
+                "Your current password did not match the stored password."
             ],
         }
 
@@ -252,11 +249,11 @@ def change_user_password(
 
         return {
             "success": False,
-            "failure_reason": ("password did not change"),
+            "failure_reason": "password did not change",
             "user_id": payload["user_id"],
             "email": payload["email"],
             "messages": [
-                "Your new password cannot " "be the same as your old password."
+                "Your new password cannot be the same as your old password."
             ],
         }
 
@@ -357,7 +354,7 @@ def change_user_password(
 
             return {
                 "success": False,
-                "failure_reason": ("DB error when updating password"),
+                "failure_reason": "DB error when updating password",
                 "user_id": payload["user_id"],
                 "email": payload["email"],
                 "messages": messages,
@@ -383,7 +380,7 @@ def change_user_password(
         )
         return {
             "success": False,
-            "failure_reason": ("new password is insecure"),
+            "failure_reason": "new password is insecure",
             "user_id": payload["user_id"],
             "email": payload["email"],
             "messages": messages,
@@ -537,11 +534,11 @@ def change_user_password_nosession(
 
         return {
             "success": False,
-            "failure_reason": ("user does not exist"),
+            "failure_reason": "user does not exist",
             "user_id": payload["user_id"],
             "email": payload["email"],
             "messages": [
-                "Your current password did " "not match the stored password."
+                "Your current password did not match the stored password."
             ],
         }
 
@@ -571,11 +568,11 @@ def change_user_password_nosession(
 
         return {
             "success": False,
-            "failure_reason": ("user password does not match"),
+            "failure_reason": "user password does not match",
             "user_id": payload["user_id"],
             "email": payload["email"],
             "messages": [
-                "Your current password did " "not match the stored password."
+                "Your current password did not match the stored password."
             ],
         }
 
@@ -601,11 +598,11 @@ def change_user_password_nosession(
 
         return {
             "success": False,
-            "failure_reason": ("password did not change"),
+            "failure_reason": "password did not change",
             "user_id": payload["user_id"],
             "email": payload["email"],
             "messages": [
-                "Your new password cannot " "be the same as your old password."
+                "Your new password cannot be the same as your old password."
             ],
         }
 
@@ -666,7 +663,7 @@ def change_user_password_nosession(
                 "success": True,
                 "user_id": payload["user_id"],
                 "email": payload["email"],
-                "messages": (messages),
+                "messages": messages,
             }
 
         else:
@@ -686,7 +683,7 @@ def change_user_password_nosession(
 
             return {
                 "success": False,
-                "failure_reason": ("DB error when updating password"),
+                "failure_reason": "DB error when updating password",
                 "user_id": payload["user_id"],
                 "email": payload["email"],
                 "messages": messages,
@@ -712,7 +709,7 @@ def change_user_password_nosession(
         )
         return {
             "success": False,
-            "failure_reason": ("new password is insecure"),
+            "failure_reason": "new password is insecure",
             "user_id": payload["user_id"],
             "email": payload["email"],
             "messages": messages,

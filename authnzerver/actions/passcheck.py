@@ -47,12 +47,9 @@ except Exception:
 
     utc = UTC()
 
-import multiprocessing as mp
-
 from sqlalchemy import select
 from argon2 import PasswordHasher
 
-from .. import authdb
 from ..permissions import pii_hash
 from authnzerver.actions.utils import get_procdb_permjson
 
@@ -247,7 +244,7 @@ def auth_password_check(
 
             return {
                 "success": False,
-                "failure_reason": ("session does not exist"),
+                "failure_reason": "session does not exist",
                 "user_id": None,
                 "messages": ["No session token provided."],
             }
@@ -384,7 +381,7 @@ def auth_password_check(
 
                     return {
                         "success": False,
-                        "failure_reason": ("user exists but is inactive"),
+                        "failure_reason": "user exists but is inactive",
                         "user_id": user_info.user_id,
                         "messages": [
                             "Sorry, that user ID and "
@@ -639,7 +636,7 @@ def auth_password_check_nosession(
 
                 return {
                     "success": False,
-                    "failure_reason": ("user exists but is inactive"),
+                    "failure_reason": "user exists but is inactive",
                     "user_id": user_info.user_id,
                     "messages": [
                         "Sorry, that user ID and "

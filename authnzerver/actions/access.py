@@ -493,7 +493,7 @@ def check_user_limit(
         users = meta.tables["users"]
 
         s = (
-            select([users.c.user_id])
+            select(users.c.user_id)
             .select_from(users)
             .where(users.c.user_id == originating_userid)
             .where(users.c.user_role == originating_user_role)

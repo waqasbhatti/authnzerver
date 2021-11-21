@@ -1333,7 +1333,7 @@ def internal_edit_user(
             and update_dict["extra_info"] is not None
         ):
 
-            user_extra_info = userid_and_extrainfo[-1]
+            user_extra_info = userid_and_extrainfo.extra_info
             if not user_extra_info:
                 user_extra_info = {}
 
@@ -1344,7 +1344,7 @@ def internal_edit_user(
                     user_extra_info[key] = val
 
         else:
-            user_extra_info = userid_and_extrainfo[-1]
+            user_extra_info = userid_and_extrainfo.extra_info
 
         # do the update
 
@@ -1583,8 +1583,8 @@ def internal_toggle_user_lock(
             result = conn.execute(sel)
             row = result.first()
 
-        current_user_role = row["user_role"]
-        user_extra_info = row["extra_info"]
+        current_user_role = row.user_role
+        user_extra_info = row.extra_info
         previous_user_roles = user_extra_info.get(
             "previous_user_roles", ["locked"]
         )
