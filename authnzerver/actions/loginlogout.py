@@ -338,7 +338,7 @@ def auth_user_login(
                 try:
 
                     pass_ok = pass_hasher.verify(
-                        user_info["password"],
+                        user_info.password,
                         payload["password"][:256],
                     )
 
@@ -355,9 +355,7 @@ def auth_user_login(
                                 payload["session_token"], payload["pii_salt"]
                             ),
                             pii_hash(payload["email"], payload["pii_salt"]),
-                            pii_hash(
-                                user_info["user_id"], payload["pii_salt"]
-                            ),
+                            pii_hash(user_info.user_id, payload["pii_salt"]),
                             e,
                         )
                     )
@@ -406,7 +404,7 @@ def auth_user_login(
 
                 # check the stored hashed password's parameters
                 pass_needs_rehash = pass_hasher.check_needs_rehash(
-                    user_info["password"]
+                    user_info.password
                 )
 
                 # if they need to be updated, rehash the plain-text password
@@ -421,7 +419,7 @@ def auth_user_login(
                     # update the table for this user
                     upd = (
                         users.update()
-                        .where(users.c.user_id == user_info["user_id"])
+                        .where(users.c.user_id == user_info.user_id)
                         .where(users.c.email == payload["email"])
                         .values({"password": rehashed_password})
                     )
@@ -440,19 +438,14 @@ def auth_user_login(
                                 payload["session_token"], payload["pii_salt"]
                             ),
                             pii_hash(payload["email"], payload["pii_salt"]),
-                            pii_hash(
-                                user_info["user_id"], payload["pii_salt"]
-                            ),
+                            pii_hash(user_info.user_id, payload["pii_salt"]),
                         )
                     )
 
                 # if the user account is active and unlocked, proceed.
                 # the frontend will take this user_id and ask for a new session
                 # token with it.
-                if (
-                    user_info["is_active"]
-                    and user_info["user_role"] != "locked"
-                ):
+                if user_info.is_active and user_info.user_role != "locked":
 
                     LOGGER.info(
                         "[%s] User login successful for session_token: %s and "
@@ -464,16 +457,14 @@ def auth_user_login(
                                 payload["session_token"], payload["pii_salt"]
                             ),
                             pii_hash(payload["email"], payload["pii_salt"]),
-                            pii_hash(
-                                user_info["user_id"], payload["pii_salt"]
-                            ),
+                            pii_hash(user_info.user_id, payload["pii_salt"]),
                         )
                     )
 
                     return {
                         "success": True,
-                        "user_id": user_info["user_id"],
-                        "user_role": user_info["user_role"],
+                        "user_id": user_info.user_id,
+                        "user_role": user_info.user_role,
                         "messages": ["Login successful."],
                     }
 
@@ -491,16 +482,14 @@ def auth_user_login(
                                 payload["session_token"], payload["pii_salt"]
                             ),
                             pii_hash(payload["email"], payload["pii_salt"]),
-                            pii_hash(
-                                user_info["user_id"], payload["pii_salt"]
-                            ),
+                            pii_hash(user_info.user_id, payload["pii_salt"]),
                         )
                     )
 
                     return {
                         "success": False,
                         "failure_reason": "user exists but is inactive",
-                        "user_id": user_info["user_id"],
+                        "user_id": user_info.user_id,
                         "messages": [
                             "Sorry, that user ID and "
                             "password combination didn't work."
