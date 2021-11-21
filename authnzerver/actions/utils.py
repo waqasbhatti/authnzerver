@@ -5,11 +5,17 @@ Contains utilities for actions.
 
 from multiprocessing import current_process
 from typing import Tuple
+import os.path
 
 from sqlalchemy.engine import Engine
 from sqlalchemy import MetaData
 
 from authnzerver import authdb
+
+MOD_DIR = os.path.dirname(__file__)
+DEFAULT_PERMJSON = os.path.abspath(
+    os.path.join(MOD_DIR, "..", "default-permissions-model.json")
+)
 
 
 def get_procdb_permjson(
@@ -32,9 +38,11 @@ def get_procdb_permjson(
 
     if override_permissions_json:
         currproc.permissions_json = override_permissions_json
+    else:
+        currproc.permissions_json = DEFAULT_PERMJSON
 
     if not getattr(currproc, "authdb_engine", None):
-        (currproc.authdb_engine, currproc.authdb_meta,) = authdb.get_auth_db(
+        currproc.authdb_engine, currproc.authdb_meta = authdb.get_auth_db(
             currproc.auth_db_path, echo=raiseonfail, returnconn=False
         )
 
