@@ -11,6 +11,7 @@
 #############
 
 import logging
+from types import SimpleNamespace
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
@@ -23,11 +24,13 @@ LOGGER = logging.getLogger(__name__)
 try:
 
     from datetime import datetime, timezone, timedelta
+
     utc = timezone.utc
 
 except Exception:
 
     from datetime import datetime, timedelta, tzinfo
+
     ZERO = timedelta(0)
 
     class UTC(tzinfo):
@@ -51,12 +54,12 @@ from sqlalchemy import select
 from argon2 import PasswordHasher
 from tornado.escape import xhtml_escape, squeeze
 
-from .. import authdb
 from ..permissions import pii_hash
 
 from .. import validators
 
 from .passwords import validate_input_password
+from authnzerver.actions.utils import get_procdb_permjson
 
 ######################
 ## PASSWORD CONTEXT ##
@@ -69,14 +72,15 @@ pass_hasher = PasswordHasher()
 ## USER HANDLING ##
 ###################
 
+
 def create_new_user(
-        payload,
-        min_pass_length=12,
-        max_unsafe_similarity=33,
-        override_authdb_path=None,
-        raiseonfail=False,
-        config=None
-):
+    payload: dict,
+    min_pass_length: int = 12,
+    max_unsafe_similarity: int = 33,
+    override_authdb_path: str = None,
+    raiseonfail: bool = False,
+    config: SimpleNamespace = None,
+) -> dict:
     """Makes a new user.
 
     Parameters
@@ -168,42 +172,46 @@ def create_new_user(
 
     """
 
-    for key in ('reqid', 'pii_salt'):
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=None,
+        raiseonfail=raiseonfail,
+    )
+
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'user_email': None,
-                'user_id': None,
-                'send_verification': False,
-                'failure_reason': (
+                "success": False,
+                "user_email": None,
+                "user_id": None,
+                "send_verification": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid user creation request."],
+                "messages": ["Invalid user creation request."],
             }
 
-    for key in ('full_name',
-                'email',
-                'password'):
+    for key in ("full_name", "email", "password"):
 
         if key not in payload:
 
             LOGGER.error(
-                '[%s] Invalid user creation request, missing %s.' %
-                (payload['reqid'], key)
+                "[%s] Invalid user creation request, missing %s."
+                % (payload["reqid"], key)
             )
 
             return {
-                'success': False,
-                'user_email': None,
-                'user_id': None,
-                'send_verification': False,
-                'failure_reason': (
+                "success": False,
+                "user_email": None,
+                "user_id": None,
+                "send_verification": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid user creation request."]
+                "messages": ["Invalid user creation request."],
             }
 
     #
@@ -211,16 +219,16 @@ def create_new_user(
     #
 
     # check for Unicode confusables and dangerous usernames
-    email_confusables_ok = (
-        validators.validate_confusables_email(payload['email'])
+    email_confusables_ok = validators.validate_confusables_email(
+        payload["email"]
     )
 
     # check if the email is a valid one according to HTML5 specs
-    email_regex_ok = validators.validate_email_address(payload['email'])
+    email_regex_ok = validators.validate_email_address(payload["email"])
 
     # check if the email domain is not a disposable email address
     if email_confusables_ok and email_regex_ok:
-        email_domain = payload['email'].split('@')[1].casefold()
+        email_domain = payload["email"].split("@")[1].casefold()
         email_domain_not_disposable = (
             email_domain not in validators.DISPOSABLE_EMAIL_DOMAINS
         )
@@ -229,9 +237,7 @@ def create_new_user(
 
     # if all of the tests above pass, the email is OK
     email_ok = (
-        email_regex_ok and
-        email_confusables_ok and
-        email_domain_not_disposable
+        email_regex_ok and email_confusables_ok and email_domain_not_disposable
     )
 
     if not email_ok:
@@ -239,26 +245,30 @@ def create_new_user(
         LOGGER.error(
             "[%s] User creation request failed for "
             "email: %s. "
-            "The email address provided is not valid." %
-            (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']))
+            "The email address provided is not valid."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'user_email': None,
-            'user_id': None,
-            'send_verification': False,
-            'failure_reason': "invalid email",
-            'messages': ["The email address provided doesn't "
-                         "seem to be a valid email address and cannot be used "
-                         "to sign up for an account on this server."]
+            "success": False,
+            "user_email": None,
+            "user_id": None,
+            "send_verification": False,
+            "failure_reason": "invalid email",
+            "messages": [
+                "The email address provided doesn't "
+                "seem to be a valid email address and cannot be used "
+                "to sign up for an account on this server."
+            ],
         }
 
-    email = validators.normalize_value(payload['email'])
-    full_name = validators.normalize_value(payload['full_name'],
-                                           casefold=False)
+    email = validators.normalize_value(payload["email"])
+    full_name = validators.normalize_value(
+        payload["full_name"], casefold=False
+    )
 
     # sanitize the full name
     full_name = squeeze(xhtml_escape(full_name))
@@ -269,14 +279,16 @@ def create_new_user(
             f"and is likely suspicious."
         )
         return {
-            'success': False,
-            'user_email': None,
-            'user_id': None,
-            'send_verification': False,
-            'failure_reason': "invalid full name",
-            'messages': ["The full name provided appears to contain "
-                         "an HTTP link, and cannot be used "
-                         "to sign up for an account on this server."]
+            "success": False,
+            "user_email": None,
+            "user_id": None,
+            "send_verification": False,
+            "failure_reason": "invalid full name",
+            "messages": [
+                "The full name provided appears to contain "
+                "an HTTP link, and cannot be used "
+                "to sign up for an account on this server."
+            ],
         }
 
     # check if the full name contains a valid public suffix domain
@@ -293,13 +305,15 @@ def create_new_user(
             f"either the payload or in the current process namespace."
         )
         return {
-            'success': False,
-            'user_email': None,
-            'user_id': None,
-            'send_verification': False,
-            'failure_reason': "public suffix list not present",
-            'messages': ["Full name could not be validated "
-                         "because of an internal server error"]
+            "success": False,
+            "user_email": None,
+            "user_id": None,
+            "send_verification": False,
+            "failure_reason": "public suffix list not present",
+            "messages": [
+                "Full name could not be validated "
+                "because of an internal server error"
+            ],
         }
 
     for domain_suffix in public_suffix_list:
@@ -310,18 +324,20 @@ def create_new_user(
                 f"and is likely suspicious."
             )
             return {
-                'success': False,
-                'user_email': None,
-                'user_id': None,
-                'send_verification': False,
-                'failure_reason': "invalid full name",
-                'messages': ["The full name provided appears to contain "
-                             "an HTTP link, and cannot be used "
-                             "to sign up for an account on this server."]
+                "success": False,
+                "user_email": None,
+                "user_id": None,
+                "send_verification": False,
+                "failure_reason": "invalid full name",
+                "messages": [
+                    "The full name provided appears to contain "
+                    "an HTTP link, and cannot be used "
+                    "to sign up for an account on this server."
+                ],
             }
 
     # get the password
-    password = payload['password']
+    password = payload["password"]
 
     #
     # optional items
@@ -350,21 +366,7 @@ def create_new_user(
     # proceed to processing
     #
 
-    # this checks if the database connection is live
-    engine = getattr(currproc, 'authdb_engine', None)
-
-    if override_authdb_path:
-        currproc.auth_db_path = override_authdb_path
-
-    if not engine:
-        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb.get_auth_db(
-                currproc.auth_db_path,
-                echo=raiseonfail
-            )
-        )
-
-    users = currproc.authdb_meta.tables['users']
+    users = meta.tables["users"]
 
     # the password is restricted to 256 characters since that should be enough
     # (for 2020), and we don't want to kill our own server when hashing absurdly
@@ -380,8 +382,8 @@ def create_new_user(
         full_name,
         email,
         input_password,
-        payload['pii_salt'],
-        payload['reqid'],
+        payload["pii_salt"],
+        payload["reqid"],
         min_pass_length=min_pass_length,
         max_unsafe_similarity=max_unsafe_similarity,
         config=config,
@@ -392,19 +394,20 @@ def create_new_user(
         LOGGER.error(
             "[%s] User creation request failed for "
             "email: %s. "
-            "The password provided is not secure." %
-            (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']))
+            "The password provided is not secure."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'user_email': email,
-            'user_id': None,
-            'send_verification': False,
-            'failure_reason': "invalid password",
-            'messages': messages
+            "success": False,
+            "user_email": email,
+            "user_id": None,
+            "send_verification": False,
+            "failure_reason": "invalid password",
+            "messages": messages,
         }
 
     # insert stuff into the user's table, set is_active = False, user_role =
@@ -420,28 +423,31 @@ def create_new_user(
                 "verify_retry_wait": verify_retry_wait,
             }
         else:
-            extra_info.update({
-                "provenance": "request-created",
-                "type": "normal-user",
-                "verify_retry_wait": verify_retry_wait,
-            })
+            extra_info.update(
+                {
+                    "provenance": "request-created",
+                    "type": "normal-user",
+                    "verify_retry_wait": verify_retry_wait,
+                }
+            )
 
         new_user_dict = {
-            'full_name': full_name,
-            'system_id': system_id,
-            'password': hashed_password,
-            'email': email,
-            'email_verified': False,
-            'is_active': False,
-            'emailverify_sent_datetime': datetime.utcnow(),
-            'created_on': datetime.utcnow(),
-            'user_role': 'locked',
-            'last_updated': datetime.utcnow(),
-            'extra_info': extra_info,
+            "full_name": full_name,
+            "system_id": system_id,
+            "password": hashed_password,
+            "email": email,
+            "email_verified": False,
+            "is_active": False,
+            "emailverify_sent_datetime": datetime.utcnow(),
+            "created_on": datetime.utcnow(),
+            "user_role": "locked",
+            "last_updated": datetime.utcnow(),
+            "extra_info": extra_info,
         }
-        ins = users.insert(new_user_dict)
-        result = currproc.authdb_conn.execute(ins)
-        result.close()
+
+        with engine.begin() as conn:
+            ins = users.insert(new_user_dict)
+            conn.execute(ins)
 
         user_added = True
 
@@ -451,19 +457,22 @@ def create_new_user(
 
         user_added = False
 
-    # get back the user ID
-    sel = select([
-        users.c.email,
-        users.c.user_id,
-        users.c.system_id,
-        users.c.is_active,
-        users.c.emailverify_sent_datetime,
-    ]).select_from(users).where(
-        users.c.email == email
-    )
-    result = currproc.authdb_conn.execute(sel)
-    rows = result.fetchone()
-    result.close()
+    with engine.begin() as conn:
+
+        # get back the user ID
+        sel = (
+            select(
+                users.c.email,
+                users.c.user_id,
+                users.c.system_id,
+                users.c.is_active,
+                users.c.emailverify_sent_datetime,
+            )
+            .select_from(users)
+            .where(users.c.email == email)
+        )
+        result = conn.execute(sel)
+        rows = result.first()
 
     # if the user was added successfully, tell the frontend all is good and to
     # send a verification email
@@ -471,24 +480,25 @@ def create_new_user(
 
         LOGGER.info(
             "[%s] User creation request succeeded for "
-            "email: %s. New user_id: %s" %
-            (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']),
-             pii_hash(rows['user_id'], payload['pii_salt']))
+            "email: %s. New user_id: %s"
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+                pii_hash(rows.user_id, payload["pii_salt"]),
+            )
         )
 
         messages.append(
-            'User account created. Please verify your email address to log in.'
+            "User account created. Please verify your email address to log in."
         )
 
         return {
-            'success': True,
-            'user_email': rows['email'],
-            'user_id': rows['user_id'],
-            'system_id': rows['system_id'],
-            'send_verification': True,
-            'messages': messages
+            "success": True,
+            "user_email": rows.email,
+            "user_id": rows.user_id,
+            "system_id": rows.system_id,
+            "send_verification": True,
+            "messages": messages,
         }
 
     # if the user wasn't added successfully, then they exist in the DB already
@@ -497,34 +507,38 @@ def create_new_user(
         LOGGER.error(
             "[%s] User creation request failed for "
             "email: %s. "
-            "The email provided probably exists in the DB already. " %
-            (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']))
+            "The email provided probably exists in the DB already. "
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+            )
         )
 
         # check the timedelta between now and the emailverify_sent_datetime
-        verification_timedelta = (datetime.utcnow() -
-                                  rows['emailverify_sent_datetime'])
+        verification_timedelta = (
+            datetime.utcnow() - rows.emailverify_sent_datetime
+        )
 
         # this sets whether we should resend the verification email
-        resend_verification = (
-            not(rows['is_active']) and
-            (verification_timedelta > timedelta(hours=verify_retry_wait))
+        resend_verification = (not rows.is_active) and (
+            verification_timedelta > timedelta(hours=verify_retry_wait)
         )
         LOGGER.warning(
-            '[%s] Existing user_id = %s for new user creation '
-            'request with email = %s, is_active = %s. '
-            'Email verification originally sent at = %sZ, '
-            'verification timedelta: %s, verify_retry_wait = %s hours. '
-            'Will resend verification = %s' %
-            (payload['reqid'],
-             pii_hash(rows['user_id'], payload['pii_salt']),
-             pii_hash(payload['email'], payload['pii_salt']),
-             rows['is_active'],
-             rows['emailverify_sent_datetime'].isoformat(),
-             verification_timedelta, verify_retry_wait,
-             resend_verification)
+            "[%s] Existing user_id = %s for new user creation "
+            "request with email = %s, is_active = %s. "
+            "Email verification originally sent at = %sZ, "
+            "verification timedelta: %s, verify_retry_wait = %s hours. "
+            "Will resend verification = %s"
+            % (
+                payload["reqid"],
+                pii_hash(rows.user_id, payload["pii_salt"]),
+                pii_hash(payload["email"], payload["pii_salt"]),
+                rows.is_active,
+                rows.emailverify_sent_datetime.isoformat(),
+                verification_timedelta,
+                verify_retry_wait,
+                resend_verification,
+            )
         )
 
         if resend_verification:
@@ -536,49 +550,55 @@ def create_new_user(
                 del new_user_dict["created_on"]
                 del new_user_dict["system_id"]
 
-            upd = users.update(
-            ).where(
-                users.c.user_id == rows["user_id"]
-            ).values(new_user_dict)
-            result = currproc.authdb_conn.execute(upd)
-            result.close()
+            with engine.begin() as conn:
 
-            # get back the user ID
-            sel = select([
-                users.c.email,
-                users.c.user_id,
-                users.c.system_id,
-                users.c.is_active,
-                users.c.emailverify_sent_datetime,
-            ]).select_from(users).where(
-                users.c.email == email
-            )
-            result = currproc.authdb_conn.execute(sel)
-            rows = result.fetchone()
-            result.close()
+                upd = (
+                    users.update()
+                    .where(users.c.user_id == rows.user_id)
+                    .values(new_user_dict)
+                )
+                conn.execute(upd)
+
+                # get back the user ID
+                sel = (
+                    select(
+                        users.c.email,
+                        users.c.user_id,
+                        users.c.system_id,
+                        users.c.is_active,
+                        users.c.emailverify_sent_datetime,
+                    )
+                    .select_from(users)
+                    .where(users.c.email == email)
+                )
+                result = conn.execute(sel)
+                rows = result.first()
 
             LOGGER.warning(
                 "[%s] Resending verification to user: %s because timedelta "
                 "between original sign up and retry: %s > "
                 "verify_retry_wait: %s hours. "
                 "User information has been updated "
-                "with their latest provided sign-up info." %
-                (payload["reqid"],
-                 pii_hash(rows["user_id"], payload["pii_salt"]),
-                 verification_timedelta, verify_retry_wait)
+                "with their latest provided sign-up info."
+                % (
+                    payload["reqid"],
+                    pii_hash(rows.user_id, payload["pii_salt"]),
+                    verification_timedelta,
+                    verify_retry_wait,
+                )
             )
 
         messages.append(
-            'User account created. Please verify your email address to log in.'
+            "User account created. Please verify your email address to log in."
         )
         return {
-            'success': False,
-            'user_email': rows['email'],
-            'user_id': rows['user_id'],
-            'system_id': rows['system_id'],
-            'send_verification': resend_verification,
-            'failure_reason': "user exists",
-            'messages': messages
+            "success": False,
+            "user_email": rows.email,
+            "user_id": rows.user_id,
+            "system_id": rows.system_id,
+            "send_verification": resend_verification,
+            "failure_reason": "user exists",
+            "messages": messages,
         }
 
     # otherwise, the user wasn't added successfully and they don't already exist
@@ -586,31 +606,33 @@ def create_new_user(
     else:
 
         LOGGER.error(
-            '[%s] User creation request failed for email: %s. '
-            'Could not add row to the DB.' %
-            (payload['reqid'],
-             pii_hash(payload['email'], payload['pii_salt']))
+            "[%s] User creation request failed for email: %s. "
+            "Could not add row to the DB."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+            )
         )
 
         messages.append(
-            'User account created. Please verify your email address to log in.'
+            "User account created. Please verify your email address to log in."
         )
         return {
-            'success': False,
-            'user_email': None,
-            'user_id': None,
-            'send_verification': False,
-            'failure_reason': "DB issue with user creation",
-            'messages': messages
+            "success": False,
+            "user_email": None,
+            "user_id": None,
+            "send_verification": False,
+            "failure_reason": "DB issue with user creation",
+            "messages": messages,
         }
 
 
 def internal_delete_user(
-        payload,
-        raiseonfail=False,
-        override_authdb_path=None,
-        config=None,
-):
+    payload: dict,
+    raiseonfail: bool = False,
+    override_authdb_path: str = None,
+    config: SimpleNamespace = None,
+) -> dict:
     """Deletes a user and does not check for permissions.
 
     Suitable ONLY for internal server use by a frontend. Do NOT expose this
@@ -650,119 +672,108 @@ def internal_delete_user(
         deleted.
     """
 
-    for key in ('reqid', 'pii_salt'):
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=None,
+        raiseonfail=raiseonfail,
+    )
+
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid user deletion request."],
+                "messages": ["Invalid user deletion request."],
             }
 
-    if 'target_userid' not in payload:
+    if "target_userid" not in payload:
 
         LOGGER.error(
-            '[%s] Invalid user deletion request, missing %s.' %
-            (payload['reqid'], 'target_userid')
+            "[%s] Invalid user deletion request, missing %s."
+            % (payload["reqid"], "target_userid")
         )
 
         return {
-            'success': False,
-            'failure_reason': (
+            "success": False,
+            "failure_reason": (
                 "invalid request: missing 'target_userid' in request"
             ),
-            'messages': ["Invalid user deletion request."],
+            "messages": ["Invalid user deletion request."],
         }
 
-    # this checks if the database connection is live
-    currproc = mp.current_process()
-    engine = getattr(currproc, 'authdb_engine', None)
+    with engine.begin() as conn:
 
-    if override_authdb_path:
-        currproc.auth_db_path = override_authdb_path
+        users = meta.tables["users"]
+        sessions = meta.tables["sessions"]
 
-    if not engine:
-        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb.get_auth_db(
-                currproc.auth_db_path,
-                echo=raiseonfail
-            )
+        # delete the user
+        delete = users.delete().where(
+            users.c.user_id == payload["target_userid"]
+        )
+        conn.execute(delete)
+
+        # don't forget to delete their sessions as well
+        delete = sessions.delete().where(
+            sessions.c.user_id == payload["target_userid"]
+        )
+        conn.execute(delete)
+
+        sel = (
+            select(users.c.user_id, users.c.email, sessions.c.session_token)
+            .select_from(users.join(sessions))
+            .where(users.c.user_id == payload["target_userid"])
         )
 
-    users = currproc.authdb_meta.tables['users']
-    sessions = currproc.authdb_meta.tables['sessions']
-
-    # delete the user
-    delete = users.delete().where(
-        users.c.user_id == payload['target_userid']
-    )
-    result = currproc.authdb_conn.execute(delete)
-    result.close()
-
-    # don't forget to delete the sessions as well
-    delete = sessions.delete().where(
-        sessions.c.user_id == payload['target_userid']
-    )
-    result = currproc.authdb_conn.execute(delete)
-    result.close()
-
-    sel = select([
-        users.c.user_id,
-        users.c.email,
-        sessions.c.session_token
-    ]).select_from(
-        users.join(sessions)
-    ).where(
-        users.c.user_id == payload['target_userid']
-    )
-
-    result = currproc.authdb_conn.execute(sel)
-    rows = result.fetchall()
+        result = conn.execute(sel)
+        rows = result.fetchall()
 
     if rows and len(rows) > 0:
 
         LOGGER.error(
             "[%s] User deletion request failed for "
             "user_id: %s. "
-            "The database rows for this user could not be deleted." %
-            (payload['reqid'],
-             pii_hash(payload['target_userid'],
-                      payload['pii_salt']))
+            "The database rows for this user could not be deleted."
+            % (
+                payload["reqid"],
+                pii_hash(payload["target_userid"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
-                "user deletion failed in DB"
-            ),
-            'messages': ["Could not delete user from DB."]
+            "success": False,
+            "failure_reason": "user deletion failed in DB",
+            "messages": ["Could not delete user from DB."],
         }
 
     else:
 
         LOGGER.warning(
             "[%s] User deletion request succeeded for "
-            "user_id: %s. " %
-            (payload['reqid'],
-             pii_hash(payload['target_userid'],
-                      payload['pii_salt']))
+            "user_id: %s. "
+            % (
+                payload["reqid"],
+                pii_hash(payload["target_userid"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': True,
-            'user_id': payload['target_userid'],
-            'messages': ["User successfully deleted from DB."]
+            "success": True,
+            "user_id": payload["target_userid"],
+            "messages": ["User successfully deleted from DB."],
         }
 
 
-def delete_user(payload,
-                raiseonfail=False,
-                override_authdb_path=None,
-                config=None):
+def delete_user(
+    payload: dict,
+    raiseonfail: bool = False,
+    override_authdb_path: str = None,
+    config: SimpleNamespace = None,
+) -> dict:
     """Deletes a user.
 
     This can only be called by the user themselves or the superuser.
@@ -812,221 +823,201 @@ def delete_user(payload,
         deleted.
     """
 
-    for key in ('reqid', 'pii_salt'):
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=None,
+        raiseonfail=raiseonfail,
+    )
+
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'email': None,
-                'user_id': None,
-                'messages': ["Invalid user deletion request."],
+                "email": None,
+                "user_id": None,
+                "messages": ["Invalid user deletion request."],
             }
 
-    for key in ('email',
-                'user_id',
-                'password'):
+    for key in ("email", "user_id", "password"):
 
         if key not in payload:
 
             LOGGER.error(
-                '[%s] Invalid user deletion request, missing %s.' %
-                (payload['reqid'], key)
+                "[%s] Invalid user deletion request, missing %s."
+                % (payload["reqid"], key)
             )
 
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id': None,
-                'email': None,
-                'messages': ["Invalid user deletion request."],
+                "user_id": None,
+                "email": None,
+                "messages": ["Invalid user deletion request."],
             }
 
-    # this checks if the database connection is live
-    currproc = mp.current_process()
-    engine = getattr(currproc, 'authdb_engine', None)
-
-    if override_authdb_path:
-        currproc.auth_db_path = override_authdb_path
-
-    if not engine:
-        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb.get_auth_db(
-                currproc.auth_db_path,
-                echo=raiseonfail
-            )
-        )
-
-    users = currproc.authdb_meta.tables['users']
-    sessions = currproc.authdb_meta.tables['sessions']
+    users = meta.tables["users"]
+    sessions = meta.tables["sessions"]
 
     # check if the incoming email address actually belongs to the user making
     # the request
-    sel = select([
-        users.c.user_id,
-        users.c.email,
-        users.c.password,
-        users.c.user_role
-    ]).select_from(
-        users
-    ).where(
-        users.c.user_id == payload['user_id']
-    ).where(
-        users.c.email == payload['email']
+    sel = (
+        select(
+            users.c.user_id, users.c.email, users.c.password, users.c.user_role
+        )
+        .select_from(users)
+        .where(users.c.user_id == payload["user_id"])
+        .where(users.c.email == payload["email"])
     )
-    result = currproc.authdb_conn.execute(sel)
-    row = result.fetchone()
+    with engine.begin() as conn:
+        result = conn.execute(sel)
+        row = result.first()
 
     if not row or len(row) == 0:
 
         LOGGER.error(
             "[%s] User deletion request failed for "
             "email: %s, user_id: %s. "
-            "The email address provided does not match the one on record." %
-            (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']),
-             pii_hash(payload['user_id'],
-                      payload['pii_salt']))
+            "The email address provided does not match the one on record."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+                pii_hash(payload["user_id"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
-                "invalid email"
-            ),
-            'user_id': payload['user_id'],
-            'email': payload['email'],
-            'messages': ["We could not verify your email address or password."]
+            "success": False,
+            "failure_reason": "invalid email",
+            "user_id": payload["user_id"],
+            "email": payload["email"],
+            "messages": [
+                "We could not verify your email address or password."
+            ],
         }
 
     # check if the user's password is valid and matches the one on record
     try:
-        pass_ok = pass_hasher.verify(row['password'],
-                                     payload['password'][: 256])
+        pass_ok = pass_hasher.verify(
+            row["password"], payload["password"][:256]
+        )
     except Exception as e:
 
         LOGGER.error(
             "[%s] User deletion request failed for "
             "email: %s, user_id: %s. "
             "The password provided does not match "
-            "the one on record. Exception: %s" %
-            (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']),
-             pii_hash(payload['user_id'],
-                      payload['pii_salt']), e)
+            "the one on record. Exception: %s"
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+                pii_hash(payload["user_id"], payload["pii_salt"]),
+                e,
+            )
         )
         pass_ok = False
 
     if not pass_ok:
         return {
-            'success': False,
-            'failure_reason': (
-                "invalid password"
-            ),
-            'user_id': payload['user_id'],
-            'email': payload['email'],
-            'messages': ["We could not verify your email address or password."]
+            "success": False,
+            "failure_reason": "invalid password",
+            "user_id": payload["user_id"],
+            "email": payload["email"],
+            "messages": [
+                "We could not verify your email address or password."
+            ],
         }
 
-    if row['user_role'] == 'superuser':
+    if row["user_role"] == "superuser":
 
         LOGGER.error(
             "[%s] User deletion request failed for "
             "email: %s, user_id: %s. "
-            "Superusers can't be deleted." %
-            (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']),
-             pii_hash(payload['user_id'],
-                      payload['pii_salt']))
+            "Superusers can't be deleted."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+                pii_hash(payload["user_id"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
-                "can't delete superusers"
-            ),
-            'user_id': payload['user_id'],
-            'email': payload['email'],
-            'messages': ["Can't delete superusers."]
+            "success": False,
+            "failure_reason": "can't delete superusers",
+            "user_id": payload["user_id"],
+            "email": payload["email"],
+            "messages": ["Can't delete superusers."],
         }
 
     # delete the user
-    delete = users.delete().where(
-        users.c.user_id == payload['user_id']
-    ).where(
-        users.c.email == payload['email']
-    ).where(
-        users.c.user_role != 'superuser'
-    )
-    result = currproc.authdb_conn.execute(delete)
-    result.close()
+    with engine.begin() as conn:
+        delete = (
+            users.delete()
+            .where(users.c.user_id == payload["user_id"])
+            .where(users.c.email == payload["email"])
+            .where(users.c.user_role != "superuser")
+        )
+        result = conn.execute(delete)
+        result.close()
 
-    # don't forget to delete the sessions as well
-    delete = sessions.delete().where(
-        sessions.c.user_id == payload['user_id']
-    )
-    result = currproc.authdb_conn.execute(delete)
-    result.close()
+        # don't forget to delete the sessions as well
+        delete = sessions.delete().where(
+            sessions.c.user_id == payload["user_id"]
+        )
+        result = conn.execute(delete)
+        result.close()
 
-    sel = select([
-        users.c.user_id,
-        users.c.email,
-        sessions.c.session_token
-    ]).select_from(
-        users.join(sessions)
-    ).where(
-        users.c.user_id == payload['user_id']
-    )
+        sel = (
+            select(users.c.user_id, users.c.email, sessions.c.session_token)
+            .select_from(users.join(sessions))
+            .where(users.c.user_id == payload["user_id"])
+        )
 
-    result = currproc.authdb_conn.execute(sel)
-    rows = result.fetchall()
+        result = conn.execute(sel)
+        rows = result.fetchall()
 
     if rows and len(rows) > 0:
 
         LOGGER.error(
             "[%s] User deletion request failed for "
             "email: %s, user_id: %s. "
-            "The database rows for this user could not be deleted." %
-            (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']),
-             pii_hash(payload['user_id'],
-                      payload['pii_salt']))
+            "The database rows for this user could not be deleted."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+                pii_hash(payload["user_id"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
-                "user deletion failed in DB"
-            ),
-            'user_id': payload['user_id'],
-            'email': payload['email'],
-            'messages': ["Could not delete user from DB."]
+            "success": False,
+            "failure_reason": "user deletion failed in DB",
+            "user_id": payload["user_id"],
+            "email": payload["email"],
+            "messages": ["Could not delete user from DB."],
         }
     else:
 
         LOGGER.warning(
             "[%s] User deletion request succeeded for "
-            "email: %s, user_id: %s. " %
-            (payload['reqid'],
-             pii_hash(payload['email'],
-                      payload['pii_salt']),
-             pii_hash(payload['user_id'],
-                      payload['pii_salt']))
+            "email: %s, user_id: %s. "
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+                pii_hash(payload["user_id"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': True,
-            'user_id': payload['user_id'],
-            'email': payload['email'],
-            'messages': ["User successfully deleted from DB."]
+            "success": True,
+            "user_id": payload["user_id"],
+            "email": payload["email"],
+            "messages": ["User successfully deleted from DB."],
         }
