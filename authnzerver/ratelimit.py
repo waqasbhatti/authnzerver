@@ -16,6 +16,7 @@ close derivatives.
 #############
 
 import logging
+from typing import Union
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
@@ -74,11 +75,13 @@ class RateLimitMixin:
 
     """
 
-    def ratelimit_request(self,
-                          reqid,
-                          request_type,
-                          frontend_client_ipaddr,
-                          request_body=None):
+    def ratelimit_request(
+        self,
+        reqid: Union[int, str],
+        request_type: str,
+        frontend_client_ipaddr: str,
+        request_body: dict = None,
+    ) -> None:
         """
         This rate-limits the request based on the request type and the
         set ratelimits passed in the config object.
@@ -104,10 +107,12 @@ class RateLimitMixin:
                 email_addr = request_body.get("email_address")
 
             if not email_addr:
-                LOGGER.error(f"email-tied request type: {request_type} could "
-                             f"not be rate-limited because no "
-                             f"'email' or 'email_address' key found in "
-                             f"request body. failing this request...")
+                LOGGER.error(
+                    f"email-tied request type: {request_type} could "
+                    f"not be rate-limited because no "
+                    f"'email' or 'email_address' key found in "
+                    f"request body. failing this request..."
+                )
                 raise tornado.web.HTTPError(status_code=429)
 
             client_email_key = f"{request_type}-{email_addr}"
@@ -115,53 +120,59 @@ class RateLimitMixin:
                 client_email_key
             )
 
-            (client_email_reqrate,
-             client_email_reqcount,
-             client_email_reqcount0,
-             client_email_req_tnow,
-             client_email_req_t0) = (
-                self.cacheobj.counter_rate(
-                    client_email_key,
-                    60.0,
-                    return_allinfo=True
-                )
+            (
+                client_email_reqrate,
+                client_email_reqcount,
+                client_email_reqcount0,
+                client_email_req_tnow,
+                client_email_req_t0,
+            ) = self.cacheobj.counter_rate(
+                client_email_key, 60.0, return_allinfo=True
             )
 
             if request_type in AGGRESSIVE_RATE_LIMITS:
 
                 limit_applied = AGGRESSIVE_RATE_LIMITS[request_type]
-                if (client_email_count > limit_applied
-                        and client_email_reqrate > limit_applied):
+                if (
+                    client_email_count > limit_applied
+                    and client_email_reqrate > limit_applied
+                ):
                     LOGGER.error(
                         "[%s] request '%s' is being rate-limited. "
                         "Cache token: '%s', count: %s. "
                         "Rate: %.3f per minute > limit specified for '%s': %s"
-                        % (reqid,
-                           request_type,
-                           pii_hash(client_email_key, self.pii_salt),
-                           client_email_reqcount,
-                           client_email_reqrate,
-                           request_type,
-                           limit_applied)
+                        % (
+                            reqid,
+                            request_type,
+                            pii_hash(client_email_key, self.pii_salt),
+                            client_email_reqcount,
+                            client_email_reqrate,
+                            request_type,
+                            limit_applied,
+                        )
                     )
                     raise tornado.web.HTTPError(status_code=429)
 
             else:
 
                 limit_applied = self.ratelimits["user"]
-                if (client_email_count > limit_applied
-                        and client_email_reqrate > limit_applied):
+                if (
+                    client_email_count > limit_applied
+                    and client_email_reqrate > limit_applied
+                ):
                     LOGGER.error(
                         "[%s] request '%s' is being rate-limited. "
                         "Cache token: '%s', count: %s. "
                         "Rate: %.3f per minute > limit specified for '%s': %s"
-                        % (reqid,
-                           request_type,
-                           pii_hash(client_email_key, self.pii_salt),
-                           client_email_reqcount,
-                           client_email_reqrate,
-                           request_type,
-                           limit_applied)
+                        % (
+                            reqid,
+                            request_type,
+                            pii_hash(client_email_key, self.pii_salt),
+                            client_email_reqcount,
+                            client_email_reqrate,
+                            request_type,
+                            limit_applied,
+                        )
                     )
                     raise tornado.web.HTTPError(status_code=429)
 
@@ -172,33 +183,35 @@ class RateLimitMixin:
         # apply agressive rate limiting to sensitive actions
         if request_type in AGGRESSIVE_RATE_LIMITS:
 
-            (client_ipaddr_reqrate,
-             client_ipaddr_reqcount,
-             client_ipaddr_reqcount0,
-             client_ipaddr_req_tnow,
-             client_ipaddr_req_t0) = (
-                self.cacheobj.counter_rate(
-                    client_ipaddr_key,
-                    60.0,
-                    return_allinfo=True
-                )
+            (
+                client_ipaddr_reqrate,
+                client_ipaddr_reqcount,
+                client_ipaddr_reqcount0,
+                client_ipaddr_req_tnow,
+                client_ipaddr_req_t0,
+            ) = self.cacheobj.counter_rate(
+                client_ipaddr_key, 60.0, return_allinfo=True
             )
 
             limit_applied = AGGRESSIVE_RATE_LIMITS[request_type]
 
-            if (client_req_count > limit_applied
-                    and client_ipaddr_reqrate > limit_applied):
+            if (
+                client_req_count > limit_applied
+                and client_ipaddr_reqrate > limit_applied
+            ):
                 LOGGER.error(
                     "[%s] request '%s' is being rate-limited. "
                     "Cache token: '%s', count: %s. "
                     "Rate: %.3f per minute > limit specified for '%s': %s"
-                    % (reqid,
-                       request_type,
-                       pii_hash(client_ipaddr_key, self.pii_salt),
-                       client_ipaddr_reqcount,
-                       client_ipaddr_reqrate,
-                       request_type,
-                       limit_applied)
+                    % (
+                        reqid,
+                        request_type,
+                        pii_hash(client_ipaddr_key, self.pii_salt),
+                        client_ipaddr_reqcount,
+                        client_ipaddr_reqrate,
+                        request_type,
+                        limit_applied,
+                    )
                 )
                 raise tornado.web.HTTPError(status_code=429)
 
@@ -206,33 +219,35 @@ class RateLimitMixin:
         # API actions in the ratelimits config var
         elif request_type in self.ratelimits:
 
-            (client_ipaddr_reqrate,
-             client_ipaddr_reqcount,
-             client_ipaddr_reqcount0,
-             client_ipaddr_req_tnow,
-             client_ipaddr_req_t0) = (
-                self.cacheobj.counter_rate(
-                    client_ipaddr_key,
-                    60.0,
-                    return_allinfo=True
-                )
+            (
+                client_ipaddr_reqrate,
+                client_ipaddr_reqcount,
+                client_ipaddr_reqcount0,
+                client_ipaddr_req_tnow,
+                client_ipaddr_req_t0,
+            ) = self.cacheobj.counter_rate(
+                client_ipaddr_key, 60.0, return_allinfo=True
             )
 
             limit_applied = self.ratelimits[request_type]
 
-            if (client_req_count > limit_applied
-                    and client_ipaddr_reqrate > limit_applied):
+            if (
+                client_req_count > limit_applied
+                and client_ipaddr_reqrate > limit_applied
+            ):
                 LOGGER.error(
                     "[%s] request '%s' is being rate-limited. "
                     "Cache token: '%s', count: %s. "
                     "Rate: %.3f per minute > limit specified for '%s': %s"
-                    % (reqid,
-                       request_type,
-                       pii_hash(client_ipaddr_key, self.pii_salt),
-                       client_ipaddr_reqcount,
-                       client_ipaddr_reqrate,
-                       request_type,
-                       limit_applied)
+                    % (
+                        reqid,
+                        request_type,
+                        pii_hash(client_ipaddr_key, self.pii_salt),
+                        client_ipaddr_reqcount,
+                        client_ipaddr_reqrate,
+                        request_type,
+                        limit_applied,
+                    )
                 )
                 raise tornado.web.HTTPError(status_code=429)
 
@@ -241,44 +256,44 @@ class RateLimitMixin:
         else:
 
             # only apply rate-limits after burst is exceeded
-            if client_req_count > self.ratelimits['burst']:
+            if client_req_count > self.ratelimits["burst"]:
 
-                (client_ipaddr_reqrate,
-                 client_ipaddr_reqcount,
-                 client_ipaddr_reqcount0,
-                 client_ipaddr_req_tnow,
-                 client_ipaddr_req_t0) = (
-                    self.cacheobj.counter_rate(
-                        client_ipaddr_key,
-                        60.0,
-                        return_allinfo=True
-                    )
+                (
+                    client_ipaddr_reqrate,
+                    client_ipaddr_reqcount,
+                    client_ipaddr_reqcount0,
+                    client_ipaddr_req_tnow,
+                    client_ipaddr_req_t0,
+                ) = self.cacheobj.counter_rate(
+                    client_ipaddr_key, 60.0, return_allinfo=True
                 )
 
                 #
                 # specific rate-limiting per request type
                 #
-                if request_type.startswith('user-'):
+                if request_type.startswith("user-"):
                     limit_name, limit_applied = (
-                        'user', self.ratelimits['user']
+                        "user",
+                        self.ratelimits["user"],
                     )
-                elif request_type.startswith('session-'):
+                elif request_type.startswith("session-"):
                     limit_name, limit_applied = (
-                        'session', self.ratelimits['session']
+                        "session",
+                        self.ratelimits["session"],
                     )
-                elif request_type.startswith('apikey-'):
+                elif request_type.startswith("apikey-"):
                     limit_name, limit_applied = (
-                        'apikey', self.ratelimits['apikey']
+                        "apikey",
+                        self.ratelimits["apikey"],
                     )
                 # internal- prefixed requests have a more generous ratelimit
-                elif request_type.startswith('internal-'):
-                    limit_name, limit_applied = (
-                        'internal', 3000
-                    )
+                elif request_type.startswith("internal-"):
+                    limit_name, limit_applied = ("internal", 3000)
                 # all other requests are limited by frontend client IP addr
                 else:
                     limit_name, limit_applied = (
-                        'ipaddr', self.ratelimits['ipaddr']
+                        "ipaddr",
+                        self.ratelimits["ipaddr"],
                     )
 
                 if client_ipaddr_reqrate > limit_applied:
@@ -286,13 +301,15 @@ class RateLimitMixin:
                         "[%s] request '%s' is being rate-limited. "
                         "Cache token: '%s', count: %s. "
                         "Rate: %.3f per minute > limit specified for '%s': %s"
-                        % (reqid,
-                           request_type,
-                           pii_hash(client_ipaddr_key, self.pii_salt),
-                           client_ipaddr_reqcount,
-                           client_ipaddr_reqrate,
-                           limit_name,
-                           limit_applied)
+                        % (
+                            reqid,
+                            request_type,
+                            pii_hash(client_ipaddr_key, self.pii_salt),
+                            client_ipaddr_reqcount,
+                            client_ipaddr_reqrate,
+                            limit_name,
+                            limit_applied,
+                        )
                     )
                     raise tornado.web.HTTPError(status_code=429)
 
@@ -303,7 +320,7 @@ class UserLockMixin:
 
     """
 
-    async def handle_failed_logins(self, payload):
+    async def handle_failed_logins(self, payload: dict) -> tuple:
         """
         This handles failed logins.
 
@@ -319,14 +336,12 @@ class UserLockMixin:
         """
 
         # increment the failure counter and return it
-        if payload['body']['email'] in self.failed_passchecks:
-            self.failed_passchecks[payload['body']['email']] += 1
+        if payload["body"]["email"] in self.failed_passchecks:
+            self.failed_passchecks[payload["body"]["email"]] += 1
         else:
-            self.failed_passchecks[payload['body']['email']] = 1
+            self.failed_passchecks[payload["body"]["email"]] = 1
 
-        failed_pass_count = self.failed_passchecks[
-            payload['body']['email']
-        ]
+        failed_pass_count = self.failed_passchecks[payload["body"]["email"]]
 
         if 0 < failed_pass_count <= self.config.userlocktries:
             # asyncio.sleep for an exponentially increasing period of time
@@ -335,17 +350,19 @@ class UserLockMixin:
             if wait_time > 40.0:
                 wait_time = 40.0
             await asyncio.sleep(wait_time)
-            return 'wait', failed_pass_count, wait_time
+            return "wait", failed_pass_count, wait_time
 
         elif failed_pass_count > self.config.userlocktries:
-            return 'locked', failed_pass_count, 0.0
+            return "locked", failed_pass_count, 0.0
 
         else:
-            return 'ok', failed_pass_count, 0.0
+            return "ok", failed_pass_count, 0.0
 
-    async def lockuser_repeated_login_failures(self,
-                                               payload,
-                                               unlock_after_seconds=3600):
+    async def lockuser_repeated_login_failures(
+        self,
+        payload: dict,
+        unlock_after_seconds: int = 3600,
+    ) -> dict:
         """
         This locks the user account. Also schedules an unlock action for later.
 
@@ -362,23 +379,24 @@ class UserLockMixin:
 
         backend_func = partial(
             actions.get_user_by_email,
-            {'email': payload['body']['email'],
-             'reqid': payload['body']['reqid'],
-             'pii_salt': payload['body']['pii_salt']},
-            config=self.config
+            {
+                "email": payload["body"]["email"],
+                "reqid": payload["body"]["reqid"],
+                "pii_salt": payload["body"]["pii_salt"],
+            },
+            config=self.config,
         )
 
-        user_info = await loop.run_in_executor(
-            self.executor,
-            backend_func
-        )
+        user_info = await loop.run_in_executor(self.executor, backend_func)
 
-        if not user_info['success']:
+        if not user_info["success"]:
 
             LOGGER.error(
                 "Could not look up the user ID for email: %s to lock "
-                "their account after repeated failed login attempts." %
-                pii_hash(payload['body']['email'], payload['body']['pii_salt'])
+                "their account after repeated failed login attempts."
+                % pii_hash(
+                    payload["body"]["email"], payload["body"]["pii_salt"]
+                )
             )
 
         else:
@@ -386,41 +404,49 @@ class UserLockMixin:
             # attempt to lock the user using actions.internal_toggle_user_lock
             backend_func = partial(
                 actions.internal_toggle_user_lock,
-                {'target_userid': user_info['user_info']['user_id'],
-                 'action': 'lock',
-                 'reqid': payload['body']['reqid'],
-                 'pii_salt': payload['body']['pii_salt']},
-                config=self.config
+                {
+                    "target_userid": user_info["user_info"]["user_id"],
+                    "action": "lock",
+                    "reqid": payload["body"]["reqid"],
+                    "pii_salt": payload["body"]["pii_salt"],
+                },
+                config=self.config,
             )
 
             locked_info = await loop.run_in_executor(
-                self.executor,
-                backend_func
+                self.executor, backend_func
             )
 
-            if locked_info['success']:
-                unlock_after_dt = (datetime.utcnow() +
-                                   timedelta(seconds=unlock_after_seconds))
+            if locked_info["success"]:
+                unlock_after_dt = datetime.utcnow() + timedelta(
+                    seconds=unlock_after_seconds
+                )
 
                 # schedule the unlock
                 loop.call_later(
                     unlock_after_seconds,
                     self.scheduled_user_unlock,
-                    user_info['user_info']['user_id'],
-                    payload['body']['reqid'],
-                    payload['body']['pii_salt']
+                    user_info["user_info"]["user_id"],
+                    payload["body"]["reqid"],
+                    payload["body"]["pii_salt"],
                 )
 
                 LOGGER.warning(
                     "Locked the account for user ID: %s, "
                     "email: %s after repeated "
                     "failed login attempts. "
-                    "Unlock scheduled for: %sZ" %
-                    (pii_hash(user_info['user_info']['user_id'],
-                              payload['body']['pii_salt']),
-                     pii_hash(payload['body']['email'],
-                              payload['body']['pii_salt']),
-                     unlock_after_dt)
+                    "Unlock scheduled for: %sZ"
+                    % (
+                        pii_hash(
+                            user_info["user_info"]["user_id"],
+                            payload["body"]["pii_salt"],
+                        ),
+                        pii_hash(
+                            payload["body"]["email"],
+                            payload["body"]["pii_salt"],
+                        ),
+                        unlock_after_dt,
+                    )
                 )
 
         # we'll return a failure here as the response no matter what happens
@@ -433,10 +459,12 @@ class UserLockMixin:
                 "after repeated login failures. "
                 "Try again in an hour or "
                 "contact the server admins."
-            ]
+            ],
         }
 
-    async def scheduled_user_unlock(self, user_id, reqid, pii_salt):
+    async def scheduled_user_unlock(
+        self, user_id: int, reqid: Union[int, str], pii_salt: str
+    ):
         """
         This function is scheduled on the ioloop to unlock the specified user.
 
@@ -444,22 +472,21 @@ class UserLockMixin:
 
         LOGGER.warning(
             "[%s] Unlocked the account for user ID: %s after "
-            "login-failure timeout expired." %
-            (reqid, pii_hash(user_id, pii_salt))
+            "login-failure timeout expired."
+            % (reqid, pii_hash(user_id, pii_salt))
         )
 
         loop = tornado.ioloop.IOLoop.current()
 
         backend_func = partial(
             actions.internal_toggle_user_lock,
-            {'target_userid': user_id,
-             'action': 'unlock',
-             'reqid': reqid,
-             'pii_salt': pii_salt},
-            config=self.config
+            {
+                "target_userid": user_id,
+                "action": "unlock",
+                "reqid": reqid,
+                "pii_salt": pii_salt,
+            },
+            config=self.config,
         )
 
-        await loop.run_in_executor(
-            self.executor,
-            backend_func
-        )
+        await loop.run_in_executor(self.executor, backend_func)

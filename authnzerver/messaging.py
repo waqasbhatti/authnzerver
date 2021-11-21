@@ -10,6 +10,7 @@ authnzerver and any frontends.
 #############
 
 import logging
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -21,8 +22,10 @@ import json
 from base64 import b64encode, b64decode
 import secrets
 import time
+from typing import Union, Optional
 
 from .jsonencoder import FrontendEncoder
+
 # this replaces the default encoder and makes it so Tornado will do the right
 # thing when it converts dicts to JSON when a
 # tornado.web.RequestHandler.write(dict) is called.
@@ -41,6 +44,7 @@ try:
     import nacl.secret
     import nacl.encoding
     import nacl.exceptions
+
     NACL = True
 except ImportError:
     NACL = False
@@ -50,10 +54,11 @@ except ImportError:
 ## FERNET SYMMETRIC ENCRYPTED MESSAGE HANDLING ##
 #################################################
 
+
 def encrypt_message(
-        message_dict,
-        key,
-):
+    message_dict: dict,
+    key: bytes,
+) -> bytes:
     """
     Encrypts a message dict using Fernet from the PyCA cryptography package.
 
@@ -86,11 +91,11 @@ def encrypt_message(
 
 
 def decrypt_message(
-        message,
-        key,
-        reqid=None,
-        ttl=None
-):
+    message: bytes,
+    key: bytes,
+    reqid: Union[int, str] = None,
+    ttl: int = None,
+) -> Optional[dict]:
     """
     Decrypts a Fernet-encrypted message back to a message dict.
 
@@ -137,17 +142,17 @@ def decrypt_message(
     except InvalidToken:
 
         LOGGER.error(
-            '%sMessage could not be decrypted because '
-            'it is invalid/was tampered with, or has expired.' %
-            ('[%s] ' % reqid if reqid else '')
+            "%sMessage could not be decrypted because "
+            "it is invalid/was tampered with, or has expired."
+            % ("[%s] " % reqid if reqid else "")
         )
         return None
 
     except Exception as e:
 
         LOGGER.error(
-            '%sCould not understand encrypted message, '
-            ' exception was: %r' % ('[%s] ' % (reqid if reqid else ''), e)
+            "%sCould not understand encrypted message, "
+            " exception was: %r" % ("[%s] " % (reqid if reqid else ""), e)
         )
         return None
 
@@ -160,10 +165,10 @@ CHACHA_VERSION = 1
 
 
 def chacha_encrypt_message(
-        message_dict,
-        key,
-        nonce=None,
-):
+    message_dict: dict,
+    key: bytes,
+    nonce: bytes = None,
+) -> bytes:
     """Encrypts a dict using the ChaCha20-Poly1305 symmetric cipher.
 
     This depends on OpenSSL containing the cipher, so OpenSSL > 1.1.0
@@ -213,15 +218,13 @@ def chacha_encrypt_message(
     chacha = ChaCha20Poly1305(key)
     current_time = time.time()
 
-    chacha_dict = {'message': message_dict,
-                   'iat': current_time,
-                   'ver': CHACHA_VERSION}
+    chacha_dict = {
+        "message": message_dict,
+        "iat": current_time,
+        "ver": CHACHA_VERSION,
+    }
     message_json_bytes = json.dumps(chacha_dict).encode()
-    json_encrypted_bytes = chacha.encrypt(
-        nonce,
-        message_json_bytes,
-        None
-    )
+    json_encrypted_bytes = chacha.encrypt(nonce, message_json_bytes, None)
 
     encrypted_message = nonce + json_encrypted_bytes
     message_base64 = b64encode(encrypted_message)
@@ -229,11 +232,11 @@ def chacha_encrypt_message(
 
 
 def chacha_decrypt_message(
-        message,
-        key,
-        reqid=None,
-        ttl=None
-):
+    message: bytes,
+    key: bytes,
+    reqid: Union[str, int] = None,
+    ttl: int = None,
+) -> Optional[dict]:
     """
     Decrypts a ChaCha20-Poly1305-encrypted message back to a message dict.
 
@@ -289,28 +292,28 @@ def chacha_decrypt_message(
         current_time = time.time()
 
         if ttl is not None and ttl > 0.0:
-            if (chacha_dict['iat'] + ttl) < current_time:
+            if (chacha_dict["iat"] + ttl) < current_time:
                 raise InvalidTag
 
-        if chacha_dict['ver'] != CHACHA_VERSION:
+        if chacha_dict["ver"] != CHACHA_VERSION:
             raise InvalidTag
 
-        return chacha_dict['message']
+        return chacha_dict["message"]
 
     except InvalidTag:
 
         LOGGER.error(
-            '%sMessage could not be decrypted because '
-            'it is invalid/was tampered with, or has expired.' %
-            ('[%s] ' % reqid if reqid else '')
+            "%sMessage could not be decrypted because "
+            "it is invalid/was tampered with, or has expired."
+            % ("[%s] " % reqid if reqid else "")
         )
         return None
 
     except Exception as e:
 
         LOGGER.error(
-            '%sCould not understand encrypted message, '
-            ' exception was: %r' % ('[%s] ' % (reqid if reqid else ''), e)
+            "%sCould not understand encrypted message, "
+            " exception was: %r" % ("[%s] " % (reqid if reqid else ""), e)
         )
         return None
 
@@ -323,9 +326,9 @@ XSALSA_VERSION = 1
 
 
 def xsalsa_encrypt_message(
-    message_dict,
-    key,
-):
+    message_dict: dict,
+    key: bytes,
+) -> bytes:
     """
     Encrypts a dict using the XSalsa20-Poly1305 symmetric cipher.
 
@@ -355,31 +358,30 @@ def xsalsa_encrypt_message(
         raise ImportError("This function will not work without PyNACL.")
 
     if len(key) != 32:
-        raise ValueError(
-            "XSalsa20-Poly1305 key must be 256 bits == 32 bytes"
-        )
+        raise ValueError("XSalsa20-Poly1305 key must be 256 bits == 32 bytes")
 
     secret_box = nacl.secret.SecretBox(key)
     current_time = time.time()
 
-    xsalsa_dict = {'message': message_dict,
-                   'iat': current_time,
-                   'ver': XSALSA_VERSION}
+    xsalsa_dict = {
+        "message": message_dict,
+        "iat": current_time,
+        "ver": XSALSA_VERSION,
+    }
     message_json_bytes = json.dumps(xsalsa_dict).encode()
 
     encrypted_base64 = secret_box.encrypt(
-        message_json_bytes,
-        encoder=nacl.encoding.Base64Encoder
+        message_json_bytes, encoder=nacl.encoding.Base64Encoder
     )
     return encrypted_base64
 
 
 def xsalsa_decrypt_message(
-        message,
-        key,
-        reqid=None,
-        ttl=None
-):
+    message: bytes,
+    key: bytes,
+    reqid: Union[int, str] = None,
+    ttl: int = None,
+) -> Optional[dict]:
     """
     Decrypts a XSalsa20-Poly1305-encrypted message back to a message dict.
 
@@ -420,17 +422,14 @@ def xsalsa_decrypt_message(
         raise ImportError("This function will not work without PyNACL.")
 
     if len(key) != 32:
-        raise ValueError(
-            "XSalsa20-Poly1305 key must be 256 bits == 32 bytes"
-        )
+        raise ValueError("XSalsa20-Poly1305 key must be 256 bits == 32 bytes")
 
     secret_box = nacl.secret.SecretBox(key)
 
     try:
 
         decrypted_bytes = secret_box.decrypt(
-            message,
-            encoder=nacl.encoding.Base64Encoder
+            message, encoder=nacl.encoding.Base64Encoder
         )
         xsalsa_dict = json.loads(decrypted_bytes)
 
@@ -438,27 +437,27 @@ def xsalsa_decrypt_message(
         current_time = time.time()
 
         if ttl is not None and ttl > 0.0:
-            if (xsalsa_dict['iat'] + ttl) < current_time:
+            if (xsalsa_dict["iat"] + ttl) < current_time:
                 raise nacl.exceptions.CryptoError
 
-        if xsalsa_dict['ver'] != XSALSA_VERSION:
+        if xsalsa_dict["ver"] != XSALSA_VERSION:
             raise nacl.exceptions.CryptoError
 
-        return xsalsa_dict['message']
+        return xsalsa_dict["message"]
 
     except nacl.exceptions.CryptoError:
 
         LOGGER.error(
-            '%sMessage could not be decrypted because '
-            'it is invalid/was tampered with, or has expired.' %
-            ('[%s] ' % reqid if reqid else '')
+            "%sMessage could not be decrypted because "
+            "it is invalid/was tampered with, or has expired."
+            % ("[%s] " % reqid if reqid else "")
         )
         return None
 
     except Exception as e:
 
         LOGGER.error(
-            '%sCould not understand encrypted message, '
-            ' exception was: %r' % (('[%s] ' % reqid if reqid else ''), e)
+            "%sCould not understand encrypted message, "
+            " exception was: %r" % (("[%s] " % reqid if reqid else ""), e)
         )
         return None

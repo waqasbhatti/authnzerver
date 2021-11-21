@@ -10,7 +10,7 @@ This contains an auto-generated API client for the authnzerver.
 from functools import partial
 from textwrap import dedent
 
-from authnzerver.apischema import schema, validate_api_request
+from authnzerver.apischema import SCHEMA, validate_api_request
 from authnzerver.client import Authnzerver
 
 
@@ -50,7 +50,7 @@ def dynamic_docstring(action: str, use_kwargs: bool = False) -> str:
     )
 
     param_list = []
-    for arg in schema[action]["args"]:
+    for arg in SCHEMA[action]["args"]:
         param_types = arg["type"]
         if isinstance(param_types, (list, tuple)):
             param_types = ", ".join(param_types)
@@ -66,7 +66,7 @@ def dynamic_docstring(action: str, use_kwargs: bool = False) -> str:
             )
         )
 
-    for kwarg in schema[action]["kwargs"]:
+    for kwarg in SCHEMA[action]["kwargs"]:
         param_types = kwarg["type"]
         if isinstance(param_types, (list, tuple)):
             param_types = ", ".join(param_types)
@@ -90,7 +90,7 @@ def dynamic_docstring(action: str, use_kwargs: bool = False) -> str:
         kwarg_note = ""
 
     docstring = docstring_template.format(
-        docsentence=schema[action]["doc"],
+        docsentence=SCHEMA[action]["doc"],
         param_list="\n".join(param_list),
         kwarg_note=kwarg_note,
     )
@@ -155,7 +155,7 @@ class APIClient:
 
         """
 
-        request_schema = schema.get(api_action, None)
+        request_schema = SCHEMA.get(api_action, None)
         if not request_schema:
             raise ValueError(
                 f"Requested action: '{api_action}' is not a "
@@ -204,7 +204,7 @@ class APIClient:
 
         """
 
-        request_schema = schema.get(api_action, None)
+        request_schema = SCHEMA.get(api_action, None)
         if not request_schema:
             raise ValueError(
                 f"Requested action: '{api_action}' is not a "
@@ -245,7 +245,7 @@ class APIClient:
     def __init__(
         self,
         authnzerver_url: str = None,
-        authnzerver_secret: str = None,
+        authnzerver_secret: bytes = None,
         asynchronous: bool = False,
         use_kwargs: bool = False,
     ):
@@ -281,7 +281,7 @@ class APIClient:
         #
 
         if asynchronous:
-            for action in schema:
+            for action in SCHEMA:
                 function_to_use = partial(
                     self.async_dynamic_api_function,
                     action,
@@ -296,7 +296,7 @@ class APIClient:
                 setattr(self, method_name, function_to_use)
 
         else:
-            for action in schema:
+            for action in SCHEMA:
                 function_to_use = partial(
                     self.dynamic_api_function,
                     action,

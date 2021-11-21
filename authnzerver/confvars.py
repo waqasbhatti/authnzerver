@@ -59,7 +59,7 @@ a `GCP Secrets Manager
 <https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#access_a_secret_version>`_
 item, you'd set some environmental variables like so::
 
-    GCP_SECMAN_URL=https://secretmanager.googleapis.com/v1/projects/abcproj/secrets/abc/versions/z: access
+    GCP_SECMAN_URL=https://secretmanager.googleapis.com/v1/projects/abcproj/secrets/abc/versions/z:access
     GCP_AUTH_TOKEN=some-secret-token
 
 Then change the ``secret`` dict item in CONF dict below to::

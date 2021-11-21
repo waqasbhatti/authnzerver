@@ -32,16 +32,16 @@ LOGGER = logging.getLogger(__name__)
 ## sorted key object ##
 #######################
 
-KeyWithTime = namedtuple('KeyWithTime', ['keytime', 'key'])
+KeyWithTime = namedtuple("KeyWithTime", ["keytime", "key"])
 
 
 ##################
 ## CACHE OBJECT ##
 ##################
 
-class DictCache:
 
-    def __init__(self, capacity=20000):
+class DictCache:
+    def __init__(self, capacity: int = 20000):
         """
         Initializes a cache with the given capacity.
 
@@ -71,10 +71,9 @@ class DictCache:
             oldest_key = self.sortedkeys.pop(index=0)
             oldest_item = self.container.pop(oldest_key.key)
 
-            if oldest_item is not None and oldest_item['ttl'] is not None:
+            if oldest_item is not None and oldest_item["ttl"] is not None:
                 oldest_item_ttlkey = KeyWithTime(
-                    oldest_item['keytime'] + oldest_item['ttl'],
-                    oldest_key
+                    oldest_item["keytime"] + oldest_item["ttl"], oldest_key
                 )
                 self.expireable_key_ttls.discard(oldest_item_ttlkey)
 
@@ -184,7 +183,7 @@ class DictCache:
 
         infodict = {
             "size": self.size(),
-            "ttlkeys": len(self.expireable_key_ttl),
+            "ttlkeys": len(self.expireable_key_ttls),
             "capacity": self.capacity,
             "time": self.time(),
         }
@@ -219,11 +218,13 @@ class DictCache:
             insert_time = time()
 
             sortedkey = KeyWithTime(insert_time, key)
-            self.container[key] = {'value': value,
-                                   'keytime': insert_time,
-                                   'ttl': ttl}
+            self.container[key] = {
+                "value": value,
+                "keytime": insert_time,
+                "ttl": ttl,
+            }
             if extras is not None:
-                self.container[key]['extras'] = extras
+                self.container[key]["extras"] = extras
 
             self.sortedkeys.add(sortedkey)
             self._add_ttl(key, insert_time, ttl)
@@ -244,23 +245,20 @@ class DictCache:
 
         item = self.container.get(key, None)
         if item and time_and_ttl and extras:
-            return (item['value'],
-                    item['keytime'],
-                    item['ttl'],
-                    item.get('extras'))
+            return (
+                item["value"],
+                item["keytime"],
+                item["ttl"],
+                item.get("extras"),
+            )
         if item and time_and_ttl:
-            return item['value'], item['keytime'], item['ttl']
+            return item["value"], item["keytime"], item["ttl"]
         elif item:
-            return item['value']
+            return item["value"]
         else:
             return None
 
-    def set(self,
-            key,
-            value,
-            ttl=None,
-            extras=None,
-            add_ifnotexists=True):
+    def set(self, key, value, ttl=None, extras=None, add_ifnotexists=True):
         """This sets the value of key to value and returns the new value.
 
         If the key doesn't exist and add_ifnotexists is False, returns None. If
@@ -285,16 +283,18 @@ class DictCache:
             return self.add(key, value, ttl=ttl, extras=extras)
 
         elif key in self.container:
-            self.container[key]['value'] = value
-            self._set_ttl(key,
-                          self.container[key]['keytime'],
-                          self.container[key]['ttl'],
-                          ttl)
-            self.container[key]['ttl'] = ttl
+            self.container[key]["value"] = value
+            self._set_ttl(
+                key,
+                self.container[key]["keytime"],
+                self.container[key]["ttl"],
+                ttl,
+            )
+            self.container[key]["ttl"] = ttl
             if extras is not None:
-                self.container[key]['extras'].update(extras)
+                self.container[key]["extras"].update(extras)
 
-            return self.container[key]['value']
+            return self.container[key]["value"]
 
         else:
             return None
@@ -311,21 +311,19 @@ class DictCache:
         item = self.container.pop(key, None)
         if item:
 
-            sortedkey = KeyWithTime(item['keytime'], key)
+            sortedkey = KeyWithTime(item["keytime"], key)
             self.sortedkeys.discard(sortedkey)
 
-            if item.get('ttl', None) is not None:
-                ttlkey = KeyWithTime(item['keytime'] + item['ttl'], key)
+            if item.get("ttl", None) is not None:
+                ttlkey = KeyWithTime(item["keytime"] + item["ttl"], key)
                 self.expireable_key_ttls.discard(ttlkey)
 
-            return item['value']
+            return item["value"]
         else:
             return None
 
     def delete(self, key):
-        """Deletes the key from the cache.
-
-        """
+        """Deletes the key from the cache."""
 
         self._trim()
         self._expire()
@@ -351,9 +349,7 @@ class DictCache:
     #
 
     def counter_get(self, key):
-        """This gets the current count for a counter key.
-
-        """
+        """This gets the current count for a counter key."""
 
         self._trim()
         self._expire()
@@ -383,10 +379,12 @@ class DictCache:
             raise ValueError("counter value must be an integer >= 0")
 
         if counter_key not in self.container:
-            return self.add(counter_key,
-                            int_initial_value,
-                            ttl=ttl,
-                            extras={'initval': initial_value})
+            return self.add(
+                counter_key,
+                int_initial_value,
+                ttl=ttl,
+                extras={"initval": initial_value},
+            )
         else:
             return self.counter_get(key)
 
@@ -406,9 +404,7 @@ class DictCache:
             raise ValueError("counter value must be an integer >= 0")
 
         if counter_key not in self.container:
-            return self.counter_add(key,
-                                    int_value,
-                                    ttl=ttl)
+            return self.counter_add(key, int_value, ttl=ttl)
         else:
             return self.set(counter_key, int_value, ttl=ttl)
 
@@ -471,11 +467,9 @@ class DictCache:
         else:
             return None
 
-    def counter_rate(self,
-                     key,
-                     period_seconds,
-                     return_allinfo=False,
-                     absolute_rate=True):
+    def counter_rate(
+        self, key, period_seconds, return_allinfo=False, absolute_rate=True
+    ):
         """This gets the rate of increment/decrement over period (in seconds)
         for a counter key that was incremented in the past.
 
@@ -497,18 +491,21 @@ class DictCache:
         if counter_key in self.container:
             key_item = self.container[counter_key]
             tnow = time()
-            rate = ( (key_item['value'] - key_item['extras']['initval']) /
-                     ((tnow - key_item['keytime']) / period_seconds) )
+            rate = (key_item["value"] - key_item["extras"]["initval"]) / (
+                (tnow - key_item["keytime"]) / period_seconds
+            )
 
             if absolute_rate is True:
                 rate = abs(rate)
 
             if return_allinfo:
-                return (rate,
-                        key_item['value'],
-                        key_item['extras']['initval'],
-                        tnow,
-                        key_item['keytime'])
+                return (
+                    rate,
+                    key_item["value"],
+                    key_item["extras"]["initval"],
+                    tnow,
+                    key_item["keytime"],
+                )
             else:
                 return rate
 
@@ -536,20 +533,22 @@ class DictCache:
             "sortedkeys": self.sortedkeys,
             "keyttls": self.expireable_key_ttls,
             "container": self.container,
-            "capacity": self.capacity
+            "capacity": self.capacity,
         }
 
         if hmac_key is not None:
             pickle_bytes = pickle.dumps(serialized, protocol=protocol)
-            hasher = blake2b(key=hmac_key.encode('utf-8'),
-                             digest_size=16,
-                             person=b'authnzrv-hmac')
+            hasher = blake2b(
+                key=hmac_key.encode("utf-8"),
+                digest_size=16,
+                person=b"authnzrv-hmac",
+            )
             hasher.update(pickle_bytes)
             hmac_sig = hasher.hexdigest()
-            with open(outfile, 'wb') as outfd:
-                outfd.write(hmac_sig.encode('utf-8') + pickle_bytes)
+            with open(outfile, "wb") as outfd:
+                outfd.write(hmac_sig.encode("utf-8") + pickle_bytes)
         else:
-            with open(outfile, 'wb') as outfd:
+            with open(outfile, "wb") as outfd:
                 pickle.dump(serialized, outfd, protocol=protocol)
 
     def load(self, infile, hmac_key=None):
@@ -563,31 +562,35 @@ class DictCache:
 
         if not hmac_key:
 
-            with open(infile, 'rb') as infd:
+            with open(infile, "rb") as infd:
                 deserialized = pickle.load(infd)
 
         else:
 
-            with open(infile, 'rb') as infd:
+            with open(infile, "rb") as infd:
                 intermediate = infd.read()
 
-            hasher = blake2b(key=hmac_key.encode('utf-8'),
-                             digest_size=16,
-                             person=b'authnzrv-hmac')
-            signature, deserialized_bytes = intermediate[:32], intermediate[32:]
+            hasher = blake2b(
+                key=hmac_key.encode("utf-8"),
+                digest_size=16,
+                person=b"authnzrv-hmac",
+            )
+            signature, deserialized_bytes = (
+                intermediate[:32],
+                intermediate[32:],
+            )
             hasher.update(deserialized_bytes)
             hmac_sig = hasher.hexdigest()
-            sig_ok = compare_digest(signature,
-                                    hmac_sig.encode('utf-8'))
+            sig_ok = compare_digest(signature, hmac_sig.encode("utf-8"))
             if not sig_ok:
                 raise ValueError("Incorrect signature for loaded pickle.")
             else:
                 deserialized = pickle.loads(deserialized_bytes)
 
-        self.sortedkeys = deserialized['sortedkeys']
-        self.expireable_key_ttls = deserialized['keyttls']
-        self.container = deserialized['container']
-        self.capacity = deserialized['capacity']
+        self.sortedkeys = deserialized["sortedkeys"]
+        self.expireable_key_ttls = deserialized["keyttls"]
+        self.container = deserialized["container"]
+        self.capacity = deserialized["capacity"]
 
         self._trim()
         self._expire()

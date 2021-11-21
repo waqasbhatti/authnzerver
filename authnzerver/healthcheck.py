@@ -28,6 +28,7 @@ from time import monotonic
 # thing when it converts dicts to JSON when a
 # tornado.web.RequestHandler.write(dict) is called.
 from .jsonencoder import FrontendEncoder
+
 json._default_encoder = FrontendEncoder()
 
 import tornado.web
@@ -37,17 +38,13 @@ from .ratelimit import RateLimitMixin
 from .actions import database_health_check
 
 
-class HealthCheckHandler(tornado.web.RequestHandler,
-                         RateLimitMixin):
+class HealthCheckHandler(tornado.web.RequestHandler, RateLimitMixin):
     """
     This handles health check endpoints.
 
     """
 
-    def initialize(self,
-                   config,
-                   executor,
-                   cacheobj):
+    def initialize(self, config, executor, cacheobj):
         """
         This sets up some config.
 
@@ -67,18 +64,24 @@ class HealthCheckHandler(tornado.web.RequestHandler,
 
         """
 
-        self.set_header('content-type', 'text/plain; charset=UTF-8')
+        self.set_header("content-type", "text/plain; charset=UTF-8")
         if status_code == 400:
-            self.write(f"HTTP {status_code}: Could not service this request "
-                       f"because of invalid request parameters.")
+            self.write(
+                f"HTTP {status_code}: Could not service this request "
+                f"because of invalid request parameters."
+            )
         elif status_code == 401:
-            self.write(f"HTTP {status_code}: Could not service this request "
-                       f"because of invalid request authentication token or "
-                       f"violation of host restriction.")
+            self.write(
+                f"HTTP {status_code}: Could not service this request "
+                f"because of invalid request authentication token or "
+                f"violation of host restriction."
+            )
         elif status_code == 429:
             self.set_header("Retry-After", "180")
-            self.write(f"HTTP {status_code}: Could not service this request "
-                       f"because the set rate limit has been exceeded.")
+            self.write(
+                f"HTTP {status_code}: Could not service this request "
+                f"because the set rate limit has been exceeded."
+            )
         else:
             self.write(f"HTTP {status_code}: Could not service this request.")
 
@@ -93,16 +96,15 @@ class HealthCheckHandler(tornado.web.RequestHandler,
 
         """
 
-        self.ratelimit_request(101010,
-                               "apikey-healthcheck",
-                               {"ip_address": self.request.remote_ip})
+        self.ratelimit_request(
+            101010,
+            "apikey-healthcheck",
+            {"ip_address": self.request.remote_ip},
+        )
 
         loop = tornado.ioloop.IOLoop.current()
 
-        backend_func = partial(
-            database_health_check,
-            config=self.config
-        )
+        backend_func = partial(database_health_check, config=self.config)
 
         health_checks = {}
 
@@ -114,11 +116,11 @@ class HealthCheckHandler(tornado.web.RequestHandler,
 
             # this round-robin schedules the tasks on all the workers
             health_check = await loop.run_in_executor(
-                self.executor,
-                backend_func
+                self.executor, backend_func
             )
-            health_checks[health_check['process']] = (
-                "ok" if health_check['success']
+            health_checks[health_check["process"]] = (
+                "ok"
+                if health_check["success"]
                 else health_check["failure_reason"]
             )
 
@@ -126,14 +128,16 @@ class HealthCheckHandler(tornado.web.RequestHandler,
             if len(health_checks) == self.nworkers:
                 break
 
-        all_workers_ok = (all(health_checks[key] for key in health_checks)
-                          and len(health_checks) == self.nworkers)
+        all_workers_ok = (
+            all(health_checks[key] for key in health_checks)
+            and len(health_checks) == self.nworkers
+        )
 
         retdict = {
             "Expected-Workers": self.nworkers,
             "Workers": health_checks,
             "Check-Time": healthcheck_clock,
-            "Health-Ok": all_workers_ok
+            "Health-Ok": all_workers_ok,
         }
 
         if all_workers_ok:
@@ -141,4 +145,4 @@ class HealthCheckHandler(tornado.web.RequestHandler,
         else:
             self.set_status(500)
         self.write(retdict)
-        self.finish()
+        await self.finish()

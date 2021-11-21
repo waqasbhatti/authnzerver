@@ -44,6 +44,7 @@ django-registration's various user-registration form classes.
 #############
 
 import logging
+from typing import Sequence, Union
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
@@ -92,145 +93,150 @@ SUFFIX_LIST_URL = "https://publicsuffix.org/list/public_suffix_list.dat"
 # https://ldpreload.com/blog/names-to-reserve
 SPECIAL_HOSTNAMES = [
     # Hostnames with special/reserved meaning.
-    'autoconfig',     # Thunderbird autoconfig
-    'autodiscover',   # MS Outlook/Exchange autoconfig
-    'broadcasthost',  # Network broadcast hostname
-    'isatap',         # IPv6 tunnel autodiscovery
-    'localdomain',    # Loopback
-    'localhost',      # Loopback
-    'wpad',           # Proxy autodiscovery
+    "autoconfig",  # Thunderbird autoconfig
+    "autodiscover",  # MS Outlook/Exchange autoconfig
+    "broadcasthost",  # Network broadcast hostname
+    "isatap",  # IPv6 tunnel autodiscovery
+    "localdomain",  # Loopback
+    "localhost",  # Loopback
+    "wpad",  # Proxy autodiscovery
 ]
 
 
 PROTOCOL_HOSTNAMES = [
     # Common protocol hostnames.
-    'ftp',
-    'imap',
-    'mail',
-    'news',
-    'pop',
-    'pop3',
-    'smtp',
-    'usenet',
-    'uucp',
-    'webmail',
-    'www',
+    "ftp",
+    "imap",
+    "mail",
+    "news",
+    "pop",
+    "pop3",
+    "smtp",
+    "usenet",
+    "uucp",
+    "webmail",
+    "www",
 ]
 
 
 CA_ADDRESSES = [
     # Email addresses known used by certificate authorities during
     # verification.
-    'admin',
-    'administrator',
-    'hostmaster',
-    'info',
-    'is',
-    'it',
-    'mis',
-    'postmaster',
-    'root',
-    'ssladmin',
-    'ssladministrator',
-    'sslwebmaster',
-    'sysadmin',
-    'webmaster',
+    "admin",
+    "administrator",
+    "hostmaster",
+    "info",
+    "is",
+    "it",
+    "mis",
+    "postmaster",
+    "root",
+    "ssladmin",
+    "ssladministrator",
+    "sslwebmaster",
+    "sysadmin",
+    "webmaster",
 ]
 
 
 RFC_2142 = [
     # RFC-2142-defined names not already covered.
-    'abuse',
-    'marketing',
-    'noc',
-    'sales',
-    'security',
-    'support',
+    "abuse",
+    "marketing",
+    "noc",
+    "sales",
+    "security",
+    "support",
 ]
 
 
 NOREPLY_ADDRESSES = [
     # Common no-reply email addresses.
-    'mailer-daemon',
-    'nobody',
-    'noreply',
-    'no-reply',
+    "mailer-daemon",
+    "nobody",
+    "noreply",
+    "no-reply",
 ]
 
 
 SENSITIVE_FILENAMES = [
     # Sensitive filenames.
-    'clientaccesspolicy.xml',  # Silverlight cross-domain policy file.
-    'crossdomain.xml',         # Flash cross-domain policy file.
-    'favicon.ico',
-    'humans.txt',
-    'keybase.txt',  # Keybase ownership-verification URL.
-    'robots.txt',
-    '.htaccess',
-    '.htpasswd',
+    "clientaccesspolicy.xml",  # Silverlight cross-domain policy file.
+    "crossdomain.xml",  # Flash cross-domain policy file.
+    "favicon.ico",
+    "humans.txt",
+    "keybase.txt",  # Keybase ownership-verification URL.
+    "robots.txt",
+    ".htaccess",
+    ".htpasswd",
 ]
 
 
 OTHER_SENSITIVE_NAMES = [
     # Other names which could be problems depending on URL/subdomain
     # structure.
-    'account',
-    'accounts',
-    'auth',
-    'authorize',
-    'blog',
-    'buy',
-    'cart',
-    'clients',
-    'contact',
-    'contactus',
-    'contact-us',
-    'copyright',
-    'dashboard',
-    'doc',
-    'docs',
-    'download',
-    'downloads',
-    'enquiry',
-    'faq',
-    'help',
-    'inquiry',
-    'license',
-    'login',
-    'logout',
-    'me',
-    'myaccount',
-    'oauth',
-    'pay',
-    'payment',
-    'payments',
-    'plans',
-    'portfolio',
-    'preferences',
-    'pricing',
-    'privacy',
-    'profile',
-    'register',
-    'secure',
-    'settings',
-    'signin',
-    'signup',
-    'ssl',
-    'status',
-    'store',
-    'subscribe',
-    'terms',
-    'tos',
-    'user',
-    'users',
-    'weblog',
-    'work',
+    "account",
+    "accounts",
+    "auth",
+    "authorize",
+    "blog",
+    "buy",
+    "cart",
+    "clients",
+    "contact",
+    "contactus",
+    "contact-us",
+    "copyright",
+    "dashboard",
+    "doc",
+    "docs",
+    "download",
+    "downloads",
+    "enquiry",
+    "faq",
+    "help",
+    "inquiry",
+    "license",
+    "login",
+    "logout",
+    "me",
+    "myaccount",
+    "oauth",
+    "pay",
+    "payment",
+    "payments",
+    "plans",
+    "portfolio",
+    "preferences",
+    "pricing",
+    "privacy",
+    "profile",
+    "register",
+    "secure",
+    "settings",
+    "signin",
+    "signup",
+    "ssl",
+    "status",
+    "store",
+    "subscribe",
+    "terms",
+    "tos",
+    "user",
+    "users",
+    "weblog",
+    "work",
 ]
 
 
 DEFAULT_RESERVED_NAMES = set(
-    SPECIAL_HOSTNAMES + PROTOCOL_HOSTNAMES + CA_ADDRESSES + RFC_2142 +
-    NOREPLY_ADDRESSES + SENSITIVE_FILENAMES + OTHER_SENSITIVE_NAMES
+    SPECIAL_HOSTNAMES
+    + PROTOCOL_HOSTNAMES
+    + CA_ADDRESSES
+    + RFC_2142
+    + NOREPLY_ADDRESSES
+    + SENSITIVE_FILENAMES
+    + OTHER_SENSITIVE_NAMES
 )
 
 MOD_DIR = os.path.dirname(__file__)
@@ -238,34 +244,32 @@ MOD_DIR = os.path.dirname(__file__)
 # https://github.com/danielmiessler/SecLists/blob/master/
 # Passwords/Common-Credentials/10-million-password-list-top-10000.txt
 TENK_PASSWORDS_FILE = os.path.abspath(
-    os.path.join(MOD_DIR,
-                 'top-10k-passwords.txt')
+    os.path.join(MOD_DIR, "top-10k-passwords.txt")
 )
-with open(TENK_PASSWORDS_FILE, 'r') as infd:
-    TOP_10K_PASSWORDS = {x.strip('\n') for x in infd.readlines()}
+with open(TENK_PASSWORDS_FILE, "r") as infd:
+    TOP_10K_PASSWORDS = {x.strip("\n") for x in infd.readlines()}
 
 # https://github.com/martenson/disposable-email-domains/blob/master/
 # disposable_email_blocklist.conf
 DISPOSABLE_EMAIL_DOMAINS_FILE = os.path.abspath(
-    os.path.join(MOD_DIR,
-                 'disposable_email_blocklist.conf')
+    os.path.join(MOD_DIR, "disposable_email_blocklist.conf")
 )
-with open(DISPOSABLE_EMAIL_DOMAINS_FILE, 'r') as infd:
-    DISPOSABLE_EMAIL_DOMAINS = {x.strip('\n') for x in infd.readlines()}
+with open(DISPOSABLE_EMAIL_DOMAINS_FILE, "r") as infd:
+    DISPOSABLE_EMAIL_DOMAINS = {x.strip("\n") for x in infd.readlines()}
 
 
 ###############
 ## FUNCTIONS ##
 ###############
 
-def validate_reserved_name(value):
+
+def validate_reserved_name(value: str) -> bool:
     """
     This validates if the value is not one of the reserved names.
 
     """
 
-    if (value in DEFAULT_RESERVED_NAMES or
-        '.well-known' in value):
+    if value in DEFAULT_RESERVED_NAMES or ".well-known" in value:
 
         return False
 
@@ -274,20 +278,16 @@ def validate_reserved_name(value):
         return True
 
 
-def validate_confusables(value):
+def validate_confusables(value: str):
     """
     This validates if the value is not a confusable homoglyph.
 
     """
 
-    if confusables.is_dangerous(value):
-        return False
-
-    else:
-        return True
+    return confusables.is_dangerous(value)
 
 
-def validate_email_address(emailaddr):
+def validate_email_address(emailaddr: str) -> bool:
     """This validates an email address using the HTML5 specification,
     which is good enough for most purposes.
 
@@ -307,7 +307,7 @@ def validate_email_address(emailaddr):
     return re.match(match_regex, emailaddr) is not None
 
 
-def validate_confusables_email(value):
+def validate_confusables_email(value: str) -> bool:
     """
     Validator which disallows 'dangerous' email addresses likely to
     represent homograph attacks.
@@ -320,12 +320,14 @@ def validate_confusables_email(value):
     """
 
     # we need a single @ in the email
-    at_symbols = re.findall(r'@', value)
+    at_symbols = re.findall(r"@", value)
     if len(at_symbols) != 1:
         return False
 
-    local_part, domain = value.split('@')
-    if confusables.is_dangerous(local_part) or confusables.is_dangerous(domain):
+    local_part, domain = value.split("@")
+    if confusables.is_dangerous(local_part) or confusables.is_dangerous(
+        domain
+    ):
         return False
 
     if local_part in DEFAULT_RESERVED_NAMES:
@@ -334,7 +336,7 @@ def validate_confusables_email(value):
     return True
 
 
-def validate_unique_value(value, check_list):
+def validate_unique_value(value: str, check_list: Sequence) -> bool:
 
     """This checks if the input value does not already exist in the check_list.
 
@@ -343,9 +345,9 @@ def validate_unique_value(value, check_list):
 
     """
 
-    normalized_value = unicodedata.normalize('NFKC', value)
+    normalized_value = unicodedata.normalize("NFKC", value)
 
-    if hasattr(normalized_value, 'casefold'):
+    if hasattr(normalized_value, "casefold"):
         normalized_value = normalized_value.casefold()
 
     if normalized_value in set(check_list):
@@ -358,7 +360,8 @@ def validate_unique_value(value, check_list):
 ## NORMALIZING VALUES ##
 ########################
 
-def normalize_value(value, casefold=True):
+
+def normalize_value(value: str, casefold: bool = True) -> str:
     """
     This normalizes a given value and casefolds it.
 
@@ -366,27 +369,27 @@ def normalize_value(value, casefold=True):
 
     """
 
-    if '@' in value:
-        local_part, domain = value.split('@')
+    if "@" in value:
+        local_part, domain = value.split("@")
 
     else:
         local_part = value
-        domain = ''
+        domain = ""
 
     if len(local_part) > 0:
 
-        local_part = unicodedata.normalize('NFKC', local_part)
+        local_part = unicodedata.normalize("NFKC", local_part)
         if casefold:
             local_part = local_part.casefold()
 
     if len(domain) > 0:
 
-        domain = unicodedata.normalize('NFKC', domain)
+        domain = unicodedata.normalize("NFKC", domain)
         if casefold:
             domain = domain.casefold()
 
-    if '@' in value:
-        return '@'.join([local_part, domain])
+    if "@" in value:
+        return "@".join([local_part, domain])
     else:
         return local_part
 
@@ -395,7 +398,8 @@ def normalize_value(value, casefold=True):
 ## PUBLIC SUFFIX LIST FOR DOMAINS ##
 ####################################
 
-def public_suffix_list(return_set=False):
+
+def public_suffix_list(return_set: bool = False) -> Union[list, set]:
     """
     Retrieves the Internet names public suffix list and loads it into a set.
 
@@ -404,10 +408,10 @@ def public_suffix_list(return_set=False):
     list_resp = requests.get(SUFFIX_LIST_URL, timeout=5.0)
     list_txt = list_resp.text
 
-    list_lines = list_txt.split('\n')
+    list_lines = list_txt.split("\n")
 
     suffixes = {
-        f".{x}" for x in list_lines if not x.startswith('//') and len(x) > 0
+        f".{x}" for x in list_lines if not x.startswith("//") and len(x) > 0
     }
 
     if return_set:
@@ -416,7 +420,10 @@ def public_suffix_list(return_set=False):
         return list(suffixes)
 
 
-def get_public_suffix_list(return_set=False, save_to_currproc=False):
+def get_public_suffix_list(
+    return_set: bool = False,
+    save_to_currproc: bool = False,
+) -> Union[list, set]:
     """
     Gets the public suffix list and caches it if necessary.
 
@@ -424,10 +431,7 @@ def get_public_suffix_list(return_set=False, save_to_currproc=False):
 
     # check if this exists already
     list_file = os.path.join(
-        os.path.expanduser("~"),
-        ".cache",
-        "authnzerver",
-        "public-suffixes.txt"
+        os.path.expanduser("~"), ".cache", "authnzerver", "public-suffixes.txt"
     )
 
     suff_list = None
