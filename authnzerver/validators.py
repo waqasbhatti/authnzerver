@@ -246,16 +246,16 @@ MOD_DIR = os.path.dirname(__file__)
 TENK_PASSWORDS_FILE = os.path.abspath(
     os.path.join(MOD_DIR, "top-10k-passwords.txt")
 )
-with open(TENK_PASSWORDS_FILE, "r") as infd:
-    TOP_10K_PASSWORDS = {x.strip("\n") for x in infd.readlines()}
+with open(TENK_PASSWORDS_FILE, "r") as pass_infd:
+    TOP_10K_PASSWORDS = {x.strip("\n") for x in pass_infd.readlines()}
 
 # https://github.com/martenson/disposable-email-domains/blob/master/
 # disposable_email_blocklist.conf
 DISPOSABLE_EMAIL_DOMAINS_FILE = os.path.abspath(
     os.path.join(MOD_DIR, "disposable_email_blocklist.conf")
 )
-with open(DISPOSABLE_EMAIL_DOMAINS_FILE, "r") as infd:
-    DISPOSABLE_EMAIL_DOMAINS = {x.strip("\n") for x in infd.readlines()}
+with open(DISPOSABLE_EMAIL_DOMAINS_FILE, "r") as email_infd:
+    DISPOSABLE_EMAIL_DOMAINS = {x.strip("\n") for x in email_infd.readlines()}
 
 
 ###############
@@ -293,7 +293,7 @@ def validate_email_address(emailaddr: str) -> bool:
 
     The regex is taken from here:
 
-    http://blog.gerv.net/2011/05/html5_email_address_regexp/
+    https://blog.gerv.net/2011/05/html5_email_address_regexp/
 
     And was transformed to Python using the excellent https://regex101.com.
 
