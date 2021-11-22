@@ -79,7 +79,7 @@ def auth_echo(payload: dict):
         result = conn.execute(s)
         rows = result.fetchall()
         # add the result to the outgoing payload
-        serializable_result = [dict(row) for row in rows]
+        serializable_result = [dict(row._mapping) for row in rows]
         payload["dbtest"] = serializable_result
 
     LOGGER.info("responding from process: %s" % currproc.name)

@@ -50,7 +50,7 @@ except Exception:
 import multiprocessing as mp
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, insert
 from argon2 import PasswordHasher
 from tornado.escape import xhtml_escape, squeeze
 
@@ -446,7 +446,7 @@ def create_new_user(
         }
 
         with engine.begin() as conn:
-            ins = users.insert(new_user_dict)
+            ins = insert(users).values(new_user_dict)
             conn.execute(ins)
 
         user_added = True

@@ -582,7 +582,7 @@ def send_signup_verification_email(
             "messages": (["Invalid verify email request."]),
         }
 
-    if user_info["is_active"] or user_info["user_role"] != "locked":
+    if user_info.is_active or user_info.user_role != "locked":
 
         LOGGER.error(
             "[%s] Verify email request failed for "
@@ -686,7 +686,7 @@ def send_signup_verification_email(
         ip_address=ip_addr,
         user_email=payload["email_address"],
     )
-    recipients = [user_info["email"]]
+    recipients = [user_info.email]
     subject = SIGNUP_VERIFICATION_EMAIL_SUBJECT.format(
         server_name=payload["server_name"]
     )
@@ -741,8 +741,8 @@ def send_signup_verification_email(
 
         return {
             "success": True,
-            "user_id": user_info["user_id"],
-            "email_address": user_info["email"],
+            "user_id": user_info.user_id,
+            "email_address": user_info.email,
             "emailverify_sent_datetime": emailverify_sent_datetime,
             "messages": (["Verify email sent successfully."]),
         }
@@ -1379,10 +1379,10 @@ def send_forgotpass_verification_email(
         }
 
     # check the last time we sent a forgot password email to this user
-    if user_info["emailforgotpass_sent_datetime"] is not None:
+    if user_info.emailforgotpass_sent_datetime is not None:
 
         check_elapsed = (
-            datetime.utcnow() - user_info["emailforgotpass_sent_datetime"]
+            datetime.utcnow() - user_info.emailforgotpass_sent_datetime
         ) > timedelta(hours=24)
 
         if check_elapsed:
@@ -1492,7 +1492,7 @@ def send_forgotpass_verification_email(
         ip_address=ip_addr,
         user_email=payload["email_address"],
     )
-    recipients = [user_info["email"]]
+    recipients = [user_info.email]
     subject = FORGOTPASS_VERIFICATION_EMAIL_SUBJECT.format(
         server_name=payload["server_name"]
     )

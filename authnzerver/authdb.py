@@ -36,6 +36,7 @@ from sqlalchemy import (
     ForeignKey,
     MetaData,
     JSON,
+    insert,
 )
 
 from argon2 import PasswordHasher
@@ -455,7 +456,7 @@ def initial_authdb_inserts(
         )
 
     with engine.begin() as conn:
-        res = conn.execute(roles.insert(), insert_list)
+        res = conn.execute(insert(roles), insert_list)
         res.close()
 
     # get the users table
@@ -481,59 +482,58 @@ def initial_authdb_inserts(
     with engine.begin() as conn:
 
         conn.execute(
-            users.insert().values(
-                [
-                    # the superuser
-                    {
-                        "password": hashed_password,
-                        "email": superuser_email,
-                        "system_id": str(uuid.uuid4()),
-                        "email_verified": True,
-                        "is_active": True,
-                        "user_role": "superuser",
-                        "created_on": datetime.utcnow(),
-                        "last_updated": datetime.utcnow(),
-                        "full_name": "Superuser account",
-                        "extra_info": {
-                            "provenance": "auto-created",
-                            "type": "system-user",
-                        },
+            insert(users),
+            [
+                # the superuser
+                {
+                    "password": hashed_password,
+                    "email": superuser_email,
+                    "system_id": str(uuid.uuid4()),
+                    "email_verified": True,
+                    "is_active": True,
+                    "user_role": "superuser",
+                    "created_on": datetime.utcnow(),
+                    "last_updated": datetime.utcnow(),
+                    "full_name": "Superuser account",
+                    "extra_info": {
+                        "provenance": "auto-created",
+                        "type": "system-user",
                     },
-                    # the anonuser,
-                    {
-                        "password": hasher.hash(secrets.token_urlsafe(32)),
-                        "email": "anonuser@localhost",
-                        "system_id": str(uuid.uuid4()),
-                        "email_verified": True,
-                        "is_active": True,
-                        "user_role": "anonymous",
-                        "created_on": datetime.utcnow(),
-                        "last_updated": datetime.utcnow(),
-                        "full_name": "The systemwide anonymous user",
-                        "extra_info": {
-                            "provenance": "auto-created",
-                            "type": "system-user",
-                        },
+                },
+                # the anonuser,
+                {
+                    "password": hasher.hash(secrets.token_urlsafe(32)),
+                    "email": "anonuser@localhost",
+                    "system_id": str(uuid.uuid4()),
+                    "email_verified": True,
+                    "is_active": True,
+                    "user_role": "anonymous",
+                    "created_on": datetime.utcnow(),
+                    "last_updated": datetime.utcnow(),
+                    "full_name": "The systemwide anonymous user",
+                    "extra_info": {
+                        "provenance": "auto-created",
+                        "type": "system-user",
                     },
-                    # the dummyuser to fail passwords for nonexistent users
-                    # against
-                    {
-                        "password": hasher.hash(secrets.token_urlsafe(32)),
-                        "email": "dummyuser@localhost",
-                        "system_id": str(uuid.uuid4()),
-                        "email_verified": True,
-                        "is_active": False,
-                        "user_role": "locked",
-                        "created_on": datetime.utcnow(),
-                        "last_updated": datetime.utcnow(),
-                        "full_name": "The systemwide locked user",
-                        "extra_info": {
-                            "provenance": "auto-created",
-                            "type": "locked-user",
-                        },
+                },
+                # the dummyuser to fail passwords for nonexistent users
+                # against
+                {
+                    "password": hasher.hash(secrets.token_urlsafe(32)),
+                    "email": "dummyuser@localhost",
+                    "system_id": str(uuid.uuid4()),
+                    "email_verified": True,
+                    "is_active": False,
+                    "user_role": "locked",
+                    "created_on": datetime.utcnow(),
+                    "last_updated": datetime.utcnow(),
+                    "full_name": "The systemwide locked user",
+                    "extra_info": {
+                        "provenance": "auto-created",
+                        "type": "locked-user",
                     },
-                ]
-            )
+                },
+            ],
         )
 
     if superuser_pass_auto:

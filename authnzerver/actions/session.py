@@ -50,7 +50,7 @@ except Exception:
 import ipaddress
 import secrets
 
-from sqlalchemy import select
+from sqlalchemy import select, insert
 
 from ..permissions import pii_hash
 from authnzerver.actions.utils import get_procdb_permjson
@@ -188,7 +188,7 @@ def auth_session_new(
 
         with engine.begin() as conn:
             sessions = meta.tables["sessions"]
-            insert = sessions.insert().values(
+            ins = insert(sessions).values(
                 {
                     "session_token": session_token,
                     "ip_address": payload["ip_address"],
@@ -198,7 +198,7 @@ def auth_session_new(
                     "extra_info_json": payload["extra_info_json"],
                 }
             )
-            conn.execute(insert)
+            conn.execute(ins)
 
         LOGGER.info(
             "[%s] New session initiated for "
@@ -424,7 +424,7 @@ def internal_edit_session(
 
         try:
 
-            serialized_result = dict(row)
+            serialized_result = dict(row._mapping)
             LOGGER.info(
                 "[%s] Session info updated for "
                 "user_id: %s with IP address: %s, "
@@ -614,7 +614,7 @@ def auth_session_exists(
 
         try:
 
-            serialized_result = dict(rows)
+            serialized_result = dict(rows._mapping)
 
             LOGGER.info(
                 "[%s] Session info request successful for "

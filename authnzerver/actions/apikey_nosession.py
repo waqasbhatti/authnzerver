@@ -116,7 +116,7 @@ except Exception:
 
 import secrets
 
-from sqlalchemy import select
+from sqlalchemy import select, insert
 from argon2 import PasswordHasher
 
 from ..permissions import pii_hash
@@ -357,7 +357,7 @@ def issue_apikey(
     # NOTE: we store only the random token. this will later be checked for
     # equality against the value stored in the API key dict['tkn'] when we send
     # in this API key for verification later
-    ins = apikeys.insert(
+    ins = insert(apikeys).values(
         {
             "apikey": random_token,
             "issued": issued,

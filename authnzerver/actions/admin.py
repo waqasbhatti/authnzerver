@@ -361,7 +361,7 @@ def get_user_by_email(
 
         try:
 
-            serialized_result = dict(rows)
+            serialized_result = dict(rows._mapping)
 
             LOGGER.info(
                 "[%s] User lookup request succeeded. "
@@ -1087,7 +1087,7 @@ def edit_user(
 
         try:
 
-            serialized_result = dict(rows)
+            serialized_result = dict(rows._mapping)
 
             LOGGER.info(
                 "[%s] User edit request succeeded for "
@@ -1373,7 +1373,7 @@ def internal_edit_user(
 
         try:
 
-            serialized_result = dict(row)
+            serialized_result = dict(row._mapping)
             LOGGER.info(
                 "[%s] User info updated for "
                 "user_id: %s."
@@ -1605,7 +1605,7 @@ def internal_toggle_user_lock(
 
             return {
                 "success": True,
-                "user_info": dict(row),
+                "user_info": dict(row._mapping),
                 "messages": ["User lock toggle successful."],
             }
 
@@ -1626,7 +1626,7 @@ def internal_toggle_user_lock(
 
             return {
                 "success": True,
-                "user_info": dict(row),
+                "user_info": dict(row._mapping),
                 "messages": ["User lock toggle successful."],
             }
 
@@ -1721,7 +1721,7 @@ def internal_toggle_user_lock(
 
         try:
 
-            serialized_result = dict(rows)
+            serialized_result = dict(rows._mapping)
 
             LOGGER.info(
                 "[%s] User lock toggle request succeeded for user_id: %s. "
