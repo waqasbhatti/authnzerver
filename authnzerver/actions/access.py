@@ -11,6 +11,7 @@
 #############
 
 import logging
+from types import SimpleNamespace
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
@@ -20,26 +21,28 @@ LOGGER = logging.getLogger(__name__)
 ## IMPORTS ##
 #############
 
-import multiprocessing as mp
 from sqlalchemy import select
 
 from ..permissions import (
     load_policy_and_check_limits,
     load_policy_and_check_access,
-    pii_hash
+    pii_hash,
 )
-from .. import authdb
+from authnzerver.actions.utils import get_procdb_permjson
 
 
 ################
 ## FUNCTIONS  ##
 ################
 
-def check_user_access(payload,
-                      raiseonfail=False,
-                      override_permissions_json=None,
-                      override_authdb_path=None,
-                      config=None):
+
+def check_user_access(
+    payload: dict,
+    raiseonfail: bool = False,
+    override_permissions_json: str = None,
+    override_authdb_path: str = None,
+    config: SimpleNamespace = None,
+) -> dict:
     """Checks for user access to a specified item based on a permissions policy.
 
     Parameters
@@ -97,139 +100,134 @@ def check_user_access(payload,
 
     """
 
-    for key in ('reqid', 'pii_salt'):
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=override_permissions_json,
+        raiseonfail=raiseonfail,
+    )
+
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid access grant request."],
+                "messages": ["Invalid access grant request."],
             }
 
-    for key in ('user_id', 'user_role', 'action', 'target_name',
-                'target_owner', 'target_visibility',
-                'target_sharedwith'):
+    for key in {
+        "user_id",
+        "user_role",
+        "action",
+        "target_name",
+        "target_owner",
+        "target_visibility",
+        "target_sharedwith",
+    }:
 
         if key not in payload:
             LOGGER.error(
-                '[%s] Invalid access grant request, missing %s.' %
-                (payload['reqid'], key)
+                "[%s] Invalid access grant request, missing %s."
+                % (payload["reqid"], key)
             )
 
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid access grant request."],
+                "messages": ["Invalid access grant request."],
             }
 
-    originating_userid = int(payload['user_id'])
-    originating_user_role = payload['user_role']
-    target_userid = int(payload['target_owner'])
-    target_sharedwith = payload['target_sharedwith']
+    originating_userid = int(payload["user_id"])
+    originating_user_role = payload["user_role"]
+    target_userid = int(payload["target_owner"])
+    target_sharedwith = payload["target_sharedwith"]
 
     try:
 
-        currproc = mp.current_process()
-
-        # override permissions JSON if necessary
-        if override_permissions_json:
-            currproc.permissions_json = override_permissions_json
-
         # validate the access request
         access_granted = load_policy_and_check_access(
-            currproc.permissions_json,
-            userid=payload['user_id'],
-            role=payload['user_role'],
-            action=payload['action'],
-            target_name=payload['target_name'],
-            target_owner=payload['target_owner'],
-            target_visibility=payload['target_visibility'],
-            target_sharedwith=payload['target_sharedwith']
+            permjson,
+            userid=payload["user_id"],
+            role=payload["user_role"],
+            action=payload["action"],
+            target_name=payload["target_name"],
+            target_owner=payload["target_owner"],
+            target_visibility=payload["target_visibility"],
+            target_sharedwith=payload["target_sharedwith"],
         )
 
-        # make sure the incoming user ID, target user ID, and any
-        # target_sharedwith user IDs actually exist in the database
-        engine = getattr(currproc, 'authdb_engine', None)
-
-        if override_authdb_path:
-            currproc.auth_db_path = override_authdb_path
-
-        if not engine:
-            (currproc.authdb_engine,
-             currproc.authdb_conn,
-             currproc.authdb_meta) = (
-                authdb.get_auth_db(
-                    currproc.auth_db_path,
-                    echo=raiseonfail
-                )
-            )
-
-        users = currproc.authdb_meta.tables['users']
+        users = meta.tables["users"]
         userids_to_check = [originating_userid, target_userid]
 
-        if (target_sharedwith and
-            target_sharedwith != '' and
-            target_sharedwith.lower() != 'none'):
+        if (
+            target_sharedwith
+            and target_sharedwith != ""
+            and target_sharedwith.lower() != "none"
+        ):
 
-            sharedwith_userids = target_sharedwith.split(',')
+            sharedwith_userids = target_sharedwith.split(",")
             sharedwith_userids = [int(x) for x in sharedwith_userids]
             userids_to_check.extend(sharedwith_userids)
 
         userids_to_check = list(set(userids_to_check))
 
         # check if the originating_userid is legit
-        s = select([
-            users.c.user_id
-        ]).select_from(users).where(
-            users.c.user_id == originating_userid
-        ).where(
-            users.c.user_role == originating_user_role
-        ).where(
-            users.c.is_active.is_(True)
+        s = (
+            select(users.c.user_id)
+            .select_from(users)
+            .where(users.c.user_id == originating_userid)
+            .where(users.c.user_role == originating_user_role)
+            .where(users.c.is_active.is_(True))
         )
-        result = currproc.authdb_conn.execute(s)
-        row = result.scalar()
+        with engine.begin() as conn:
+            result = conn.execute(s)
+            row = result.scalar()
 
         if not row or row != originating_userid:
 
             LOGGER.warning(
                 "[%s] Access check failed. "
                 "user_id: %s with role: '%s' attempted '%s' on '%s', "
-                "which was owned by user_id: %s and had visibility: '%s'. " %
-                (payload['reqid'],
-                 pii_hash(originating_userid, payload['pii_salt']),
-                 payload['user_role'],
-                 payload['action'],
-                 payload['target_name'],
-                 pii_hash(target_userid, payload['pii_salt']),
-                 payload['target_visibility'])
+                "which was owned by user_id: %s and had visibility: '%s'. "
+                % (
+                    payload["reqid"],
+                    pii_hash(originating_userid, payload["pii_salt"]),
+                    payload["user_role"],
+                    payload["action"],
+                    payload["target_name"],
+                    pii_hash(target_userid, payload["pii_salt"]),
+                    payload["target_visibility"],
+                )
             )
 
             return {
-                'success': False,
-                'failure_reason': 'user initiating request is not valid',
-                'messages': ['Access request check successful. '
-                             'Access granted: False.']
+                "success": False,
+                "failure_reason": "user initiating request is not valid",
+                "messages": [
+                    "Access request check successful. "
+                    "Access granted: False."
+                ],
             }
 
         # now check if the rest of the user IDs make sense
-        s = select([
-            users.c.user_id,
-        ]).select_from(users).where(
-            users.c.user_id.in_(userids_to_check)
-        ).where(
-            users.c.is_active.is_(True)
+        s = (
+            select(
+                users.c.user_id,
+            )
+            .select_from(users)
+            .where(users.c.user_id.in_(userids_to_check))
+            .where(users.c.is_active.is_(True))
         )
 
-        result = currproc.authdb_conn.execute(s)
-        rows = result.fetchall()
-        result.close()
+        with engine.begin() as conn:
+            result = conn.execute(s)
+            rows = result.fetchall()
 
         try:
 
@@ -243,24 +241,29 @@ def check_user_access(payload,
                         "[%s] Access check success: %s. "
                         "user_id: %s with role: '%s' attempted '%s' on '%s', "
                         "which was owned by user_id: %s "
-                        "and had visibility: '%s'. " %
-                        (payload['reqid'], access_granted,
-                         pii_hash(originating_userid, payload['pii_salt']),
-                         payload['user_role'],
-                         payload['action'],
-                         payload['target_name'],
-                         pii_hash(target_userid, payload['pii_salt']),
-                         payload['target_visibility'])
+                        "and had visibility: '%s'. "
+                        % (
+                            payload["reqid"],
+                            access_granted,
+                            pii_hash(originating_userid, payload["pii_salt"]),
+                            payload["user_role"],
+                            payload["action"],
+                            payload["target_name"],
+                            pii_hash(target_userid, payload["pii_salt"]),
+                            payload["target_visibility"],
+                        )
                     )
 
                     retdict = {
-                        'success': access_granted,
-                        'messages': ['Access request check successful. '
-                                     'Access granted: %s.' % access_granted]
+                        "success": access_granted,
+                        "messages": [
+                            "Access request check successful. "
+                            "Access granted: %s." % access_granted
+                        ],
                     }
 
                     if not access_granted:
-                        retdict['failure_reason'] = 'action not permitted'
+                        retdict["failure_reason"] = "action not permitted"
 
                     return retdict
 
@@ -270,23 +273,27 @@ def check_user_access(payload,
                         "[%s] Access check failed. "
                         "user_id: %s with role: '%s' attempted '%s' on '%s', "
                         "which was owned by user_id: %s "
-                        "and had visibility: '%s'. " %
-                        (payload['reqid'],
-                         pii_hash(originating_userid, payload['pii_salt']),
-                         payload['user_role'],
-                         payload['action'],
-                         payload['target_name'],
-                         pii_hash(target_userid, payload['pii_salt']),
-                         payload['target_visibility'])
+                        "and had visibility: '%s'. "
+                        % (
+                            payload["reqid"],
+                            pii_hash(originating_userid, payload["pii_salt"]),
+                            payload["user_role"],
+                            payload["action"],
+                            payload["target_name"],
+                            pii_hash(target_userid, payload["pii_salt"]),
+                            payload["target_visibility"],
+                        )
                     )
 
                     return {
-                        'success': False,
-                        'failure_reason': (
-                            'users specified as owner or shared-with not found'
+                        "success": False,
+                        "failure_reason": (
+                            "users specified as owner or shared-with not found"
                         ),
-                        'messages': ['Access request check successful. '
-                                     'Access granted: False.']
+                        "messages": [
+                            "Access request check successful. "
+                            "Access granted: False."
+                        ],
                     }
 
             else:
@@ -295,23 +302,27 @@ def check_user_access(payload,
                     "[%s] Access check failed. "
                     "user_id: '%s' with role: '%s' attempted '%s' on '%s', "
                     "which was owned by user_id: %s "
-                    "and had visibility: '%s'." %
-                    (payload['reqid'],
-                     pii_hash(originating_userid, payload['pii_salt']),
-                     payload['user_role'],
-                     payload['action'],
-                     payload['target_name'],
-                     pii_hash(target_userid, payload['pii_salt']),
-                     payload['target_visibility'])
+                    "and had visibility: '%s'."
+                    % (
+                        payload["reqid"],
+                        pii_hash(originating_userid, payload["pii_salt"]),
+                        payload["user_role"],
+                        payload["action"],
+                        payload["target_name"],
+                        pii_hash(target_userid, payload["pii_salt"]),
+                        payload["target_visibility"],
+                    )
                 )
 
                 return {
-                    'success': False,
-                    'failure_reason': (
-                        'none of the users specified in the request were found'
+                    "success": False,
+                    "failure_reason": (
+                        "none of the users specified in the request were found"
                     ),
-                    'messages': ['Access request check successful. '
-                                 'Access granted: False.']
+                    "messages": [
+                        "Access request check successful. "
+                        "Access granted: False."
+                    ],
                 }
 
         except Exception as e:
@@ -319,23 +330,26 @@ def check_user_access(payload,
             LOGGER.error(
                 "[%s] Access check ran into an exception: %r. "
                 "user_id: %s with role: '%s' attempted '%s' on '%s', "
-                "which was owned by user_id: '%s' and had visibility: '%s'." %
-                (payload['reqid'], e,
-                 pii_hash(originating_userid, payload['pii_salt']),
-                 payload['user_role'],
-                 payload['action'],
-                 payload['target_name'],
-                 pii_hash(target_userid, payload['pii_salt']),
-                 payload['target_visibility'])
+                "which was owned by user_id: '%s' and had visibility: '%s'."
+                % (
+                    payload["reqid"],
+                    e,
+                    pii_hash(originating_userid, payload["pii_salt"]),
+                    payload["user_role"],
+                    payload["action"],
+                    payload["target_name"],
+                    pii_hash(target_userid, payload["pii_salt"]),
+                    payload["target_visibility"],
+                )
             )
 
             if raiseonfail:
                 raise
 
             return {
-                'success': False,
-                'failure_reason': 'exception when checking the DB',
-                'messages': ["Access request check failed."],
+                "success": False,
+                "failure_reason": "exception when checking the DB",
+                "messages": ["Access request check failed."],
             }
 
     except Exception as e:
@@ -346,28 +360,33 @@ def check_user_access(payload,
         LOGGER.error(
             "[%s] Access check ran into an exception: %r. "
             "user_id: %s with role: '%s' attempted '%s' on '%s', "
-            "which was owned by user_id: %s and had visibility: '%s'." %
-            (payload['reqid'], e,
-             pii_hash(originating_userid, payload['pii_salt']),
-             payload['user_role'],
-             payload['action'],
-             payload['target_name'],
-             pii_hash(target_userid, payload['pii_salt']),
-             payload['target_visibility'])
+            "which was owned by user_id: %s and had visibility: '%s'."
+            % (
+                payload["reqid"],
+                e,
+                pii_hash(originating_userid, payload["pii_salt"]),
+                payload["user_role"],
+                payload["action"],
+                payload["target_name"],
+                pii_hash(target_userid, payload["pii_salt"]),
+                payload["target_visibility"],
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': 'exception when checking the DB',
-            'messages': ["Could not validate access to the requested item."],
+            "success": False,
+            "failure_reason": "exception when checking the DB",
+            "messages": ["Could not validate access to the requested item."],
         }
 
 
-def check_user_limit(payload,
-                     raiseonfail=False,
-                     override_permissions_json=None,
-                     override_authdb_path=None,
-                     config=None):
+def check_user_limit(
+    payload: dict,
+    raiseonfail: bool = False,
+    override_permissions_json: str = None,
+    override_authdb_path: str = None,
+    config: SimpleNamespace = None,
+) -> dict:
     """Applies a specified limit to an item based on a permissions policy.
 
     Parameters
@@ -422,85 +441,68 @@ def check_user_limit(payload,
 
     """
 
-    for key in ('reqid', 'pii_salt'):
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=override_permissions_json,
+        raiseonfail=raiseonfail,
+    )
+
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' from request" % key
                 ),
-                'messages': ["Invalid access grant request."],
+                "messages": ["Invalid access grant request."],
             }
 
-    for key in ('user_id', 'user_role', 'limit_name', 'value_to_check'):
+    for key in ("user_id", "user_role", "limit_name", "value_to_check"):
 
         if key not in payload:
             LOGGER.error(
-                '[%s] Invalid limit check request, missing %s.' %
-                (payload['reqid'], key)
+                "[%s] Invalid limit check request, missing %s."
+                % (payload["reqid"], key)
             )
 
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' from request" % key
                 ),
-                'messages': ["Invalid limit check request."],
+                "messages": ["Invalid limit check request."],
             }
 
-    originating_userid = int(payload['user_id'])
-    originating_user_role = str(payload['user_role'])
+    originating_userid = int(payload["user_id"])
+    originating_user_role = str(payload["user_role"])
 
     try:
 
-        currproc = mp.current_process()
-
-        # override if necessary
-        if override_permissions_json:
-            currproc.permissions_json = override_permissions_json
-
         # load the permissions JSON
         limit_checked = load_policy_and_check_limits(
-            currproc.permissions_json,
-            payload['user_role'],
-            payload['limit_name'],
-            payload['value_to_check']
+            permjson,
+            payload["user_role"],
+            payload["limit_name"],
+            payload["value_to_check"],
         )
 
         # make sure the incoming user ID and role actually exist in the database
-        engine = getattr(currproc, 'authdb_engine', None)
+        users = meta.tables["users"]
 
-        if override_authdb_path:
-            currproc.auth_db_path = override_authdb_path
-
-        if not engine:
-            (currproc.authdb_engine,
-             currproc.authdb_conn,
-             currproc.authdb_meta) = (
-                authdb.get_auth_db(
-                    currproc.auth_db_path,
-                    echo=raiseonfail
-                )
-            )
-
-        users = currproc.authdb_meta.tables['users']
-
-        s = select([
-            users.c.user_id
-        ]).select_from(users).where(
-            users.c.user_id == originating_userid
-        ).where(
-            users.c.user_role == originating_user_role
-        ).where(
-            users.c.is_active.is_(True)
+        s = (
+            select(users.c.user_id)
+            .select_from(users)
+            .where(users.c.user_id == originating_userid)
+            .where(users.c.user_role == originating_user_role)
+            .where(users.c.is_active.is_(True))
         )
 
-        result = currproc.authdb_conn.execute(s)
-        rows = result.fetchall()
-        result.close()
+        with engine.begin() as conn:
+            result = conn.execute(s)
+            rows = result.fetchall()
 
         try:
 
@@ -509,25 +511,27 @@ def check_user_limit(payload,
                 LOGGER.info(
                     "[%s] Limit check success: %s. "
                     "user_id: %s with role: '%s', limit name: '%s', "
-                    "value checked against limit was: %s." %
-                    (payload['reqid'],
-                     limit_checked,
-                     pii_hash(originating_userid, payload['pii_salt']),
-                     payload['user_role'],
-                     payload['limit_name'],
-                     payload['value_to_check'])
+                    "value checked against limit was: %s."
+                    % (
+                        payload["reqid"],
+                        limit_checked,
+                        pii_hash(originating_userid, payload["pii_salt"]),
+                        payload["user_role"],
+                        payload["limit_name"],
+                        payload["value_to_check"],
+                    )
                 )
 
                 retdict = {
-                    'success': limit_checked,
-                    'messages': ['Limit check successful. '
-                                 'Limit check passed: %s.' % limit_checked]
+                    "success": limit_checked,
+                    "messages": [
+                        "Limit check successful. "
+                        "Limit check passed: %s." % limit_checked
+                    ],
                 }
 
                 if not limit_checked:
-                    retdict['failure_reason'] = (
-                        "user is over limit"
-                    )
+                    retdict["failure_reason"] = "user is over limit"
                 return retdict
 
             else:
@@ -536,19 +540,22 @@ def check_user_limit(payload,
                     "[%s] Limit check failed. "
                     "Possibly unknown user_id: %s with "
                     "role: '%s', limit name: '%s', "
-                    "value checked against limit was: %s." %
-                    (payload['reqid'],
-                     pii_hash(originating_userid, payload['pii_salt']),
-                     payload['user_role'],
-                     payload['limit_name'],
-                     payload['value_to_check'])
+                    "value checked against limit was: %s."
+                    % (
+                        payload["reqid"],
+                        pii_hash(originating_userid, payload["pii_salt"]),
+                        payload["user_role"],
+                        payload["limit_name"],
+                        payload["value_to_check"],
+                    )
                 )
 
                 return {
-                    'success': False,
-                    'failure_reason': 'user attempting access not found',
-                    'messages': ['Limit check successful. '
-                                 'Limit check passed: False.']
+                    "success": False,
+                    "failure_reason": "user attempting access not found",
+                    "messages": [
+                        "Limit check successful. " "Limit check passed: False."
+                    ],
                 }
 
         except Exception as e:
@@ -560,19 +567,21 @@ def check_user_limit(payload,
                 "[%s] Limit check ran into an exception: %r. "
                 "Provided user_id: %s with "
                 "role: '%s', limit name: '%s', "
-                "value checked against limit was: %s." %
-                (payload['reqid'],
-                 e,
-                 pii_hash(originating_userid, payload['pii_salt']),
-                 payload['user_role'],
-                 payload['limit_name'],
-                 payload['value_to_check'])
+                "value checked against limit was: %s."
+                % (
+                    payload["reqid"],
+                    e,
+                    pii_hash(originating_userid, payload["pii_salt"]),
+                    payload["user_role"],
+                    payload["limit_name"],
+                    payload["value_to_check"],
+                )
             )
 
             return {
-                'success': False,
-                'failure_reason': 'exception when checking the DB',
-                'messages': ["Limit check failed."],
+                "success": False,
+                "failure_reason": "exception when checking the DB",
+                "messages": ["Limit check failed."],
             }
 
     except Exception as e:
@@ -584,18 +593,21 @@ def check_user_limit(payload,
             "[%s] Limit check ran into an exception: %r. "
             "Provided user_id: %s with "
             "role: '%s', limit name: '%s', "
-            "value checked against limit was: %s." %
-            (payload['reqid'],
-             e,
-             pii_hash(originating_userid, payload['pii_salt']),
-             payload['user_role'],
-             payload['limit_name'],
-             payload['value_to_check'])
+            "value checked against limit was: %s."
+            % (
+                payload["reqid"],
+                e,
+                pii_hash(originating_userid, payload["pii_salt"]),
+                payload["user_role"],
+                payload["limit_name"],
+                payload["value_to_check"],
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': 'exception when checking the DB',
-            'messages': ["Could not validate limit "
-                         "rule for the requested item."],
+            "success": False,
+            "failure_reason": "exception when checking the DB",
+            "messages": [
+                "Could not validate limit " "rule for the requested item."
+            ],
         }

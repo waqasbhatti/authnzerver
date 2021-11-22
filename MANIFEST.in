@@ -12,11 +12,9 @@ include authnzerver/default-permissions-model.json
 include authnzerver/disposable_email_blocklist.conf
 include authnzerver/top-10k-passwords.txt
 
-recursive-include authnzerver/frontend/static/js *.js
-recursive-include authnzerver/frontend/static/css *.css
-recursive-include authnzerver/frontend/templates *.html
-
 global-exclude *.pkl
 global-exclude *.pyc
 global-exclude .DS_Store
 global-exclude *.map
+global-exclude *env*
+global-exclude *venv*

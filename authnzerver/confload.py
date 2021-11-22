@@ -12,6 +12,7 @@ an envfile.
 #############
 
 import logging
+from typing import Union, Any, Sequence
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
@@ -40,10 +41,10 @@ from .modtools import object_from_string
 ## FILE AND URL HANDLING FUNCTIONS ##
 #####################################
 
-ENV_REGEX = re.compile(r'\[\[(\w+)\]\]')
+ENV_REGEX = re.compile(r"\[\[(\w+)\]\]")
 
 
-def _dict_get(datadict, keylist):
+def _dict_get(datadict: dict, keylist: Union[Sequence, str]) -> Any:
     """This gets a requested dict key by walking the dict.
 
     Parameters
@@ -89,14 +90,14 @@ def _dict_get(datadict, keylist):
 
     # convert the key list items to a list and handle str -> int conversions
     if isinstance(keylist, str):
-        in_keylist = keylist.split('.')
+        in_keylist = keylist.split(".")
     else:
         in_keylist = [str(x) for x in keylist]
 
     use_keylist = []
     for item in in_keylist:
-        if '_arr_' in item:
-            arr_item = item.replace('_arr_', '')
+        if "_arr_" in item:
+            arr_item = item.replace("_arr_", "")
             arr_item = int(arr_item)
             use_keylist.append(arr_item)
         else:
@@ -105,10 +106,12 @@ def _dict_get(datadict, keylist):
     return reduce(getitem, use_keylist, datadict)
 
 
-def item_from_file(file_path,
-                   file_spec,
-                   basedir=None):
-    '''Reads a conf item from a file.
+def item_from_file(
+    file_path: str,
+    file_spec: Union[tuple, str],
+    basedir: str = None,
+) -> Any:
+    """Reads a conf item from a file.
 
     Parameters
     ----------
@@ -148,15 +151,14 @@ def item_from_file(file_path,
         Returns the value of the conf item. The calling function is
         responsible for casting to the correct type.
 
-    '''
+    """
 
     # handle special substitutions
-    if '[[basedir]]' in file_path:
-        file_to_load = file_path.replace('[[basedir]]', basedir)
-    elif '[[homedir]]' in file_path:
+    if "[[basedir]]" in file_path:
+        file_to_load = file_path.replace("[[basedir]]", basedir)
+    elif "[[homedir]]" in file_path:
         file_to_load = file_path.replace(
-            '[[homedir]]',
-            os.path.abspath(os.path.expanduser('~'))
+            "[[homedir]]", os.path.abspath(os.path.expanduser("~"))
         )
     else:
         file_to_load = file_path
@@ -165,8 +167,10 @@ def item_from_file(file_path,
 
     if not os.path.exists(file_to_load):
 
-        LOGGER.error("Requested conf item cannot be loaded because "
-                     "the file path doesn't exist.")
+        LOGGER.error(
+            "Requested conf item cannot be loaded because "
+            "the file path doesn't exist."
+        )
         return None
 
     #
@@ -174,27 +178,27 @@ def item_from_file(file_path,
     #
 
     # string load
-    if isinstance(file_spec, str) and file_spec == 'string':
+    if isinstance(file_spec, str) and file_spec == "string":
 
-        with open(file_to_load, 'r') as infd:
-            conf_item = infd.read().strip('\n')
+        with open(file_to_load, "r") as infd:
+            conf_item = infd.read().strip("\n")
 
         return conf_item
 
     # JSON load entire file
-    elif isinstance(file_spec, str) and file_spec == 'json':
+    elif isinstance(file_spec, str) and file_spec == "json":
 
-        with open(file_to_load, 'r') as infd:
+        with open(file_to_load, "r") as infd:
             conf_item = json.load(infd)
 
         return conf_item
 
-    elif isinstance(file_spec, tuple) and file_spec[0] == 'json':
+    elif isinstance(file_spec, tuple) and file_spec[0] == "json":
 
         item_path = file_spec[-1]
-        item_path = item_path.split('.')
+        item_path = item_path.split(".")
 
-        with open(file_to_load, 'r') as infd:
+        with open(file_to_load, "r") as infd:
             conf_dict = json.load(infd)
             conf_item = _dict_get(conf_dict, item_path)
 
@@ -206,11 +210,13 @@ def item_from_file(file_path,
         return None
 
 
-def item_from_url(url,
-                  url_spec,
-                  environment,
-                  timeout=5.0):
-    '''Reads a conf item from a URL.
+def item_from_url(
+    url: str,
+    url_spec: tuple,
+    environment,
+    timeout: Union[float, int] = 5.0,
+):
+    """Reads a conf item from a URL.
 
     Parameters
     ----------
@@ -272,13 +278,13 @@ def item_from_url(url,
         Returns the value of the conf item. The calling function is
         responsible for casting to the correct type.
 
-    '''
+    """
 
     if not isinstance(url_spec, tuple):
         LOGGER.error("Invalid URL spec provided for conf item.")
         return None
 
-    if url_spec[0] != 'http':
+    if url_spec[0] != "http":
         LOGGER.error("Invalid URL spec provided for conf item.")
         return None
 
@@ -288,12 +294,12 @@ def item_from_url(url,
 
     request_options = url_spec[1]
     item_type = url_spec[2]
-    if item_type == 'json' and len(url_spec) == 4:
+    if item_type == "json" and len(url_spec) == 4:
         item_path = url_spec[3]
     else:
         item_path = None
 
-    for key in ('method', 'headers', 'data'):
+    for key in ("method", "headers", "data"):
         if key not in request_options:
             LOGGER.error("Missing '%s' key in HTTP request parameters.")
             return None
@@ -302,44 +308,44 @@ def item_from_url(url,
     # handle environment var substitutions in request_options 'headers' or
     # 'data'
     #
-    if isinstance(request_options['headers'], dict):
-        for key in request_options['headers']:
+    if isinstance(request_options["headers"], dict):
+        for key in request_options["headers"]:
 
-            val = request_options['headers'][key]
+            val = request_options["headers"][key]
             env_items = ENV_REGEX.findall(val)
 
             for item in env_items:
-                val = val.replace('[[%s]]' % item, environment.get(item, ''))
+                val = val.replace("[[%s]]" % item, environment.get(item, ""))
 
-            request_options['headers'][key] = val
+            request_options["headers"][key] = val
 
-    if isinstance(request_options['data'], dict):
-        for key in request_options['data']:
+    if isinstance(request_options["data"], dict):
+        for key in request_options["data"]:
 
-            val = request_options['data'][key]
+            val = request_options["data"][key]
             env_items = ENV_REGEX.findall(val)
 
             for item in env_items:
-                val = val.replace('[[%s]]' % item, environment.get(item, ''))
+                val = val.replace("[[%s]]" % item, environment.get(item, ""))
 
-            request_options['data'][key] = val
+            request_options["data"][key] = val
 
     #
     # now process the request
     #
 
-    req_timeout = request_options.get('timeout', timeout)
+    req_timeout = request_options.get("timeout", timeout)
 
-    if request_options['method'] == 'post':
+    if request_options["method"] == "post":
 
         req = requests.post
 
         # add in the headers and data
         req_func = partial(
             req,
-            headers=request_options['headers'],
-            data=request_options['data'],
-            timeout=req_timeout
+            headers=request_options["headers"],
+            data=request_options["data"],
+            timeout=req_timeout,
         )
 
     else:
@@ -349,8 +355,8 @@ def item_from_url(url,
         # add in the headers and data
         req_func = partial(
             req,
-            headers=request_options['headers'],
-            params=request_options['data'],
+            headers=request_options["headers"],
+            params=request_options["data"],
             timeout=req_timeout,
         )
 
@@ -364,16 +370,16 @@ def item_from_url(url,
         resp = req_func(url)
         resp.raise_for_status()
 
-        if item_type == 'string':
-            conf_item = resp.text.rstrip('\n')
+        if item_type == "string":
+            conf_item = resp.text.rstrip("\n")
 
-        elif item_type == 'json' and item_path is None:
+        elif item_type == "json" and item_path is None:
             conf_item = resp.json()
 
-        elif item_type == 'json' and item_path is not None:
+        elif item_type == "json" and item_path is not None:
 
             conf_dict = resp.json()
-            conf_item = _dict_get(conf_dict, item_path.split('.'))
+            conf_item = _dict_get(conf_dict, item_path.split("."))
 
         else:
             LOGGER.error("Unknown item type provided.")
@@ -381,8 +387,7 @@ def item_from_url(url,
 
     except Exception:
 
-        LOGGER.error("Failed to retrieve config "
-                     "item value from URL.")
+        LOGGER.error("Failed to retrieve config " "item value from URL.")
         conf_item = None
 
     finally:
@@ -399,16 +404,19 @@ def item_from_url(url,
 ## CONFIG HANDLING FUNCTIONS ##
 ###############################
 
-def get_conf_item(env_key,
-                  environment,
-                  options_object,
-                  options_key=None,
-                  vartype=str,
-                  default=None,
-                  readable_from_file=False,
-                  postprocess_value=None,
-                  raiseonfail=True,
-                  basedir=None):
+
+def get_conf_item(
+    env_key: Union[str, Sequence],
+    environment,
+    options_object,
+    options_key: str = None,
+    vartype=str,
+    default=None,
+    readable_from_file: bool = False,
+    postprocess_value: str = None,
+    raiseonfail: bool = True,
+    basedir: str = None,
+) -> Any:
     """This loads a config item from the environment or command-line options.
 
     The order of precedence is:
@@ -438,18 +446,18 @@ def get_conf_item(env_key,
     options_object : Tornado options object
         If the environment variable isn't defined, the next place this function
         will try to get the item value from a passed-in `Tornado options
-        <http://www.tornadoweb.org/en/stable/options.html>`_ object, which
+        <https://www.tornadoweb.org/en/stable/options.html>`_ object, which
         parses command-line options.
+
+    options_key : str
+        This is the attribute to look up in the options object for the value of
+        the conf item.
 
     vartype : Python type object: float, str, int, etc.
         The type to use to coerce the input variable to a specific Python type.
 
     default : Any
         The default value of the conf item.
-
-    options_key : str
-        This is the attribute to look up in the options object for the value of
-        the conf item.
 
     readable_from_file : {'json','string', others, see below} or False
         If this is specified, and the conf item key (env_key or options_key
@@ -568,29 +576,31 @@ def get_conf_item(env_key,
     #
 
     # if the conf item doesn't exist and there's no default, fail.
-    if ( (confitem is None or len(str(confitem).strip()) == 0) and
-         (default is None) ):
+    if (confitem is None or len(str(confitem).strip()) == 0) and (
+        default is None
+    ):
 
         if raiseonfail:
             raise ValueError(
                 'Config item: "%s" is invalid/missing, '
-                'no default provided.' % env_key
+                "no default provided." % env_key
             )
 
         else:
             LOGGER.error(
                 'Config item: "%s" is invalid/missing, '
-                'no default provided.' % env_key
+                "no default provided." % env_key
             )
             return None
 
     # if the conf item doesn't exist, but a default exists, process that.
-    elif ( (confitem is None or len(str(confitem).strip()) == 0) and
-           (default is not None) ):
+    elif (confitem is None or len(str(confitem).strip()) == 0) and (
+        default is not None
+    ):
 
         LOGGER.warning(
             'Config item: "%s" is invalid/missing, '
-            'using provided default.' % env_key
+            "using provided default." % env_key
         )
 
         confitem = default
@@ -600,12 +610,11 @@ def get_conf_item(env_key,
         #
         if isinstance(confitem, str):
 
-            if '[[basedir]]' in confitem:
-                file_check = confitem.replace('[[basedir]]', basedir)
-            elif '[[homedir]]' in confitem:
+            if "[[basedir]]" in confitem:
+                file_check = confitem.replace("[[basedir]]", basedir)
+            elif "[[homedir]]" in confitem:
                 file_check = confitem.replace(
-                    '[[homedir]]',
-                    os.path.abspath(os.path.expanduser('~'))
+                    "[[homedir]]", os.path.abspath(os.path.expanduser("~"))
                 )
             else:
                 file_check = confitem
@@ -619,64 +628,73 @@ def get_conf_item(env_key,
         #
         # handle all the cases
         #
-        if (file_check and isinstance(readable_from_file, str) and
-            readable_from_file == 'string'):
+        if (
+            file_check
+            and isinstance(readable_from_file, str)
+            and readable_from_file == "string"
+        ):
 
-            confitem = item_from_file(confitem,
-                                      readable_from_file,
-                                      basedir=basedir)
+            confitem = item_from_file(
+                confitem, readable_from_file, basedir=basedir
+            )
 
             # check if the confitem isn't None because of a failure
             if confitem is None and raiseonfail:
                 raise ValueError(
                     'Config item: "%s" is invalid/missing, '
-                    'could not retrieve from default file.' % env_key
+                    "could not retrieve from default file." % env_key
                 )
 
             confitem = vartype(confitem)
 
-        elif (file_check and isinstance(readable_from_file, str) and
-              readable_from_file == 'json'):
+        elif (
+            file_check
+            and isinstance(readable_from_file, str)
+            and readable_from_file == "json"
+        ):
 
-            confitem = item_from_file(confitem,
-                                      readable_from_file,
-                                      basedir=basedir)
+            confitem = item_from_file(
+                confitem, readable_from_file, basedir=basedir
+            )
 
             # check if the confitem isn't None because of a failure
             if confitem is None and raiseonfail:
                 raise ValueError(
                     'Config item: "%s" is invalid/missing, '
-                    'could not retrieve from default file.' % env_key
+                    "could not retrieve from default file." % env_key
                 )
 
-        elif (file_check and isinstance(readable_from_file, tuple) and
-              readable_from_file[0] == 'json'):
+        elif (
+            file_check
+            and isinstance(readable_from_file, tuple)
+            and readable_from_file[0] == "json"
+        ):
 
-            confitem = item_from_file(confitem,
-                                      readable_from_file,
-                                      basedir=basedir)
+            confitem = item_from_file(
+                confitem, readable_from_file, basedir=basedir
+            )
 
             # check if the confitem isn't None because of a failure
             if confitem is None and raiseonfail:
                 raise ValueError(
                     'Config item: "%s" is invalid/missing, '
-                    'could not retrieve from default file.' % env_key
+                    "could not retrieve from default file." % env_key
                 )
 
-        elif (isinstance(confitem, str) and
-              confitem.startswith('http') and
-              isinstance(readable_from_file, tuple) and
-              readable_from_file[0] == 'http'):
+        elif (
+            isinstance(confitem, str)
+            and confitem.startswith("http")
+            and isinstance(readable_from_file, tuple)
+            and readable_from_file[0] == "http"
+        ):
 
-            confitem = item_from_url(confitem,
-                                     readable_from_file,
-                                     environment)
+            confitem = item_from_url(confitem, readable_from_file, environment)
 
             # check if the confitem isn't None because of a failure
             if confitem is None and raiseonfail:
                 raise ValueError(
                     'Config item: "%s" is invalid/missing, '
-                    'could not retrieve from default URL.' % env_key
+                    "could not retrieve from default URL." % env_key
                 )
 
         # otherwise, it's not a file or it doesn't exist, return it as is
@@ -702,12 +720,11 @@ def get_conf_item(env_key,
     #
     if isinstance(confitem, str):
 
-        if '[[basedir]]' in confitem:
-            file_check = confitem.replace('[[basedir]]', basedir)
-        elif '[[homedir]]' in confitem:
+        if "[[basedir]]" in confitem:
+            file_check = confitem.replace("[[basedir]]", basedir)
+        elif "[[homedir]]" in confitem:
             file_check = confitem.replace(
-                '[[homedir]]',
-                os.path.abspath(os.path.expanduser('~'))
+                "[[homedir]]", os.path.abspath(os.path.expanduser("~"))
             )
         else:
             file_check = confitem
@@ -721,62 +738,71 @@ def get_conf_item(env_key,
     #
     # handle all the cases
     #
-    if (file_check and isinstance(readable_from_file, str) and
-        readable_from_file == 'string'):
+    if (
+        file_check
+        and isinstance(readable_from_file, str)
+        and readable_from_file == "string"
+    ):
 
-        confitem = item_from_file(confitem,
-                                  readable_from_file,
-                                  basedir=basedir)
+        confitem = item_from_file(
+            confitem, readable_from_file, basedir=basedir
+        )
 
         # check if the confitem isn't None because of a failure
         if confitem is None and raiseonfail:
             raise ValueError(
                 'Config item: "%s" is invalid/missing, '
-                'could not retrieve from provided file.' % env_key
+                "could not retrieve from provided file." % env_key
             )
 
-    elif (file_check and isinstance(readable_from_file, str) and
-          readable_from_file == 'json'):
+    elif (
+        file_check
+        and isinstance(readable_from_file, str)
+        and readable_from_file == "json"
+    ):
 
-        confitem = item_from_file(confitem,
-                                  readable_from_file,
-                                  basedir=basedir)
+        confitem = item_from_file(
+            confitem, readable_from_file, basedir=basedir
+        )
 
         # check if the confitem isn't None because of a failure
         if confitem is None and raiseonfail:
             raise ValueError(
                 'Config item: "%s" is invalid/missing, '
-                'could not retrieve from provided file.' % env_key
+                "could not retrieve from provided file." % env_key
             )
 
-    elif (file_check and isinstance(readable_from_file, tuple) and
-          readable_from_file[0] == 'json'):
+    elif (
+        file_check
+        and isinstance(readable_from_file, tuple)
+        and readable_from_file[0] == "json"
+    ):
 
-        confitem = item_from_file(confitem,
-                                  readable_from_file,
-                                  basedir=basedir)
+        confitem = item_from_file(
+            confitem, readable_from_file, basedir=basedir
+        )
 
         # check if the confitem isn't None because of a failure
         if confitem is None and raiseonfail:
             raise ValueError(
                 'Config item: "%s" is invalid/missing, '
-                'could not retrieve from provided file.' % env_key
+                "could not retrieve from provided file." % env_key
             )
 
-    elif (isinstance(confitem, str) and
-          confitem.startswith('http') and
-          isinstance(readable_from_file, tuple) and
-          readable_from_file[0] == 'http'):
+    elif (
+        isinstance(confitem, str)
+        and confitem.startswith("http")
+        and isinstance(readable_from_file, tuple)
+        and readable_from_file[0] == "http"
+    ):
 
-        confitem = item_from_url(confitem,
-                                 readable_from_file,
-                                 environment)
+        confitem = item_from_url(confitem, readable_from_file, environment)
 
         # check if the confitem isn't None because of a failure
         if confitem is None and raiseonfail:
             raise ValueError(
                 'Config item: "%s" is invalid/missing, '
-                'could not retrieve from provided URL.' % env_key
+                "could not retrieve from provided URL." % env_key
             )
 
     # otherwise, it's not a file or it doesn't exist, return it and cast to the
@@ -795,9 +821,11 @@ def get_conf_item(env_key,
     return confitem
 
 
-def load_config(conf_dict,
-                options_object,
-                envfile=None):
+def load_config(
+    conf_dict: dict,
+    options_object,
+    envfile: str = None,
+) -> SimpleNamespace:
     """Loads all the config items in config_dict.
 
     Parameters
@@ -898,7 +926,7 @@ def load_config(conf_dict,
     options_object : Tornado options object
         If the environment variable isn't defined for a config item, the next
         place this function will try to get the item value from a passed-in
-        `Tornado options <http://www.tornadoweb.org/en/stable/options.html>`_
+        `Tornado options <https://www.tornadoweb.org/en/stable/options.html>`_
         object, which parses command-line options.
 
     envfile : str or None
@@ -921,15 +949,15 @@ def load_config(conf_dict,
         LOGGER.warning(f"Using .env file at: {envfile}")
 
         # inspired by: https://stackoverflow.com/a/26859985
-        with open(envfile, 'r') as infd:
-            envfd = chain(('[DEFAULT]',), infd)
+        with open(envfile, "r") as infd:
+            envfd = chain(("[DEFAULT]",), infd)
             c = ConfigParser()
             c.read_file(envfd)
-            current_environment = c['DEFAULT']
+            current_environment = c["DEFAULT"]
 
     # if envfile is an instance of ConfigParser, load it
     elif isinstance(envfile, ConfigParser):
-        current_environment = envfile['DEFAULT']
+        current_environment = envfile["DEFAULT"]
 
     # if neither of the above work, fall back to the actual environment
     else:
@@ -939,13 +967,13 @@ def load_config(conf_dict,
     # get the basedir from either the environment or the options
     #
     basedir = get_conf_item(
-        conf_dict['basedir']['env'],
+        conf_dict["basedir"]["env"],
         current_environment,
         options_object,
-        options_key=conf_dict['basedir']['cmdline'],
-        vartype=conf_dict['basedir']['type'],
-        default=conf_dict['basedir']['default'],
-        readable_from_file=conf_dict['basedir']['readable_from_file'],
+        options_key=conf_dict["basedir"]["cmdline"],
+        vartype=conf_dict["basedir"]["type"],
+        default=conf_dict["basedir"]["default"],
+        readable_from_file=conf_dict["basedir"]["readable_from_file"],
     )
 
     loaded_options = SimpleNamespace()
@@ -953,15 +981,15 @@ def load_config(conf_dict,
     for key in conf_dict:
 
         conf_item_value = get_conf_item(
-            conf_dict[key]['env'],
+            conf_dict[key]["env"],
             current_environment,
             options_object,
-            options_key=conf_dict[key]['cmdline'],
-            vartype=conf_dict[key]['type'],
-            default=conf_dict[key]['default'],
-            readable_from_file=conf_dict[key]['readable_from_file'],
-            postprocess_value=conf_dict[key]['postprocess_value'],
-            basedir=basedir
+            options_key=conf_dict[key]["cmdline"],
+            vartype=conf_dict[key]["type"],
+            default=conf_dict[key]["default"],
+            readable_from_file=conf_dict[key]["readable_from_file"],
+            postprocess_value=conf_dict[key]["postprocess_value"],
+            basedir=basedir,
         )
         setattr(loaded_options, key, conf_item_value)
 

@@ -26,6 +26,7 @@ import json
 # thing when it converts dicts to JSON when a
 # tornado.web.RequestHandler.write(dict) is called.
 from .jsonencoder import FrontendEncoder
+
 json._default_encoder = FrontendEncoder()
 
 import ipaddress
@@ -38,52 +39,50 @@ import tornado.ioloop
 
 from sqlalchemy.sql import select
 
-from . import authdb as authdb_module
 from .messaging import encrypt_message, decrypt_message
+from authnzerver.actions.utils import get_procdb_permjson
 
 
 #########################
 ## REQ/RESP VALIDATION ##
 #########################
 
-def check_host(remote_ip):
+
+def check_host(remote_ip: str) -> bool:
     """
     This just returns False if the remote_ip != 127.0.0.1
 
     """
     try:
-        return (ipaddress.ip_address(remote_ip) ==
-                ipaddress.ip_address('127.0.0.1'))
+        return ipaddress.ip_address(remote_ip) == ipaddress.ip_address(
+            "127.0.0.1"
+        )
     except ValueError:
         return False
 
 
-def auth_echo(payload):
+def auth_echo(payload: dict):
     """
     This just echoes back the payload.
 
     """
-
-    # this checks if the database connection is live
     currproc = mp.current_process()
-    engine = getattr(currproc, 'authdb_engine', None)
-    if not engine:
-        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb_module.get_auth_db(
-                currproc.auth_db_path,
-                echo=False
-            )
-        )
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=None,
+        override_permissions_json=None,
+        raiseonfail=True,
+    )
 
-    permissions = currproc.authdb_meta.tables['roles']
-    s = select([permissions])
-    result = currproc.authdb_engine.execute(s)
-    # add the result to the outgoing payload
-    serializable_result = [dict(x) for x in result]
-    payload['dbtest'] = serializable_result
-    result.close()
+    with engine.begin() as conn:
+        permissions = meta.tables["roles"]
+        s = select(permissions)
+        result = conn.execute(s)
+        rows = result.fetchall()
+        # add the result to the outgoing payload
+        serializable_result = [dict(row._mapping) for row in rows]
+        payload["dbtest"] = serializable_result
 
-    LOGGER.info('responding from process: %s' % currproc.name)
+    LOGGER.info("responding from process: %s" % currproc.name)
     return payload
 
 
@@ -95,10 +94,7 @@ class EchoHandler(tornado.web.RequestHandler):
 
     """
 
-    def initialize(self,
-                   authdb,
-                   fernet_secret,
-                   executor):
+    def initialize(self, authdb, fernet_secret, executor):
         """
         This sets up stuff.
 
@@ -119,15 +115,17 @@ class EchoHandler(tornado.web.RequestHandler):
         if not ipcheck:
             raise tornado.web.HTTPError(status_code=400)
 
-        payload = decrypt_message(self.request.body,
-                                  self.fernet_secret,
-                                  'debug-request')
+        payload = decrypt_message(
+            self.request.body, self.fernet_secret, "debug-request"
+        )
         if not payload:
             raise tornado.web.HTTPError(status_code=401)
 
-        if payload['request'] != 'echo':
-            LOGGER.error("this handler can only echo things. "
-                         "invalid request: %s" % payload['request'])
+        if payload["request"] != "echo":
+            LOGGER.error(
+                "this handler can only echo things. "
+                "invalid request: %s" % payload["request"]
+            )
             raise tornado.web.HTTPError(status_code=400)
 
         # if we successfully got past host and decryption validation, then
@@ -136,25 +134,22 @@ class EchoHandler(tornado.web.RequestHandler):
 
             loop = tornado.ioloop.IOLoop.current()
             response_dict = await loop.run_in_executor(
-                self.executor,
-                auth_echo,
-                payload
+                self.executor, auth_echo, payload
             )
 
             if response_dict is not None:
                 encrypted_base64 = encrypt_message(
-                    response_dict,
-                    self.fernet_secret
+                    response_dict, self.fernet_secret
                 )
 
-                self.set_header('content-type','text/plain; charset=UTF-8')
+                self.set_header("content-type", "text/plain; charset=UTF-8")
                 self.write(encrypted_base64)
-                self.finish()
+                await self.finish()
 
             else:
                 raise tornado.web.HTTPError(status_code=401)
 
         except Exception:
 
-            LOGGER.exception('failed to understand request')
+            LOGGER.exception("failed to understand request")
             raise tornado.web.HTTPError(status_code=400)

@@ -46,11 +46,12 @@ from . import dictcache
 try:
     import asyncio
     import uvloop
+
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    IOLOOP_SPEC = 'uvloop'
+    IOLOOP_SPEC = "uvloop"
 except Exception:
     HAVE_UVLOOP = False
-    IOLOOP_SPEC = 'asyncio'
+    IOLOOP_SPEC = "asyncio"
 
 import tornado.ioloop
 import tornado.httpserver
@@ -59,10 +60,10 @@ import tornado.options
 from tornado.options import define, options
 import multiprocessing as mp
 
-
 #######################
 ## UTILITY FUNCTIONS ##
 #######################
+
 
 def _handle_mainproc_sigterm(signum, sigframe):
     """
@@ -73,10 +74,9 @@ def _handle_mainproc_sigterm(signum, sigframe):
     raise KeyboardInterrupt
 
 
-def _setup_auth_worker(authdb_path,
-                       fernet_secret,
-                       permissions_json,
-                       public_suffix_list):
+def _setup_auth_worker(
+    authdb_path, fernet_secret, permissions_json, public_suffix_list
+):
     """This stores secrets and the auth DB path in the worker loop's context.
 
     The worker will then open the DB and set up its Fernet instance by itself.
@@ -88,7 +88,7 @@ def _setup_auth_worker(authdb_path,
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     currproc = mp.current_process()
-    currproc.name = 'Authnzrv-Worker-' + currproc.name
+    currproc.name = "Authnzrv-Worker-" + currproc.name
 
     currproc.auth_db_path = authdb_path
     currproc.fernet_secret = fernet_secret
@@ -108,43 +108,58 @@ modpath = os.path.abspath(os.path.dirname(__file__))
 
 # load all of the conf vars as command-line options
 for cv in CONF:
-    define(CONF[cv]['cmdline'],
-           default=CONF[cv]['default'],
-           help=CONF[cv]['help'],
-           type=CONF[cv]['type'])
+    define(
+        CONF[cv]["cmdline"],
+        default=CONF[cv]["default"],
+        help=CONF[cv]["help"],
+        type=CONF[cv]["type"],
+    )
 
 #
 # extra config options provided only as command-line parameters
 #
 
 # the path to an env file containing environment variables
-define('envfile',
-       default=None,
-       help=('Path to a file containing environ variables '
-             'for testing/development.'),
-       type=str)
+define(
+    "envfile",
+    default=None,
+    help=(
+        "Path to a file containing environ variables "
+        "for testing/development."
+    ),
+    type=str,
+)
 
 # the path to the confvar file
-define('confvars',
-       default=os.path.join(modpath, 'confvars.py'),
-       help=('Path to the file containing the configuration '
-             'variables needed by the server and how to load them.'),
-       type=str)
+define(
+    "confvars",
+    default=os.path.join(modpath, "confvars.py"),
+    help=(
+        "Path to the file containing the configuration "
+        "variables needed by the server and how to load them."
+    ),
+    type=str,
+)
 
 # whether to make a new authdb if none exists
-define('autosetup',
-       default=False,
-       help=("If this is True, will automatically generate an SQLite "
-             "authentication database in the basedir, "
-             "copy over default-permissions-model.json and "
-             "confvars.py to the basedir for easy customization, and finally, "
-             "generate the communications secret file and the PII salt file."),
-       type=bool)
+define(
+    "autosetup",
+    default=False,
+    help=(
+        "If this is True, will automatically generate an SQLite "
+        "authentication database in the basedir, "
+        "copy over default-permissions-model.json and "
+        "confvars.py to the basedir for easy customization, and finally, "
+        "generate the communications secret file and the PII salt file."
+    ),
+    type=bool,
+)
 
 
 ##########
 ## MAIN ##
 ##########
+
 
 def main():
     """
@@ -154,14 +169,14 @@ def main():
 
     # parse the command line
     tornado.options.parse_command_line()
-    DEBUG = True if options.debugmode == 1 else False
+    debug = True if options.debugmode == 1 else False
 
     # get a logger
-    LOGGER = logging.getLogger(__name__)
-    if DEBUG:
-        LOGGER.setLevel(logging.DEBUG)
+    logger = logging.getLogger(__name__)
+    if debug:
+        logger.setLevel(logging.DEBUG)
     else:
-        LOGGER.setLevel(logging.INFO)
+        logger.setLevel(logging.INFO)
 
     ###################
     ## LOCAL IMPORTS ##
@@ -192,33 +207,40 @@ def main():
     # immediately
     if options.autosetup:
 
-        authdb_path, creds, secret_file, salt_file, env_file = (
-            autogen_secrets_authdb(
-                options.basedir,
-                interactive=True,
-            )
+        (
+            authdb_path,
+            creds,
+            secret_file,
+            salt_file,
+            env_file,
+        ) = autogen_secrets_authdb(
+            options.basedir,
+            interactive=True,
         )
 
-        LOGGER.warning(
-            "Auto-setup complete, exiting..."
-        )
-        LOGGER.warning(
+        logger.warning("Auto-setup complete, exiting...")
+        logger.warning(
             "Environment variables needed for the authnzerver to start "
             "have been written to:\n\n%s\n\n"
             "Edit this file as appropriate or add these "
-            "environment variables to the shell environment." %
-            os.path.abspath(env_file)
+            "environment variables to the shell environment."
+            % os.path.abspath(env_file)
         )
-        LOGGER.warning(
+        logger.warning(
             "To run the authnzerver with this env file, "
             "your selected auth DB, and the auto-setup generated "
             "secrets files in your selected authnzerver basedir, "
-            "start authnzerver with the following command:\n\n%s\n" %
-            ("authnzrv --basedir=\"%s\" --confvars=\"%s\" --envfile=\"%s\"" %
-             (os.path.abspath(options.basedir),
-              os.path.join(os.path.abspath(options.basedir),
-                           'confvars.py'),
-              os.path.abspath(env_file)))
+            "start authnzerver with the following command:\n\n%s\n"
+            % (
+                'authnzrv --basedir="%s" --confvars="%s" --envfile="%s"'
+                % (
+                    os.path.abspath(options.basedir),
+                    os.path.join(
+                        os.path.abspath(options.basedir), "confvars.py"
+                    ),
+                    os.path.abspath(env_file),
+                )
+            )
         )
         sys.exit(0)
 
@@ -228,30 +250,30 @@ def main():
     try:
 
         # update the conf dict with that loaded from confvars.py
-        LOCAL_CONF = object_from_string(
-            "%s::CONF" % options.confvars
-        )
-        CONF.update(LOCAL_CONF)
+        local_conf = object_from_string("%s::CONF" % options.confvars)
+        CONF.update(local_conf)
 
-        loaded_config = load_config(CONF,
-                                    options,
-                                    envfile=options.envfile)
+        loaded_config = load_config(CONF, options, envfile=options.envfile)
 
     except Exception:
 
-        LOGGER.error("One or more config variables could not be set "
-                     "from the environment, an envfile, or the command "
-                     "line options. Exiting...")
+        logger.error(
+            "One or more config variables could not be set "
+            "from the environment, an envfile, or the command "
+            "line options. Exiting..."
+        )
         raise
 
     maxworkers = loaded_config.workers
     basedir = loaded_config.basedir
-    LOGGER.info("The server's base directory is: %s" % os.path.abspath(basedir))
+    logger.info(
+        "The server's base directory is: %s" % os.path.abspath(basedir)
+    )
 
     port = loaded_config.port
     listen = loaded_config.listen
     sessionexpiry = loaded_config.sessionexpiry
-    LOGGER.info('Session token expiry is set to: %s days' % sessionexpiry)
+    logger.info("Session token expiry is set to: %s days" % sessionexpiry)
 
     # get the public suffix list for spam-checking full names of users
     public_suffix_list = get_public_suffix_list()
@@ -284,7 +306,7 @@ def main():
     # demand. we now map a sleep call to all processes so all of them are
     # ready at server start.
     #
-    sleep_times = [random.random()/2.0 for x in range(maxworkers)]
+    sleep_times = [random.random() / 2.0 for _ in range(maxworkers)]
     executor.map(time.sleep, sleep_times)
 
     # handle SIGTERM so we exit cleanly
@@ -298,24 +320,26 @@ def main():
     allowed_hosts = set({})
 
     # get any additional hosts to allow from the config
-    config_allowed_hosts = loaded_config.allowedhosts.split(';')
+    config_allowed_hosts = loaded_config.allowedhosts.split(";")
     for h in config_allowed_hosts:
         if len(h.strip()) > 0:
             allowed_hosts.add(re.escape(h.strip()))
 
-    allowed_hosts_regex = r"(%s)" % '|'.join(allowed_hosts)
+    allowed_hosts_regex = r"(%s)" % "|".join(allowed_hosts)
     loaded_config.allowed_hosts_regex = re.compile(allowed_hosts_regex)
-    LOGGER.info("Allowed host regex for incoming HTTP requests is: '%s'" %
-                allowed_hosts_regex)
+    logger.info(
+        "Allowed host regex for incoming HTTP requests is: '%s'"
+        % allowed_hosts_regex
+    )
 
     ########################
     ## SET UP RATE LIMITS ##
     ########################
 
     # can disable rate limiting by passing none to the ratelimits conf item
-    if loaded_config.ratelimits.strip().casefold() == 'none':
+    if loaded_config.ratelimits.strip().casefold() == "none":
         loaded_config.ratelimits = False
-        LOGGER.warning(
+        logger.warning(
             "HTTP request rate-limiting "
             "has been disabled by setting 'none' for "
             "AUTHNZERVER_RATELIMITS or --ratelimits."
@@ -328,25 +352,23 @@ def main():
             "user": 480,
             "session": 600,
             "apikey": 720,
-            "burst": 150
+            "burst": 150,
         }
 
-        ratelimits = [x.strip().replace(' ', '').split(':')
-                      for x in loaded_config.ratelimits.split(';')]
+        ratelimits = [
+            x.strip().replace(" ", "").split(":")
+            for x in loaded_config.ratelimits.split(";")
+        ]
         ratelimits = {x[0]: int(x[1]) for x in ratelimits}
 
         # override defaults with provided values and use defaults for any
         # missing items in the ratelimit spec
-        ratelimits = {
-            **default_ratelimits,
-            **ratelimits
-        }
+        ratelimits = {**default_ratelimits, **ratelimits}
 
         loaded_config.ratelimits = ratelimits
-        LOGGER.info(
+        logger.info(
             "HTTP request rate-limiting (requests/minute) "
-            "config set to: %s" %
-            ratelimits
+            "config set to: %s" % ratelimits
         )
 
     ###########################################
@@ -362,25 +384,41 @@ def main():
 
     # we only have one actual endpoint, the other one is for testing
     handlers = [
-        (r'/', AuthHandler,
-         {'config': loaded_config,
-          'cacheobj': cacheobj,
-          'executor': executor,
-          'failed_passchecks': {}}),
-        (r'/health', HealthCheckHandler,
-         {'config': loaded_config,
-          'executor': executor,
-          'cacheobj': cacheobj}),
+        (
+            r"/",
+            AuthHandler,
+            {
+                "config": loaded_config,
+                "cacheobj": cacheobj,
+                "executor": executor,
+                "failed_passchecks": {},
+            },
+        ),
+        (
+            r"/health",
+            HealthCheckHandler,
+            {
+                "config": loaded_config,
+                "executor": executor,
+                "cacheobj": cacheobj,
+            },
+        ),
     ]
 
-    if DEBUG:
+    if debug:
         # put in the echo handler for debugging
         from .debughandler import EchoHandler
+
         handlers.append(
-            (r'/echo', EchoHandler,
-             {'authdb': auth_database_url,
-              'fernet_secret': secret,
-              'executor': executor})
+            (
+                r"/echo",
+                EchoHandler,
+                {
+                    "authdb": auth_database_url,
+                    "fernet_secret": secret,
+                    "executor": executor,
+                },
+            )
         )
 
     #############################
@@ -390,9 +428,11 @@ def main():
     if loaded_config.tls_cert_file and loaded_config.tls_cert_key:
 
         import ssl
+
         ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_ctx.load_cert_chain(loaded_config.tls_cert_file,
-                                keyfile=loaded_config.tls_cert_key)
+        ssl_ctx.load_cert_chain(
+            loaded_config.tls_cert_file, keyfile=loaded_config.tls_cert_key
+        )
         ssl_ctx.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
         loaded_config.tls_enabled = True
 
@@ -406,7 +446,7 @@ def main():
     ########################
 
     app = tornado.web.Application(
-        debug=DEBUG,
+        debug=debug,
         autoreload=False,  # this sometimes breaks Executors so disable it
     )
 
@@ -423,19 +463,15 @@ def main():
 
     # check the authdb is set up with the correct tables
     # running these after the DB is already set up doesn't do anything
-    if 'sqlite:///' in auth_database_url:
+    if "sqlite:///" in auth_database_url:
 
-        sqlite_authdb_filepath = auth_database_url.replace('sqlite:///', '')
+        sqlite_authdb_filepath = auth_database_url.replace("sqlite:///", "")
 
-        LOGGER.info("Checking SQLite auth DB: %s..." % sqlite_authdb_filepath)
-        authdb_module.create_sqlite_authdb(
-            sqlite_authdb_filepath
-        )
+        logger.info("Checking SQLite auth DB: %s..." % sqlite_authdb_filepath)
+        authdb_module.create_sqlite_authdb(sqlite_authdb_filepath)
     else:
-        LOGGER.info("Checking auth DB at provided auth DB URL...")
-        authdb_module.create_authdb(
-            auth_database_url
-        )
+        logger.info("Checking auth DB at provided auth DB URL...")
+        authdb_module.create_authdb(auth_database_url)
 
     # do the initial inserts again, just to be sure
     # running these again won't do anything if they're set up already
@@ -449,50 +485,56 @@ def main():
             auth_database_url,
             permissions_json=permissions,
             superuser_email=env_admin_email,
-            superuser_pass=env_admin_pass
+            superuser_pass=env_admin_pass,
         )
-        LOGGER.warning("Auth DB at the provided URL was not previously "
-                       "set up for use with authnzerver and has "
-                       "been (re)initialized.")
+        logger.warning(
+            "Auth DB at the provided URL was not previously "
+            "set up for use with authnzerver and has "
+            "been (re)initialized."
+        )
 
         if env_admin_email and env_admin_pass:
-            LOGGER.warning(
+            logger.warning(
                 "Admin user email and password were set using the "
                 "provided environment variables."
             )
 
-        creds = os.path.join(basedir,
-                             '.authnzerver-admin-credentials')
+        creds = os.path.join(basedir, ".authnzerver-admin-credentials")
         if os.path.exists(creds):
-            LOGGER.warning("Admin credentials file already exists. "
-                           "Writing to a new file...")
-            creds = os.path.join(basedir,
-                                 '.authnzerver-admin-credentials-%s'
-                                 % int(time.time()))
-        with open(creds, 'w') as outfd:
-            outfd.write('%s %s\n' % (admin_user, admin_pass))
+            logger.warning(
+                "Admin credentials file already exists. "
+                "Writing to a new file..."
+            )
+            creds = os.path.join(
+                basedir, ".authnzerver-admin-credentials-%s" % int(time.time())
+            )
+        with open(creds, "w") as outfd:
+            outfd.write("%s %s\n" % (admin_user, admin_pass))
             os.chmod(creds, 0o100400)
 
-        LOGGER.warning('Generated admin user '
-                       'credentials were written to: %s\n' %
-                       creds)
+        logger.warning(
+            "Generated admin user " "credentials were written to: %s\n" % creds
+        )
 
     except IntegrityError:
 
-        LOGGER.info(
-            "Auth DB is already set up "
-            "at the provided database URL."
+        logger.info(
+            "Auth DB is already set up " "at the provided database URL."
         )
 
     except Exception:
-        LOGGER.error("Could not open the authentication "
-                     "database at the provided URL.")
+        logger.error(
+            "Could not open the authentication "
+            "database at the provided URL."
+        )
         raise
 
     # set up periodic session-killer function and kill old sessions
-    session_killer = partial(actions.auth_kill_old_sessions,
-                             session_expiry_days=sessionexpiry,
-                             override_authdb_path=auth_database_url)
+    session_killer = partial(
+        actions.auth_kill_old_sessions,
+        session_expiry_days=sessionexpiry,
+        override_authdb_path=auth_database_url,
+    )
     session_killer()
 
     ######################
@@ -502,9 +544,11 @@ def main():
     try:
         http_server.listen(port, listen)
     except socket.error:
-        LOGGER.error("Listen address TCP port: '%s:%s' is already "
-                     "in use by another process, "
-                     "bailing out..." % (listen, port))
+        logger.error(
+            "Listen address TCP port: '%s:%s' is already "
+            "in use by another process, "
+            "bailing out..." % (listen, port)
+        )
         sys.exit(1)
 
     # start the IOLoop and begin serving requests
@@ -521,39 +565,41 @@ def main():
         )
         periodic_session_kill.start()
 
-        LOGGER.info(
+        logger.info(
             "Starting authnzerver. "
-            "Listening on htt%s://%s:%s." %
-            ("ps" if loaded_config.tls_enabled else "p",
-             listen,
-             port)
+            "Listening on htt%s://%s:%s."
+            % ("ps" if loaded_config.tls_enabled else "p", listen, port)
         )
-        LOGGER.info("The server is starting with TLS %s." %
-                    ('enabled' if loaded_config.tls_enabled else 'disabled'))
-        LOGGER.info('Background worker processes: %s. IOLoop in use: %s.' %
-                    (maxworkers, IOLOOP_SPEC))
+        logger.info(
+            "The server is starting with TLS %s."
+            % ("enabled" if loaded_config.tls_enabled else "disabled")
+        )
+        logger.info(
+            "Background worker processes: %s. IOLoop in use: %s."
+            % (maxworkers, IOLOOP_SPEC)
+        )
 
         # start the IOLoop
         loop.start()
 
     except KeyboardInterrupt:
 
-        LOGGER.warning('Received Ctrl-C: shutting down...')
+        logger.warning("Received Ctrl-C: shutting down...")
 
         # stop the server
         http_server.stop()
-        LOGGER.info('HTTP server shut down.')
+        logger.info("HTTP server shut down.")
 
         # close down the processpool
         executor.shutdown()
         time.sleep(2)
-        LOGGER.info('Worker processes shut down.')
+        logger.info("Worker processes shut down.")
 
         # stop the loop
         loop.stop()
-        LOGGER.info('IOLoop shut down.')
+        logger.info("IOLoop shut down.")
 
 
 # run the server
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

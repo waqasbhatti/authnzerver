@@ -11,6 +11,7 @@
 #############
 
 import logging
+from types import SimpleNamespace
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
@@ -20,17 +21,15 @@ LOGGER = logging.getLogger(__name__)
 ## IMPORTS ##
 #############
 
-import multiprocessing as mp
-
 from sqlalchemy import select
 
-from .. import authdb
 from .session import auth_session_exists
 from ..permissions import pii_hash
 
 from argon2 import PasswordHasher
 
 from .passwords import validate_input_password
+from authnzerver.actions.utils import get_procdb_permjson
 
 ######################
 ## PASSWORD CONTEXT ##
@@ -39,12 +38,14 @@ from .passwords import validate_input_password
 pass_hasher = PasswordHasher()
 
 
-def verify_password_reset(payload,
-                          raiseonfail=False,
-                          override_authdb_path=None,
-                          min_pass_length=12,
-                          max_unsafe_similarity=33,
-                          config=None):
+def verify_password_reset(
+    payload: dict,
+    raiseonfail: bool = False,
+    override_authdb_path: str = None,
+    min_pass_length: int = 12,
+    max_unsafe_similarity: int = 33,
+    config: SimpleNamespace = None,
+) -> dict:
     """
     Verifies a password reset request.
 
@@ -92,134 +93,121 @@ def verify_password_reset(payload,
 
     """
 
-    for key in ('reqid', 'pii_salt'):
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=None,
+        raiseonfail=raiseonfail,
+    )
+
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid password reset request."],
+                "messages": ["Invalid password reset request."],
             }
 
-    for key in ('email_address',
-                'new_password',
-                'session_token'):
+    for key in ("email_address", "new_password", "session_token"):
 
         if key not in payload:
 
             LOGGER.error(
-                '[%s] Invalid password reset request, missing %s.' %
-                (payload['reqid'], key)
+                "[%s] Invalid password reset request, missing %s."
+                % (payload["reqid"], key)
             )
 
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid password reset request. "
-                             "Some required parameters are missing."]
+                "messages": [
+                    "Invalid password reset request. "
+                    "Some required parameters are missing."
+                ],
             }
 
-    # this checks if the database connection is live
-    currproc = mp.current_process()
-    engine = getattr(currproc, 'authdb_engine', None)
-
-    if override_authdb_path:
-        currproc.auth_db_path = override_authdb_path
-
-    if not engine:
-        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb.get_auth_db(
-                currproc.auth_db_path,
-                echo=raiseonfail
-            )
-        )
-
-    users = currproc.authdb_meta.tables['users']
+    users = meta.tables["users"]
 
     # check the session
     session_info = auth_session_exists(
-        {'session_token': payload['session_token'],
-         'pii_salt': payload['pii_salt'],
-         'reqid': payload['reqid']},
+        {
+            "session_token": payload["session_token"],
+            "pii_salt": payload["pii_salt"],
+            "reqid": payload["reqid"],
+        },
         raiseonfail=raiseonfail,
-        override_authdb_path=override_authdb_path
+        override_authdb_path=override_authdb_path,
     )
 
-    if not session_info['success']:
+    if not session_info["success"]:
 
         LOGGER.error(
             "[%s] Password reset request failed for "
             "email: %s, session_token: %s. "
-            "Provided session token was not found in the DB or has expired." %
-            (payload['reqid'],
-             pii_hash(payload['email_address'],
-                      payload['pii_salt']),
-             pii_hash(payload['session_token'],
-                      payload['pii_salt']))
+            "Provided session token was not found in the DB or has expired."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email_address"], payload["pii_salt"]),
+                pii_hash(payload["session_token"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
-                "session does not exist"
+            "success": False,
+            "failure_reason": "session does not exist",
+            "messages": (
+                ["Invalid session token for password reset request."]
             ),
-            'messages': ([
-                "Invalid session token for password reset request."
-            ])
         }
 
-    sel = select([
-        users.c.user_id,
-        users.c.full_name,
-        users.c.email,
-        users.c.password,
-    ]).select_from(
-        users
-    ).where(
-        users.c.email == payload['email_address']
-    ).where(
-        users.c.is_active.is_(True)
-    )
+    with engine.begin() as conn:
 
-    result = currproc.authdb_conn.execute(sel)
-    user_info = result.fetchone()
-    result.close()
+        sel = (
+            select(
+                users.c.user_id,
+                users.c.full_name,
+                users.c.email,
+                users.c.password,
+            )
+            .select_from(users)
+            .where(users.c.email == payload["email_address"])
+            .where(users.c.is_active.is_(True))
+        )
+
+        result = conn.execute(sel)
+        user_info = result.first()
 
     if not user_info or len(user_info) == 0:
 
         LOGGER.error(
             "[%s] Password reset request failed for "
             "email: %s, session_token: %s. "
-            "User email was not found in the DB or the user is inactive." %
-            (payload['reqid'],
-             pii_hash(payload['email_address'],
-                      payload['pii_salt']),
-             pii_hash(payload['session_token'],
-                      payload['pii_salt']))
+            "User email was not found in the DB or the user is inactive."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email_address"], payload["pii_salt"]),
+                pii_hash(payload["session_token"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
-                "user does not exist"
-            ),
-            'messages': ([
-                "Invalid user for password reset request."
-            ])
+            "success": False,
+            "failure_reason": "user does not exist",
+            "messages": ["Invalid user for password reset request."],
         }
 
     # let's hash the new password against the current password
-    new_password = payload['new_password'][: 256]
+    new_password = payload["new_password"][:256]
 
     try:
         pass_same = pass_hasher.verify(
-            user_info['password'],
+            user_info.password,
             new_password,
         )
     except Exception:
@@ -232,14 +220,13 @@ def verify_password_reset(payload,
         LOGGER.warning(
             "[%s] Password reset request warning for "
             "email: %s, session_token: %s, user_id: %s. "
-            "User is attempting to reuse the password they supposedly forgot." %
-            (payload['reqid'],
-             pii_hash(payload['email_address'],
-                      payload['pii_salt']),
-             pii_hash(payload['session_token'],
-                      payload['pii_salt']),
-             pii_hash(user_info['user_id'],
-                      payload['pii_salt']))
+            "User is attempting to reuse the password they supposedly forgot."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email_address"], payload["pii_salt"]),
+                pii_hash(payload["session_token"], payload["pii_salt"]),
+                pii_hash(user_info.user_id, payload["pii_salt"]),
+            )
         )
 
     # hash the user's password
@@ -248,11 +235,11 @@ def verify_password_reset(payload,
     # validate the input password to see if it's OK
     # do this here to make sure the password hash completes at least once
     passok, messages = validate_input_password(
-        user_info['full_name'],
-        payload['email_address'],
+        user_info.full_name,
+        payload["email_address"],
         new_password,
-        payload['pii_salt'],
-        payload['reqid'],
+        payload["pii_salt"],
+        payload["reqid"],
         min_pass_length=min_pass_length,
         max_unsafe_similarity=max_unsafe_similarity,
         config=config,
@@ -263,104 +250,94 @@ def verify_password_reset(payload,
         LOGGER.error(
             "[%s] Password reset request failed for "
             "email: %s, session_token: %s, user_id: %s. "
-            "The new password is insecure." %
-            (payload['reqid'],
-             pii_hash(payload['email_address'],
-                      payload['pii_salt']),
-             pii_hash(payload['session_token'],
-                      payload['pii_salt']),
-             pii_hash(user_info['user_id'],
-                      payload['pii_salt']))
+            "The new password is insecure."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email_address"], payload["pii_salt"]),
+                pii_hash(payload["session_token"], payload["pii_salt"]),
+                pii_hash(user_info.user_id, payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
-                "invalid password"
+            "success": False,
+            "failure_reason": "invalid password",
+            "messages": (
+                ["Insecure password for password reset request."] + messages
             ),
-            'messages': ([
-                "Insecure password for password reset request."
-            ] + messages)
         }
 
     # if the password passes validation, hash it and store it
     else:
 
-        # update the table for this user
-        upd = users.update(
-        ).where(
-            users.c.user_id == user_info['user_id']
-        ).where(
-            users.c.is_active.is_(True)
-        ).where(
-            users.c.email == payload['email_address']
-        ).values({
-            'password': hashed_password
-        })
-        currproc.authdb_conn.execute(upd)
+        with engine.begin() as conn:
 
-        sel = select([
-            users.c.password,
-        ]).select_from(users).where(
-            (users.c.email == payload['email_address'])
-        )
-        result = currproc.authdb_conn.execute(sel)
-        rows = result.fetchone()
-        result.close()
+            # update the table for this user
+            upd = (
+                users.update()
+                .where(users.c.user_id == user_info.user_id)
+                .where(users.c.is_active.is_(True))
+                .where(users.c.email == payload["email_address"])
+                .values({"password": hashed_password})
+            )
+            conn.execute(upd)
 
-        if rows and rows['password'] == hashed_password:
+            sel = (
+                select(
+                    users.c.password,
+                )
+                .select_from(users)
+                .where((users.c.email == payload["email_address"]))
+            )
+            result = conn.execute(sel)
+            rows = result.first()
+
+        if rows and rows.password == hashed_password:
 
             LOGGER.info(
                 "[%s] Password reset request succeeded for "
-                "email: %s, session_token: %s, user_id: %s. " %
-                (payload['reqid'],
-                 pii_hash(payload['email_address'],
-                          payload['pii_salt']),
-                 pii_hash(payload['session_token'],
-                          payload['pii_salt']),
-                 pii_hash(user_info['user_id'],
-                          payload['pii_salt']))
+                "email: %s, session_token: %s, user_id: %s. "
+                % (
+                    payload["reqid"],
+                    pii_hash(payload["email_address"], payload["pii_salt"]),
+                    pii_hash(payload["session_token"], payload["pii_salt"]),
+                    pii_hash(user_info.user_id, payload["pii_salt"]),
+                )
             )
 
-            messages.append('Password changed successfully.')
-            return {
-                'success': True,
-                'messages': messages
-            }
+            messages.append("Password changed successfully.")
+            return {"success": True, "messages": messages}
 
         else:
 
             LOGGER.error(
                 "[%s] Password reset request failed for "
                 "email: %s, session_token: %s, user_id: %s. "
-                "The database row for the user could not be updated." %
-                (payload['reqid'],
-                 pii_hash(payload['email_address'],
-                          payload['pii_salt']),
-                 pii_hash(payload['session_token'],
-                          payload['pii_salt']),
-                 pii_hash(user_info['user_id'],
-                          payload['pii_salt']))
+                "The database row for the user could not be updated."
+                % (
+                    payload["reqid"],
+                    pii_hash(payload["email_address"], payload["pii_salt"]),
+                    pii_hash(payload["session_token"], payload["pii_salt"]),
+                    pii_hash(user_info.user_id, payload["pii_salt"]),
+                )
             )
 
-            messages.append('Password could not be changed.')
+            messages.append("Password could not be changed.")
             return {
-                'success': False,
-                'failure_reason': (
-                    "password update failed in DB"
-                ),
-                'messages': messages
+                "success": False,
+                "failure_reason": "password update failed in DB",
+                "messages": messages,
             }
 
 
 def verify_password_reset_nosession(
-        payload,
-        raiseonfail=False,
-        override_authdb_path=None,
-        min_pass_length=12,
-        max_unsafe_similarity=30,
-        config=None
-):
+    payload: dict,
+    raiseonfail: bool = False,
+    override_authdb_path: str = None,
+    min_pass_length: int = 12,
+    max_unsafe_similarity: int = 33,
+    config: SimpleNamespace = None,
+) -> dict:
     """Verifies a password reset request.
 
     This version does not require an active session.
@@ -415,102 +392,92 @@ def verify_password_reset_nosession(
 
     """
 
-    for key in ('reqid', 'pii_salt'):
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=None,
+        raiseonfail=raiseonfail,
+    )
+
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid password reset request."],
+                "messages": ["Invalid password reset request."],
             }
 
-    for key in ('email_address',
-                'new_password',
-                'required_active'):
+    for key in ("email_address", "new_password", "required_active"):
 
         if key not in payload:
 
             LOGGER.error(
-                '[%s] Invalid password reset request, missing %s.' %
-                (payload['reqid'], key)
+                "[%s] Invalid password reset request, missing %s."
+                % (payload["reqid"], key)
             )
 
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'messages': ["Invalid password reset request. "
-                             "Some required parameters are missing."]
+                "messages": [
+                    "Invalid password reset request. "
+                    "Some required parameters are missing."
+                ],
             }
 
-    # this checks if the database connection is live
-    currproc = mp.current_process()
-    engine = getattr(currproc, 'authdb_engine', None)
-
-    if override_authdb_path:
-        currproc.auth_db_path = override_authdb_path
-
-    if not engine:
-        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb.get_auth_db(
-                currproc.auth_db_path,
-                echo=raiseonfail
-            )
-        )
-
-    users = currproc.authdb_meta.tables['users']
+    users = meta.tables["users"]
 
     required_active = payload["required_active"]
 
-    sel = select([
-        users.c.user_id,
-        users.c.full_name,
-        users.c.email,
-        users.c.password,
-    ]).select_from(
-        users
-    ).where(
-        users.c.email == payload['email_address']
-    ).where(
-        users.c.is_active.is_(required_active)
-    )
+    with engine.begin() as conn:
 
-    result = currproc.authdb_conn.execute(sel)
-    user_info = result.fetchone()
-    result.close()
+        sel = (
+            select(
+                users.c.user_id,
+                users.c.full_name,
+                users.c.email,
+                users.c.password,
+            )
+            .select_from(users)
+            .where(users.c.email == payload["email_address"])
+            .where(users.c.is_active.is_(required_active))
+        )
+
+        result = conn.execute(sel)
+        user_info = result.first()
 
     if not user_info or len(user_info) == 0:
 
         LOGGER.error(
             "[%s] Password reset request failed for "
             "email: %s. "
-            "User email was not found in the DB or the user is inactive." %
-            (payload['reqid'],
-             pii_hash(payload['email_address'],
-                      payload['pii_salt']))
+            "User email was not found in the DB or the user is inactive."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email_address"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
+            "success": False,
+            "failure_reason": (
                 "user does not exist or is_active was not as required"
             ),
-            'messages': ([
-                "Invalid user for password reset request."
-            ])
+            "messages": ["Invalid user for password reset request."],
         }
 
     # let's hash the new password against the current password
-    new_password = payload['new_password'][: 256]
+    new_password = payload["new_password"][:256]
 
     try:
         pass_same = pass_hasher.verify(
-            user_info['password'],
+            user_info.password,
             new_password,
         )
     except Exception:
@@ -523,12 +490,12 @@ def verify_password_reset_nosession(
         LOGGER.warning(
             "[%s] Password reset request warning for "
             "email: %s, user_id: %s. "
-            "User is attempting to reuse the password they supposedly forgot." %
-            (payload['reqid'],
-             pii_hash(payload['email_address'],
-                      payload['pii_salt']),
-             pii_hash(user_info['user_id'],
-                      payload['pii_salt']))
+            "User is attempting to reuse the password they supposedly forgot."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email_address"], payload["pii_salt"]),
+                pii_hash(user_info.user_id, payload["pii_salt"]),
+            )
         )
 
     # hash the user's password
@@ -537,11 +504,11 @@ def verify_password_reset_nosession(
     # validate the input password to see if it's OK
     # do this here to make sure the password hash completes at least once
     passok, messages = validate_input_password(
-        user_info['full_name'],
-        payload['email_address'],
+        user_info.full_name,
+        payload["email_address"],
         new_password,
-        payload['pii_salt'],
-        payload['reqid'],
+        payload["pii_salt"],
+        payload["reqid"],
         min_pass_length=min_pass_length,
         max_unsafe_similarity=max_unsafe_similarity,
         config=config,
@@ -552,85 +519,79 @@ def verify_password_reset_nosession(
         LOGGER.error(
             "[%s] Password reset request failed for "
             "email: %s, user_id: %s. "
-            "The new password is insecure." %
-            (payload['reqid'],
-             pii_hash(payload['email_address'],
-                      payload['pii_salt']),
-             pii_hash(user_info['user_id'],
-                      payload['pii_salt']))
+            "The new password is insecure."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email_address"], payload["pii_salt"]),
+                pii_hash(user_info.user_id, payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
-                "invalid new password"
+            "success": False,
+            "failure_reason": "invalid new password",
+            "messages": (
+                ["Insecure new password for password reset request."]
+                + messages
             ),
-            'messages': ([
-                "Insecure new password for password reset request."
-            ] + messages)
         }
 
     # if the password passes validation, hash it and store it
     else:
 
-        # update the table for this user
-        upd = users.update(
-        ).where(
-            users.c.user_id == user_info['user_id']
-        ).where(
-            users.c.is_active.is_(required_active)
-        ).where(
-            users.c.email == payload['email_address']
-        ).values({
-            'password': hashed_password
-        })
-        currproc.authdb_conn.execute(upd)
+        with engine.begin() as conn:
 
-        sel = select([
-            users.c.password,
-        ]).select_from(users).where(
-            (users.c.email == payload['email_address'])
-        )
-        result = currproc.authdb_conn.execute(sel)
-        rows = result.fetchone()
-        result.close()
+            # update the table for this user
+            upd = (
+                users.update()
+                .where(users.c.user_id == user_info.user_id)
+                .where(users.c.is_active.is_(required_active))
+                .where(users.c.email == payload["email_address"])
+                .values({"password": hashed_password})
+            )
+            conn.execute(upd)
 
-        if rows and rows['password'] == hashed_password:
+            sel = (
+                select(
+                    users.c.password,
+                )
+                .select_from(users)
+                .where((users.c.email == payload["email_address"]))
+            )
+            result = conn.execute(sel)
+            rows = result.first()
+
+        if rows and rows.password == hashed_password:
 
             LOGGER.info(
                 "[%s] Password reset request succeeded for "
-                "email: %s, user_id: %s. " %
-                (payload['reqid'],
-                 pii_hash(payload['email_address'],
-                          payload['pii_salt']),
-                 pii_hash(user_info['user_id'],
-                          payload['pii_salt']))
+                "email: %s, user_id: %s. "
+                % (
+                    payload["reqid"],
+                    pii_hash(payload["email_address"], payload["pii_salt"]),
+                    pii_hash(user_info.user_id, payload["pii_salt"]),
+                )
             )
 
-            messages.append('Password changed successfully.')
-            return {
-                'success': True,
-                'messages': messages
-            }
+            messages.append("Password changed successfully.")
+            return {"success": True, "messages": messages}
 
         else:
 
             LOGGER.error(
                 "[%s] Password reset request failed for "
                 "email: %s, user_id: %s. "
-                "The database row for the user could not be updated." %
-                (payload['reqid'],
-                 pii_hash(payload['email_address'],
-                          payload['pii_salt']),
-                 pii_hash(user_info['user_id'],
-                          payload['pii_salt']))
+                "The database row for the user could not be updated."
+                % (
+                    payload["reqid"],
+                    pii_hash(payload["email_address"], payload["pii_salt"]),
+                    pii_hash(user_info.user_id, payload["pii_salt"]),
+                )
             )
 
-            messages.append('Password could not be changed.')
+            messages.append("Password could not be changed.")
             return {
-                'success': False,
-                'failure_reason': (
-                    "password update failed in DB"
-                ),
-                'messages': messages
+                "success": False,
+                "failure_reason": "password update failed in DB",
+                "messages": messages,
             }

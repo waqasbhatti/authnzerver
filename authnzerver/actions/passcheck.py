@@ -11,6 +11,7 @@
 #############
 
 import logging
+from types import SimpleNamespace
 
 # get a logger
 LOGGER = logging.getLogger(__name__)
@@ -23,11 +24,13 @@ LOGGER = logging.getLogger(__name__)
 try:
 
     from datetime import timezone, timedelta
+
     utc = timezone.utc
 
 except Exception:
 
     from datetime import timedelta, tzinfo
+
     ZERO = timedelta(0)
 
     class UTC(tzinfo):
@@ -44,13 +47,11 @@ except Exception:
 
     utc = UTC()
 
-import multiprocessing as mp
-
 from sqlalchemy import select
 from argon2 import PasswordHasher
 
-from .. import authdb
 from ..permissions import pii_hash
+from authnzerver.actions.utils import get_procdb_permjson
 
 from .session import auth_session_exists
 
@@ -66,10 +67,13 @@ pass_hasher = PasswordHasher()
 ## USER PASSWORD CHECK HANDLING FUNCTIONS ##
 ############################################
 
-def auth_password_check(payload,
-                        override_authdb_path=None,
-                        raiseonfail=False,
-                        config=None):
+
+def auth_password_check(
+    payload: dict,
+    override_authdb_path: str = None,
+    raiseonfail: bool = False,
+    config: SimpleNamespace = None,
+) -> dict:
     """This runs a password check given a session token and password.
 
     Used to gate high-security areas or operations that require re-verification
@@ -107,48 +111,41 @@ def auth_password_check(payload,
     -------
 
     dict
-        Returns a dict containing the result of the password verification check.
+        Returns a dict containing the result of the password verification
+        check.
 
     """
 
-    for key in ('reqid', 'pii_salt'):
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=None,
+        raiseonfail=raiseonfail,
+    )
+
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id': None,
-                'messages': ["Invalid password check request."],
+                "user_id": None,
+                "messages": ["Invalid password check request."],
             }
 
     # check broken request
     request_ok = True
 
-    for item in ('password', 'session_token'):
+    for item in ("password", "session_token"):
         if item not in payload:
             request_ok = False
             break
 
     # this checks if the database connection is live
-    currproc = mp.current_process()
-    engine = getattr(currproc, 'authdb_engine', None)
-
-    if override_authdb_path:
-        currproc.auth_db_path = override_authdb_path
-
-    if not engine:
-        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb.get_auth_db(
-                currproc.auth_db_path,
-                echo=raiseonfail
-            )
-        )
-
-    users = currproc.authdb_meta.tables['users']
+    users = meta.tables["users"]
 
     #
     # check if the request is OK
@@ -159,169 +156,164 @@ def auth_password_check(payload,
 
         # dummy session request
         auth_session_exists(
-            {'session_token': 'nope',
-             'reqid': payload['reqid'],
-             'pii_salt': payload['pii_salt']},
+            {
+                "session_token": "nope",
+                "reqid": payload["reqid"],
+                "pii_salt": payload["pii_salt"],
+            },
             raiseonfail=raiseonfail,
-            override_authdb_path=override_authdb_path
+            override_authdb_path=override_authdb_path,
         )
 
-        # always get the dummy user's password from the DB
-        dummy_sel = select([
-            users.c.password
-        ]).select_from(users).where(users.c.user_id == 3)
-        dummy_results = currproc.authdb_conn.execute(dummy_sel)
-
-        dummy_password = dummy_results.fetchone()['password']
-        dummy_results.close()
-
-        try:
-            pass_hasher.verify(dummy_password, 'nope')
-        except Exception:
-            pass
-
-        # always get the dummy user's password from the DB
-        dummy_sel = select([
-            users.c.password
-        ]).select_from(users).where(users.c.user_id == 3)
-        dummy_results = currproc.authdb_conn.execute(dummy_sel)
-        dummy_password = dummy_results.fetchone()['password']
-        dummy_results.close()
-
-        try:
-            pass_hasher.verify(dummy_password, 'nope')
-        except Exception:
-            pass
+        # get the dummy user's password from the DB on an outright failure -
+        # run this twice to match the number of verifications for a normal
+        # successful user
+        dummy_sel = (
+            select(users.c.password)
+            .select_from(users)
+            .where(users.c.user_id == 3)
+        )
+        with engine.begin() as conn:
+            for _ in range(2):
+                dummy_results = conn.execute(dummy_sel)
+                dummy_password = dummy_results.scalar()
+                try:
+                    pass_hasher.verify(dummy_password, "nope")
+                except Exception:
+                    pass
 
         LOGGER.error(
-            '[%s] Password check failed for session_token: %s. '
-            'Missing request items.' %
-            (payload['reqid'],
-             pii_hash(payload['session_token'], payload['pii_salt']))
+            "[%s] Password check failed for session_token: %s. "
+            "Missing request items."
+            % (
+                payload["reqid"],
+                pii_hash(payload["session_token"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
+            "success": False,
+            "failure_reason": (
                 "invalid request: missing either 'password' or 'session_token'"
             ),
-            'user_id': None,
-            'messages': ['Invalid password verification request.']
+            "user_id": None,
+            "messages": ["Invalid password verification request."],
         }
 
     # otherwise, now we'll check if the session exists
     else:
 
         session_info = auth_session_exists(
-            {'session_token': payload['session_token'],
-             'reqid': payload['reqid'],
-             'pii_salt': payload['pii_salt']},
+            {
+                "session_token": payload["session_token"],
+                "reqid": payload["reqid"],
+                "pii_salt": payload["pii_salt"],
+            },
             raiseonfail=raiseonfail,
-            override_authdb_path=override_authdb_path
+            override_authdb_path=override_authdb_path,
         )
 
         # if it doesn't, hash the dummy password twice
-        if not session_info['success']:
+        if not session_info["success"]:
 
-            # always get the dummy user's password from the DB
-            dummy_sel = select([
-                users.c.password
-            ]).select_from(users).where(users.c.user_id == 3)
-            dummy_results = currproc.authdb_conn.execute(dummy_sel)
-            dummy_password = dummy_results.fetchone()['password']
-            dummy_results.close()
-
-            try:
-                pass_hasher.verify(dummy_password, 'nope')
-            except Exception:
-                pass
-
-            # always get the dummy user's password from the DB
-            dummy_sel = select([
-                users.c.password
-            ]).select_from(users).where(users.c.user_id == 3)
-            dummy_results = currproc.authdb_conn.execute(dummy_sel)
-            dummy_password = dummy_results.fetchone()['password']
-            dummy_results.close()
-
-            try:
-                pass_hasher.verify(dummy_password, 'nope')
-            except Exception:
-                pass
+            # get the dummy user's password from the DB on an outright failure
+            # run this twice to match the number of verifications for a normal
+            # successful user
+            dummy_sel = (
+                select(users.c.password)
+                .select_from(users)
+                .where(users.c.user_id == 3)
+            )
+            with engine.begin() as conn:
+                for _ in range(2):
+                    dummy_results = conn.execute(dummy_sel)
+                    dummy_password = dummy_results.scalar()
+                    try:
+                        pass_hasher.verify(dummy_password, "nope")
+                    except Exception:
+                        pass
 
             LOGGER.error(
-                '[%s] Password check failed for session_token: %s. '
-                'The session token provided does not exist.' %
-                (payload['reqid'],
-                 pii_hash(payload['session_token'], payload['pii_salt']))
+                "[%s] Password check failed for session_token: %s. "
+                "The session token provided does not exist."
+                % (
+                    payload["reqid"],
+                    pii_hash(payload["session_token"], payload["pii_salt"]),
+                )
             )
+
             return {
-                'success': False,
-                'failure_reason': (
-                    "session does not exist"
-                ),
-                'user_id': None,
-                'messages': ['No session token provided.']
+                "success": False,
+                "failure_reason": "session does not exist",
+                "user_id": None,
+                "messages": ["No session token provided."],
             }
 
         # if the session token does exist, we'll proceed to checking the
         # password for the provided email
         else:
 
-            # always get the dummy user's password from the DB
-            dummy_sel = select([
-                users.c.password
-            ]).select_from(users).where(users.c.user_id == 3)
-            dummy_results = currproc.authdb_conn.execute(dummy_sel)
-            dummy_password = dummy_results.fetchone()['password']
-            dummy_results.close()
+            with engine.begin() as conn:
+                # always get the dummy user's password from the DB
+                dummy_sel = (
+                    select(users.c.password)
+                    .select_from(users)
+                    .where(users.c.user_id == 3)
+                )
+                dummy_results = conn.execute(dummy_sel)
+                dummy_password = dummy_results.scalar()
+                try:
+                    pass_hasher.verify(dummy_password, "nope")
+                except Exception:
+                    pass
 
-            try:
-                pass_hasher.verify(dummy_password, 'nope')
-            except Exception:
-                pass
-
-            # look up the provided user
-            user_sel = select([
-                users.c.user_id,
-                users.c.password,
-                users.c.is_active,
-                users.c.user_role,
-            ]).select_from(
-                users
-            ).where(users.c.user_id == session_info['session_info']['user_id'])
-            user_results = currproc.authdb_conn.execute(user_sel)
-            user_info = user_results.fetchone()
-            user_results.close()
+                # look up the actual provided user
+                user_sel = (
+                    select(
+                        users.c.user_id,
+                        users.c.password,
+                        users.c.is_active,
+                        users.c.user_role,
+                    )
+                    .select_from(users)
+                    .where(
+                        users.c.user_id
+                        == session_info["session_info"]["user_id"]
+                    )
+                )
+                user_results = conn.execute(user_sel)
+                user_info = user_results.first()
 
             if user_info:
 
                 try:
 
                     pass_ok = pass_hasher.verify(
-                        user_info['password'],
-                        payload['password'][: 256],
+                        user_info.password,
+                        payload["password"][:256],
                     )
 
                 except Exception as e:
 
                     LOGGER.error(
-                        '[%s] Password check failed for session_token: %s. '
-                        'The password provided does not match the one on '
-                        'record for user_id: %s. Exception was: %r' %
-                        (payload['reqid'],
-                         pii_hash(payload['session_token'],
-                                  payload['pii_salt']),
-                         pii_hash(user_info['user_id'],
-                                  payload['pii_salt']),
-                         e)
+                        "[%s] Password check failed for session_token: %s. "
+                        "The password provided does not match the one on "
+                        "record for user_id: %s. Exception was: %r"
+                        % (
+                            payload["reqid"],
+                            pii_hash(
+                                payload["session_token"], payload["pii_salt"]
+                            ),
+                            pii_hash(user_info.user_id, payload["pii_salt"]),
+                            e,
+                        )
                     )
                     pass_ok = False
 
             else:
 
                 try:
-                    pass_hasher.verify(dummy_password, 'nope')
+                    pass_hasher.verify(dummy_password, "nope")
                 except Exception:
                     pass
 
@@ -330,13 +322,15 @@ def auth_password_check(payload,
             if not pass_ok:
 
                 return {
-                    'success': False,
-                    'failure_reason': (
+                    "success": False,
+                    "failure_reason": (
                         "user does not exist or password doesn't match"
                     ),
-                    'user_id': None,
-                    'messages': ["Sorry, that user ID and "
-                                 "password combination didn't work."]
+                    "user_id": None,
+                    "messages": [
+                        "Sorry, that user ID and "
+                        "password combination didn't work."
+                    ],
                 }
 
             # if password verification succeeeded, check if the user can
@@ -347,55 +341,61 @@ def auth_password_check(payload,
                 # if the user account is active and unlocked, proceed.
                 # the frontend will take this user_id and ask for a new session
                 # token with it.
-                if (user_info['is_active'] and
-                    user_info['user_role'] != 'locked'):
+                if user_info.is_active and user_info.user_role != "locked":
 
                     LOGGER.info(
-                        '[%s] Password check successful for session_token: %s. '
-                        'Matched user with user_id: %s. ' %
-                        (payload['reqid'],
-                         pii_hash(payload['session_token'],
-                                  payload['pii_salt']),
-                         pii_hash(user_info['user_id'],
-                                  payload['pii_salt']))
+                        "[%s] Password check successful for "
+                        "session_token: %s. "
+                        "Matched user with user_id: %s. "
+                        % (
+                            payload["reqid"],
+                            pii_hash(
+                                payload["session_token"], payload["pii_salt"]
+                            ),
+                            pii_hash(user_info.user_id, payload["pii_salt"]),
+                        )
                     )
 
                     return {
-                        'success': True,
-                        'user_id': user_info['user_id'],
-                        'user_role': user_info['user_role'],
-                        'messages': ["Verification successful."]
+                        "success": True,
+                        "user_id": user_info.user_id,
+                        "user_role": user_info.user_role,
+                        "messages": ["Verification successful."],
                     }
 
                 # if the user account is locked, return a failure
                 else:
 
                     LOGGER.error(
-                        '[%s] Password check failed for session_token: %s. '
-                        'Matched user with user_id: %s is not active '
-                        'or is locked.' %
-                        (payload['reqid'],
-                         pii_hash(payload['session_token'],
-                                  payload['pii_salt']),
-                         pii_hash(user_info['user_id'],
-                                  payload['pii_salt']))
+                        "[%s] Password check failed for session_token: %s. "
+                        "Matched user with user_id: %s is not active "
+                        "or is locked."
+                        % (
+                            payload["reqid"],
+                            pii_hash(
+                                payload["session_token"], payload["pii_salt"]
+                            ),
+                            pii_hash(user_info.user_id, payload["pii_salt"]),
+                        )
                     )
 
                     return {
-                        'success': False,
-                        'failure_reason': (
-                            "user exists but is inactive"
-                        ),
-                        'user_id': user_info['user_id'],
-                        'messages': ["Sorry, that user ID and "
-                                     "password combination didn't work."]
+                        "success": False,
+                        "failure_reason": "user exists but is inactive",
+                        "user_id": user_info.user_id,
+                        "messages": [
+                            "Sorry, that user ID and "
+                            "password combination didn't work."
+                        ],
                     }
 
 
-def auth_password_check_nosession(payload,
-                                  override_authdb_path=None,
-                                  raiseonfail=False,
-                                  config=None):
+def auth_password_check_nosession(
+    payload: dict,
+    override_authdb_path: str = None,
+    raiseonfail: bool = False,
+    config: SimpleNamespace = None,
+) -> dict:
     """This runs a password check given an email address and password.
 
     Used to gate high-security areas or operations that require re-verification
@@ -435,48 +435,40 @@ def auth_password_check_nosession(payload,
     -------
 
     dict
-        Returns a dict containing the result of the password verification check.
+        Returns a dict containing the result of the password verification
+        check.
 
     """
 
-    for key in ('reqid', 'pii_salt'):
+    engine, meta, permjson, dbpath = get_procdb_permjson(
+        override_authdb_path=override_authdb_path,
+        override_permissions_json=None,
+        raiseonfail=raiseonfail,
+    )
+
+    for key in ("reqid", "pii_salt"):
         if key not in payload:
             LOGGER.error(
                 "Missing %s in payload dict. Can't process this request." % key
             )
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "invalid request: missing '%s' in request" % key
                 ),
-                'user_id': None,
-                'messages': ["Invalid password check request."],
+                "user_id": None,
+                "messages": ["Invalid password check request."],
             }
 
     # check broken request
     request_ok = True
 
-    for item in ('password', 'email'):
+    for item in ("password", "email"):
         if item not in payload:
             request_ok = False
             break
 
-    # this checks if the database connection is live
-    currproc = mp.current_process()
-    engine = getattr(currproc, 'authdb_engine', None)
-
-    if override_authdb_path:
-        currproc.auth_db_path = override_authdb_path
-
-    if not engine:
-        currproc.authdb_engine, currproc.authdb_conn, currproc.authdb_meta = (
-            authdb.get_auth_db(
-                currproc.auth_db_path,
-                echo=raiseonfail
-            )
-        )
-
-    users = currproc.authdb_meta.tables['users']
+    users = meta.tables["users"]
 
     #
     # check if the request is OK
@@ -485,77 +477,71 @@ def auth_password_check_nosession(payload,
     # if it isn't, then hash the dummy user's password twice
     if not request_ok:
 
-        # always get the dummy user's password from the DB
-        dummy_sel = select([
-            users.c.password
-        ]).select_from(users).where(users.c.user_id == 3)
-        dummy_results = currproc.authdb_conn.execute(dummy_sel)
-
-        dummy_password = dummy_results.fetchone()['password']
-        dummy_results.close()
-
-        try:
-            pass_hasher.verify(dummy_password, 'nope')
-        except Exception:
-            pass
-
-        # always get the dummy user's password from the DB
-        dummy_sel = select([
-            users.c.password
-        ]).select_from(users).where(users.c.user_id == 3)
-        dummy_results = currproc.authdb_conn.execute(dummy_sel)
-        dummy_password = dummy_results.fetchone()['password']
-        dummy_results.close()
-
-        try:
-            pass_hasher.verify(dummy_password, 'nope')
-        except Exception:
-            pass
+        # get the dummy user's password from the DB on an outright failure -
+        # run this twice to match the number of verifications for a normal
+        # successful user
+        dummy_sel = (
+            select(users.c.password)
+            .select_from(users)
+            .where(users.c.user_id == 3)
+        )
+        with engine.begin() as conn:
+            for _ in range(2):
+                dummy_results = conn.execute(dummy_sel)
+                dummy_password = dummy_results.scalar()
+                try:
+                    pass_hasher.verify(dummy_password, "nope")
+                except Exception:
+                    pass
 
         LOGGER.error(
-            '[%s] Password check failed for email: %s. '
-            'Missing request items.' %
-            (payload['reqid'],
-             pii_hash(payload['email'], payload['pii_salt']))
+            "[%s] Password check failed for email: %s. "
+            "Missing request items."
+            % (
+                payload["reqid"],
+                pii_hash(payload["email"], payload["pii_salt"]),
+            )
         )
 
         return {
-            'success': False,
-            'failure_reason': (
+            "success": False,
+            "failure_reason": (
                 "invalid request: missing 'email' or 'password' in request"
             ),
-            'user_id': None,
-            'messages': ['Invalid password verification request.']
+            "user_id": None,
+            "messages": ["Invalid password verification request."],
         }
 
     # otherwise, now we'll check if the user exists and the password is correct
     else:
 
-        # always get the dummy user's password from the DB
-        dummy_sel = select([
-            users.c.password
-        ]).select_from(users).where(users.c.user_id == 3)
-        dummy_results = currproc.authdb_conn.execute(dummy_sel)
-        dummy_password = dummy_results.fetchone()['password']
-        dummy_results.close()
+        with engine.begin() as conn:
+            # always get the dummy user's password from the DB
+            dummy_sel = (
+                select(users.c.password)
+                .select_from(users)
+                .where(users.c.user_id == 3)
+            )
+            dummy_results = conn.execute(dummy_sel)
+            dummy_password = dummy_results.scalar()
+            try:
+                pass_hasher.verify(dummy_password, "nope")
+            except Exception:
+                pass
 
-        try:
-            pass_hasher.verify(dummy_password, 'nope')
-        except Exception:
-            pass
-
-        # look up the provided user
-        user_sel = select([
-            users.c.user_id,
-            users.c.password,
-            users.c.is_active,
-            users.c.user_role,
-        ]).select_from(
-            users
-        ).where(users.c.email == payload['email'])
-        user_results = currproc.authdb_conn.execute(user_sel)
-        user_info = user_results.fetchone()
-        user_results.close()
+            # look up the actual provided user
+            user_sel = (
+                select(
+                    users.c.user_id,
+                    users.c.password,
+                    users.c.is_active,
+                    users.c.user_role,
+                )
+                .select_from(users)
+                .where(users.c.email == payload["email"])
+            )
+            user_results = conn.execute(user_sel)
+            user_info = user_results.first()
 
         pass_ok = False
 
@@ -564,22 +550,22 @@ def auth_password_check_nosession(payload,
             try:
 
                 pass_ok = pass_hasher.verify(
-                    user_info['password'],
-                    payload['password'][: 256],
+                    user_info.password,
+                    payload["password"][:256],
                 )
 
             except Exception as e:
 
                 LOGGER.error(
-                    '[%s] Password check failed for email: %s. '
-                    'The password provided does not match the one on '
-                    'record for user_id: %s. Exception was: %r' %
-                    (payload['reqid'],
-                     pii_hash(payload['email'],
-                              payload['pii_salt']),
-                     pii_hash(user_info['user_id'],
-                              payload['pii_salt']),
-                     e)
+                    "[%s] Password check failed for email: %s. "
+                    "The password provided does not match the one on "
+                    "record for user_id: %s. Exception was: %r"
+                    % (
+                        payload["reqid"],
+                        pii_hash(payload["email"], payload["pii_salt"]),
+                        pii_hash(user_info.user_id, payload["pii_salt"]),
+                        e,
+                    )
                 )
                 pass_ok = False
 
@@ -587,7 +573,7 @@ def auth_password_check_nosession(payload,
         else:
 
             try:
-                pass_hasher.verify(dummy_password, 'nope')
+                pass_hasher.verify(dummy_password, "nope")
             except Exception:
                 pass
 
@@ -596,13 +582,15 @@ def auth_password_check_nosession(payload,
         if not pass_ok:
 
             return {
-                'success': False,
-                'failure_reason': (
+                "success": False,
+                "failure_reason": (
                     "user does not exist or password doesn't match"
                 ),
-                'user_id': None,
-                'messages': ["Sorry, that user ID and "
-                             "password combination didn't work."]
+                "user_id": None,
+                "messages": [
+                    "Sorry, that user ID and "
+                    "password combination didn't work."
+                ],
             }
 
         # if password verification succeeeded, check if the user can
@@ -613,46 +601,45 @@ def auth_password_check_nosession(payload,
             # if the user account is active and unlocked, proceed.
             # the frontend will take this user_id and ask for a new session
             # token with it.
-            if (user_info['is_active'] and
-                user_info['user_role'] != 'locked'):
+            if user_info.is_active and user_info.user_role != "locked":
 
                 LOGGER.info(
-                    '[%s] Password check successful for email: %s. '
-                    'Matched user with user_id: %s. ' %
-                    (payload['reqid'],
-                     pii_hash(payload['email'],
-                              payload['pii_salt']),
-                     pii_hash(user_info['user_id'],
-                              payload['pii_salt']))
+                    "[%s] Password check successful for email: %s. "
+                    "Matched user with user_id: %s. "
+                    % (
+                        payload["reqid"],
+                        pii_hash(payload["email"], payload["pii_salt"]),
+                        pii_hash(user_info.user_id, payload["pii_salt"]),
+                    )
                 )
 
                 return {
-                    'success': True,
-                    'user_id': user_info['user_id'],
-                    'user_role': user_info['user_role'],
-                    'messages': ["Verification successful."]
+                    "success": True,
+                    "user_id": user_info.user_id,
+                    "user_role": user_info.user_role,
+                    "messages": ["Verification successful."],
                 }
 
             # if the user account is locked, return a failure
             else:
 
                 LOGGER.error(
-                    '[%s] Password check failed for email: %s. '
-                    'Matched user with user_id: %s is not active '
-                    'or is locked.' %
-                    (payload['reqid'],
-                     pii_hash(payload['email'],
-                              payload['pii_salt']),
-                     pii_hash(user_info['user_id'],
-                              payload['pii_salt']))
+                    "[%s] Password check failed for email: %s. "
+                    "Matched user with user_id: %s is not active "
+                    "or is locked."
+                    % (
+                        payload["reqid"],
+                        pii_hash(payload["email"], payload["pii_salt"]),
+                        pii_hash(user_info.user_id, payload["pii_salt"]),
+                    )
                 )
 
                 return {
-                    'success': False,
-                    'failure_reason': (
-                        "user exists but is inactive"
-                    ),
-                    'user_id': user_info['user_id'],
-                    'messages': ["Sorry, that user ID and "
-                                 "password combination didn't work."]
+                    "success": False,
+                    "failure_reason": "user exists but is inactive",
+                    "user_id": user_info.user_id,
+                    "messages": [
+                        "Sorry, that user ID and "
+                        "password combination didn't work."
+                    ],
                 }
