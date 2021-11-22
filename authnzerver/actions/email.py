@@ -1513,6 +1513,9 @@ def send_forgotpass_verification_email(
     if email_sent:
 
         emailforgotpass_sent_datetime = datetime.utcnow()
+        update_vals = {
+            "emailforgotpass_sent_datetime": emailforgotpass_sent_datetime
+        }
 
         # finally, we'll update the users table with the actual
         # emailforgotpass_sent_datetime if sending succeeded.
@@ -1520,13 +1523,7 @@ def send_forgotpass_verification_email(
             users.update()
             .where(users.c.is_active.is_(True))
             .where(users.c.email == payload["email_address"])
-            .values(
-                {
-                    "emailforgotpass_sent_datetime": (
-                        emailforgotpass_sent_datetime,
-                    ),
-                }
-            )
+            .values(update_vals)
         )
         with engine.begin() as conn:
             result = conn.execute(upd)
