@@ -250,12 +250,12 @@ def validate_input_password(
 
     """
 
-    # handle kwargs passed via config object
-    server_fqdn = socket.getfqdn()
+    default_fqdn = socket.getfqdn()
 
+    # handle kwargs passed via config object
     if config is not None:
         passpolicy = getattr(config, "passpolicy", None)
-        server_fqdn = getattr(config, "fqdn", None)
+        server_fqdn = getattr(config, "fqdn", default_fqdn)
 
         if passpolicy:
             try:
