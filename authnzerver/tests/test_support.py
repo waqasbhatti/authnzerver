@@ -14,10 +14,7 @@ def get_public_suffix_list():
 
     # check if this exists already
     list_file = os.path.join(
-        os.path.expanduser("~"),
-        ".cache",
-        "authnzerver",
-        "public-suffixes.txt"
+        os.path.expanduser("~"), ".cache", "authnzerver", "public-suffixes.txt"
     )
 
     suff_list = None

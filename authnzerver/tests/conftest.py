@@ -26,30 +26,31 @@ def new_authnzerver(monkeypatch, tmpdir):
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file, env_file = (
-        autogen_secrets_authdb(
-            basedir,
-            interactive=False
-        )
-    )
+    (
+        authdb_path,
+        creds,
+        secrets_file,
+        salt_file,
+        env_file,
+    ) = autogen_secrets_authdb(basedir, interactive=False)
 
     # read in the secrets file for the secret
-    with open(secrets_file, 'r') as infd:
-        secret = infd.read().strip('\n')
+    with open(secrets_file, "r") as infd:
+        secret = infd.read().strip("\n")
 
     # read in the salts file for the salt
-    with open(salt_file, 'r') as infd:
-        salt = infd.read().strip('\n')
+    with open(salt_file, "r") as infd:
+        salt = infd.read().strip("\n")
 
     # read the creds file so we can try logging in
-    with open(creds, 'r') as infd:
-        useremail, password = infd.read().strip('\n').split()
+    with open(creds, "r") as infd:
+        useremail, password = infd.read().strip("\n").split()
 
     # get a temp directory
-    tmpdir = os.path.join('/tmp', 'authnzrv-%s' % secrets.token_urlsafe(8))
+    tmpdir = os.path.join("/tmp", "authnzrv-%s" % secrets.token_urlsafe(8))
 
-    server_listen = '127.0.0.1'
-    server_port = '18158'
+    server_listen = "127.0.0.1"
+    server_port = "18158"
 
     # set up the environment
     monkeypatch.setenv("AUTHNZERVER_AUTHDB", authdb_path)
@@ -68,8 +69,10 @@ def new_authnzerver(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_EMAILPASS", "testpass")
 
     # set the session request rate-limit to 120 per 60 seconds
-    monkeypatch.setenv("AUTHNZERVER_RATELIMITS",
-                       "ipaddr:720;user:360;session:120;apikey:720;burst:150")
+    monkeypatch.setenv(
+        "AUTHNZERVER_RATELIMITS",
+        "ipaddr:720;user:360;session:120;apikey:720;burst:150",
+    )
 
     # launch the server subprocess
     p = subprocess.Popen("authnzrv", shell=True)
@@ -94,5 +97,5 @@ def new_authnzerver(monkeypatch, tmpdir):
     # port number to find the remaining authnzrv processes and kill them
     subprocess.call(
         "lsof | grep 18158 | awk '{ print $2 }' | sort | uniq | xargs kill -2",
-        shell=True
+        shell=True,
     )

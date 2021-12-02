@@ -24,13 +24,14 @@ def dictcache_obj():
 # basic tests
 #
 
+
 def test_add_key(dictcache_obj):
     """
     Tests simple add.
 
     """
 
-    retval = dictcache_obj.add("test_key",123)
+    retval = dictcache_obj.add("test_key", 123)
     assert retval == 123
     assert dictcache_obj.get("test_key") == 123
 
@@ -41,7 +42,7 @@ def test_add_same_key(dictcache_obj):
 
     """
 
-    retval = dictcache_obj.add("test_key",123)
+    retval = dictcache_obj.add("test_key", 123)
     assert retval == 123
     dictcache_obj.add("test_key", 456)
     assert dictcache_obj.get("test_key") == 123
@@ -68,7 +69,7 @@ def test_cache_capacity(dictcache_obj):
         assert dictcache_obj.get(f"key_{x}") is None
 
     # check if the next 1000 keys are as expected
-    for x in range(100,1100):
+    for x in range(100, 1100):
         assert dictcache_obj.get(f"key_{x}") == f"value_{x}"
 
 
@@ -114,6 +115,7 @@ def test_cache_flush(dictcache_obj):
 # TTL tests
 #
 
+
 def test_add_key_with_ttl(dictcache_obj):
     """
     Tests add with key TTL.
@@ -153,9 +155,11 @@ def test_set_key(dictcache_obj):
     dictcache_obj.set("another_test_key", "hello-world-this-is-new")
     assert dictcache_obj.get("another_test_key") == "hello-world-this-is-new"
 
-    dictcache_obj.set("one_more_test_key",
-                      "hello-world-this-should-fail",
-                      add_ifnotexists=False)
+    dictcache_obj.set(
+        "one_more_test_key",
+        "hello-world-this-should-fail",
+        add_ifnotexists=False,
+    )
     assert dictcache_obj.get("one_more_test_key") is None
 
 
@@ -233,6 +237,7 @@ def test_set_key_expireable(dictcache_obj):
 # counter key
 #
 
+
 def test_counterkey_increment(dictcache_obj):
     """
     Tests if a counter key is incremented correctly.
@@ -283,13 +288,13 @@ def test_counterkey_addset(dictcache_obj):
 
     """
 
-    count = dictcache_obj.counter_add("test_key",100)
+    count = dictcache_obj.counter_add("test_key", 100)
 
     assert count == 100
     assert dictcache_obj.counter_get("test_key") == 100
     assert dictcache_obj.get("test_key-dictcache-counterkey") == 100
 
-    count = dictcache_obj.counter_set("test_key",50)
+    count = dictcache_obj.counter_set("test_key", 50)
     assert count == 50
     assert dictcache_obj.counter_get("test_key") == 50
     assert dictcache_obj.get("test_key-dictcache-counterkey") == 50
@@ -311,11 +316,12 @@ def test_counterkey_rate(dictcache_obj):
         total_time = total_time + time_step
     end_time = time.time()
 
-    (rate, currval, initval, currtime, inittime) = (
-        dictcache_obj.counter_rate("test_key", 1.0, return_allinfo=True)
+    (rate, currval, initval, currtime, inittime) = dictcache_obj.counter_rate(
+        "test_key", 1.0, return_allinfo=True
     )
-    assert rate == pytest.approx((100-1)/((end_time - start_time)/1.0),
-                                 rel=1.0e-3)
+    assert rate == pytest.approx(
+        (100 - 1) / ((end_time - start_time) / 1.0), rel=1.0e-3
+    )
 
     # now check decreasing rates
     dictcache_obj.counter_add("test_key_two", 101)
@@ -329,8 +335,8 @@ def test_counterkey_rate(dictcache_obj):
         total_time = total_time + time_step
     end_time = time.time()
 
-    (rate, currval, initval, currtime, inittime) = (
-        dictcache_obj.counter_rate("test_key_two", 1.0, return_allinfo=True)
+    (rate, currval, initval, currtime, inittime) = dictcache_obj.counter_rate(
+        "test_key_two", 1.0, return_allinfo=True
     )
-    expected_rate = abs((1-101)/((end_time - start_time)/1.0))
+    expected_rate = abs((1 - 101) / ((end_time - start_time) / 1.0))
     assert rate == pytest.approx(expected_rate, rel=1.0e-3)

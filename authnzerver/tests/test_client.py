@@ -16,42 +16,43 @@ from authnzerver.client import Authnzerver
 
 @pytest.mark.skipif(
     os.environ.get("GITHUB_WORKFLOW", None) is not None,
-    reason="github doesn't allow server tests probably"
+    reason="github doesn't allow server tests probably",
 )
 def test_client(monkeypatch, tmpdir):
-    '''
+    """
     This tests if the server does rate-limiting correctly.
 
-    '''
+    """
 
     # the basedir will be the pytest provided temporary directory
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file, env_file = (
-        autogen_secrets_authdb(
-            basedir,
-            interactive=False
-        )
-    )
+    (
+        authdb_path,
+        creds,
+        secrets_file,
+        salt_file,
+        env_file,
+    ) = autogen_secrets_authdb(basedir, interactive=False)
 
     # read in the secrets file for the secret
-    with open(secrets_file,'r') as infd:
-        secret = infd.read().strip('\n')
+    with open(secrets_file, "r") as infd:
+        secret = infd.read().strip("\n")
 
     # read in the salts file for the salt
-    with open(salt_file,'r') as infd:
-        salt = infd.read().strip('\n')
+    with open(salt_file, "r") as infd:
+        salt = infd.read().strip("\n")
 
     # read the creds file so we can try logging in
-    with open(creds,'r') as infd:
-        useremail, password = infd.read().strip('\n').split()
+    with open(creds, "r") as infd:
+        useremail, password = infd.read().strip("\n").split()
 
     # get a temp directory
-    tmpdir = os.path.join('/tmp', 'authnzrv-%s' % secrets.token_urlsafe(8))
+    tmpdir = os.path.join("/tmp", "authnzrv-%s" % secrets.token_urlsafe(8))
 
-    server_listen = '127.0.0.1'
-    server_port = '18158'
+    server_listen = "127.0.0.1"
+    server_port = "18158"
 
     # set up the environment
     monkeypatch.setenv("AUTHNZERVER_AUTHDB", authdb_path)
@@ -70,8 +71,10 @@ def test_client(monkeypatch, tmpdir):
     monkeypatch.setenv("AUTHNZERVER_EMAILPASS", "testpass")
 
     # set the session request rate-limit to 120 per 60 seconds
-    monkeypatch.setenv("AUTHNZERVER_RATELIMITS",
-                       "ipaddr:720;user:360;session:120;apikey:720;burst:150")
+    monkeypatch.setenv(
+        "AUTHNZERVER_RATELIMITS",
+        "ipaddr:720;user:360;session:120;apikey:720;burst:150",
+    )
 
     # launch the server subprocess
     p = subprocess.Popen("authnzrv", shell=True)
@@ -86,16 +89,18 @@ def test_client(monkeypatch, tmpdir):
 
         client = Authnzerver(
             authnzerver_url=f"http://{server_listen}:{server_port}",
-            authnzerver_secret=secret
+            authnzerver_secret=secret,
         )
 
         # create a new user
         resp = client.request(
             "user-new",
-            {"email":"test-user@test.org",
-             "password":"atYSE6m3bsBL",
-             "full_name":"New User",
-             "client_ipaddr": "1.2.3.4"}
+            {
+                "email": "test-user@test.org",
+                "password": "atYSE6m3bsBL",
+                "full_name": "New User",
+                "client_ipaddr": "1.2.3.4",
+            },
         )
         assert resp.success is True
         assert resp.response["user_id"] == 4
@@ -104,13 +109,19 @@ def test_client(monkeypatch, tmpdir):
         # edit their info
         resp = client.request(
             "internal-user-edit",
-            {"target_userid":4,
-             "client_ipaddr": "1.2.3.4",
-             "update_dict":{"email_verified":True,
-                            "is_active":True,
-                            "extra_info":{"provenance":"pytest-user",
-                                          "type":"test",
-                                          "hello":"world"}}}
+            {
+                "target_userid": 4,
+                "client_ipaddr": "1.2.3.4",
+                "update_dict": {
+                    "email_verified": True,
+                    "is_active": True,
+                    "extra_info": {
+                        "provenance": "pytest-user",
+                        "type": "test",
+                        "hello": "world",
+                    },
+                },
+            },
         )
         assert resp.success is True
         assert resp.response.get("user_info", None) is not None
@@ -118,14 +129,8 @@ def test_client(monkeypatch, tmpdir):
             resp.response["user_info"]["extra_info"]["provenance"]
             == "pytest-user"
         )
-        assert (
-            resp.response["user_info"]["extra_info"]["type"]
-            == "test"
-        )
-        assert (
-            resp.response["user_info"]["extra_info"]["hello"]
-            == "world"
-        )
+        assert resp.response["user_info"]["extra_info"]["type"] == "test"
+        assert resp.response["user_info"]["extra_info"]["hello"] == "world"
         assert resp.response["user_info"]["email_verified"] is True
         assert resp.response["user_info"]["is_active"] is True
 

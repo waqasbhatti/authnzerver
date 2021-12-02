@@ -1,10 +1,10 @@
-'''test_server_ratelimits.py -
+"""test_server_ratelimits.py -
    Waqas Bhatti (waqas.afzal.bhatti@gmail.com) - Mar 2020
 License: MIT. See the LICENSE file for details.
 
 This tests the rate-limiting for a running authnzerver.
 
-'''
+"""
 
 import secrets
 import subprocess
@@ -22,42 +22,43 @@ from authnzerver.messaging import encrypt_message
 
 @mark.skipif(
     os.environ.get("GITHUB_WORKFLOW", None) is not None,
-    reason="github doesn't allow server tests probably"
+    reason="github doesn't allow server tests probably",
 )
 def test_ratelimits(monkeypatch, tmpdir):
-    '''
+    """
     This tests if the server does rate-limiting correctly.
 
-    '''
+    """
 
     # the basedir will be the pytest provided temporary directory
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file, env_file = (
-        autogen_secrets_authdb(
-            basedir,
-            interactive=False
-        )
-    )
+    (
+        authdb_path,
+        creds,
+        secrets_file,
+        salt_file,
+        env_file,
+    ) = autogen_secrets_authdb(basedir, interactive=False)
 
     # read in the secrets file for the secret
-    with open(secrets_file,'r') as infd:
-        secret = infd.read().strip('\n')
+    with open(secrets_file, "r") as infd:
+        secret = infd.read().strip("\n")
 
     # read in the salts file for the salt
-    with open(salt_file,'r') as infd:
-        salt = infd.read().strip('\n')
+    with open(salt_file, "r") as infd:
+        salt = infd.read().strip("\n")
 
     # read the creds file so we can try logging in
-    with open(creds,'r') as infd:
-        useremail, password = infd.read().strip('\n').split()
+    with open(creds, "r") as infd:
+        useremail, password = infd.read().strip("\n").split()
 
     # get a temp directory
-    tmpdir = os.path.join('/tmp', 'authnzrv-%s' % secrets.token_urlsafe(8))
+    tmpdir = os.path.join("/tmp", "authnzrv-%s" % secrets.token_urlsafe(8))
 
-    server_listen = '127.0.0.1'
-    server_port = '18158'
+    server_listen = "127.0.0.1"
+    server_port = "18158"
 
     # set up the environment
     monkeypatch.setenv("AUTHNZERVER_AUTHDB", authdb_path)
@@ -79,7 +80,7 @@ def test_ratelimits(monkeypatch, tmpdir):
     # set the limit for the 'user-list' API call to 10 per 60 seconds
     monkeypatch.setenv(
         "AUTHNZERVER_RATELIMITS",
-        "ipaddr:300;user:360;session:120;apikey:720;burst:150;user-list:10"
+        "ipaddr:300;user:360;session:120;apikey:720;burst:150;user-list:10",
     )
 
     # launch the server subprocess
@@ -96,29 +97,31 @@ def test_ratelimits(monkeypatch, tmpdir):
         nreqs = 300
 
         resplist = []
-        for req_ind in range(1, nreqs+1):
+        for req_ind in range(1, nreqs + 1):
 
             # create a new anonymous session token
             session_payload = {
-                'user_id':2,
-                'user_agent':'Mozzarella Killerwhale',
-                'expires':datetime.utcnow()+timedelta(hours=1),
-                'ip_address': '1.1.1.1',
-                'extra_info_json':{'pref_datasets_always_private':True}
+                "user_id": 2,
+                "user_agent": "Mozzarella Killerwhale",
+                "expires": datetime.utcnow() + timedelta(hours=1),
+                "ip_address": "1.1.1.1",
+                "extra_info_json": {"pref_datasets_always_private": True},
             }
 
-            request_dict = {'request': 'session-new',
-                            'body': session_payload,
-                            'reqid': req_ind,
-                            'client_ipaddr': '1.1.1.1'}
+            request_dict = {
+                "request": "session-new",
+                "body": session_payload,
+                "reqid": req_ind,
+                "client_ipaddr": "1.1.1.1",
+            }
 
             encrypted_request = encrypt_message(request_dict, secret)
 
             # send the request to the authnzerver
             resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
+                "http://%s:%s" % (server_listen, server_port),
                 data=encrypted_request,
-                timeout=1.0
+                timeout=5.0,
             )
             resplist.append(resp.status_code)
 
@@ -126,32 +129,34 @@ def test_ratelimits(monkeypatch, tmpdir):
         # should be around 150 (max burst allowed) after which we get all 429s
         respcounter = Counter(resplist)
         print(respcounter)
-        assert respcounter[200]/nreqs == approx(150/nreqs, rel=1.0e-3)
-        assert respcounter[429]/nreqs == approx(150/nreqs, rel=1.0e-3)
+        assert respcounter[200] / nreqs == approx(150 / nreqs, rel=1.0e-3)
+        assert respcounter[429] / nreqs == approx(150 / nreqs, rel=1.0e-3)
 
         #
         # 2. check if the specific rate-limiting works as expected
         #
         resplist = []
-        for req_ind in range(1, nreqs+1):
+        for req_ind in range(1, nreqs + 1):
 
             # create a new anonymous session token
             list_payload = {
-                'user_id': 3,
+                "user_id": 3,
             }
 
-            request_dict = {'request': 'user-list',
-                            'body': list_payload,
-                            'reqid': req_ind,
-                            'client_ipaddr': '1.1.1.1'}
+            request_dict = {
+                "request": "user-list",
+                "body": list_payload,
+                "reqid": req_ind,
+                "client_ipaddr": "1.1.1.1",
+            }
 
             encrypted_request = encrypt_message(request_dict, secret)
 
             # send the request to the authnzerver
             resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
+                "http://%s:%s" % (server_listen, server_port),
                 data=encrypted_request,
-                timeout=1.0
+                timeout=5.0,
             )
             resplist.append(resp.status_code)
 
@@ -160,35 +165,37 @@ def test_ratelimits(monkeypatch, tmpdir):
         # 429s
         respcounter = Counter(resplist)
         print(respcounter)
-        assert respcounter[200]/nreqs == approx(10/nreqs, rel=1.0e-3)
-        assert respcounter[429]/nreqs == approx(290/nreqs, rel=1.0e-3)
+        assert respcounter[200] / nreqs == approx(10 / nreqs, rel=1.0e-3)
+        assert respcounter[429] / nreqs == approx(290 / nreqs, rel=1.0e-3)
 
         #
         # 2. check if the default aggressive rate-limiting on sensitive
         # operations works as expected
         #
         resplist = []
-        for req_ind in range(1, nreqs+1):
+        for req_ind in range(1, nreqs + 1):
 
             # create a new anonymous session token
             user_payload = {
-                'email': f"{secrets.token_hex(6)}@example.com",
-                'password': secrets.token_hex(16),
-                'full_name': secrets.token_hex(8),
+                "email": f"{secrets.token_hex(6)}@example.com",
+                "password": secrets.token_hex(16),
+                "full_name": secrets.token_hex(8),
             }
 
-            request_dict = {'request': 'user-new',
-                            'body': user_payload,
-                            'reqid': req_ind,
-                            'client_ipaddr': '1.1.1.1'}
+            request_dict = {
+                "request": "user-new",
+                "body": user_payload,
+                "reqid": req_ind,
+                "client_ipaddr": "1.1.1.1",
+            }
 
             encrypted_request = encrypt_message(request_dict, secret)
 
             # send the request to the authnzerver
             resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
+                "http://%s:%s" % (server_listen, server_port),
                 data=encrypted_request,
-                timeout=1.0
+                timeout=5.0,
             )
             resplist.append(resp.status_code)
 
@@ -197,8 +204,8 @@ def test_ratelimits(monkeypatch, tmpdir):
         # 429s
         respcounter = Counter(resplist)
         print(respcounter)
-        assert respcounter[200]/nreqs == approx(5/nreqs, rel=1.0e-3)
-        assert respcounter[429]/nreqs == approx(295/nreqs, rel=1.0e-3)
+        assert respcounter[200] / nreqs == approx(5 / nreqs, rel=1.0e-3)
+        assert respcounter[429] / nreqs == approx(295 / nreqs, rel=1.0e-3)
 
     #
     # kill the server at the end
@@ -208,7 +215,7 @@ def test_ratelimits(monkeypatch, tmpdir):
 
         p.terminate()
         try:
-            p.communicate(timeout=3.0)
+            p.communicate(timeout=5.0)
             p.kill()
         except Exception:
             pass

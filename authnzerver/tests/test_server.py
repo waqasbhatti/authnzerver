@@ -1,9 +1,9 @@
-'''test_server.py - Waqas Bhatti (waqas.afzal.bhatti@gmail.com) - Mar 2020
+"""test_server.py - Waqas Bhatti (waqas.afzal.bhatti@gmail.com) - Mar 2020
 License: MIT. See the LICENSE file for details.
 
 This tests the actual running server.
 
-'''
+"""
 
 import secrets
 import subprocess
@@ -20,42 +20,43 @@ from authnzerver.messaging import encrypt_message, decrypt_message
 
 @mark.skipif(
     os.environ.get("GITHUB_WORKFLOW", None) is not None,
-    reason="github doesn't allow server tests probably"
+    reason="github doesn't allow server tests probably",
 )
 def test_server_with_env(monkeypatch, tmpdir):
-    '''
+    """
     This tests if the server starts fine with all config in the environment.
 
-    '''
+    """
 
     # the basedir will be the pytest provided temporary directory
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file, env_file = (
-        autogen_secrets_authdb(
-            basedir,
-            interactive=False
-        )
-    )
+    (
+        authdb_path,
+        creds,
+        secrets_file,
+        salt_file,
+        env_file,
+    ) = autogen_secrets_authdb(basedir, interactive=False)
 
     # read in the secrets file for the secret
-    with open(secrets_file,'r') as infd:
-        secret = infd.read().strip('\n')
+    with open(secrets_file, "r") as infd:
+        secret = infd.read().strip("\n")
 
     # read in the salts file for the salt
-    with open(salt_file,'r') as infd:
-        salt = infd.read().strip('\n')
+    with open(salt_file, "r") as infd:
+        salt = infd.read().strip("\n")
 
     # read the creds file so we can try logging in
-    with open(creds,'r') as infd:
-        useremail, password = infd.read().strip('\n').split()
+    with open(creds, "r") as infd:
+        useremail, password = infd.read().strip("\n").split()
 
     # get a temp directory
-    tmpdir = os.path.join('/tmp', 'authnzrv-%s' % secrets.token_urlsafe(8))
+    tmpdir = os.path.join("/tmp", "authnzrv-%s" % secrets.token_urlsafe(8))
 
-    server_listen = '127.0.0.1'
-    server_port = '18158'
+    server_listen = "127.0.0.1"
+    server_port = "18158"
 
     # set up the environment
     monkeypatch.setenv("AUTHNZERVER_AUTHDB", authdb_path)
@@ -75,7 +76,7 @@ def test_server_with_env(monkeypatch, tmpdir):
     monkeypatch.setenv(
         "AUTHNZERVER_RATELIMITS",
         "ipaddr:300;user:360;session:120;apikey:720;burst:150;"
-        "user-new:50;user-login:50"
+        "user-new:50;user-login:50",
     )
 
     # launch the server subprocess
@@ -92,69 +93,69 @@ def test_server_with_env(monkeypatch, tmpdir):
 
         # create a new anonymous session token
         session_payload = {
-            'user_id':2,
-            'user_agent':'Mozzarella Killerwhale',
-            'expires':datetime.utcnow()+timedelta(hours=1),
-            'ip_address': '1.1.1.1',
-            'extra_info_json':{'pref_datasets_always_private':True}
+            "user_id": 2,
+            "user_agent": "Mozzarella Killerwhale",
+            "expires": datetime.utcnow() + timedelta(hours=1),
+            "ip_address": "1.1.1.1",
+            "extra_info_json": {"pref_datasets_always_private": True},
         }
 
         request_dict = {
-            'request':'session-new',
-            'body':session_payload,
-            'reqid':101,
-            'client_ipaddr': '1.2.3.4'
+            "request": "session-new",
+            "body": session_payload,
+            "reqid": 101,
+            "client_ipaddr": "1.2.3.4",
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
 
         # send the request to the authnzerver
         resp = requests.post(
-            'http://%s:%s' % (server_listen, server_port),
+            "http://%s:%s" % (server_listen, server_port),
             data=encrypted_request,
-            timeout=1.0
+            timeout=1.0,
         )
         resp.raise_for_status()
 
         # decrypt the response
         response_dict = decrypt_message(resp.text, secret)
 
-        assert response_dict['reqid'] == request_dict['reqid']
-        assert response_dict['success'] is True
-        assert isinstance(response_dict['response'], dict)
-        assert response_dict['response']['session_token'] is not None
+        assert response_dict["reqid"] == request_dict["reqid"]
+        assert response_dict["success"] is True
+        assert isinstance(response_dict["response"], dict)
+        assert response_dict["response"]["session_token"] is not None
 
         #
         # 2. login as the superuser
         #
         request_dict = {
-            'request':'user-login',
-            'body':{
-                'session_token':response_dict['response']['session_token'],
-                'email':useremail,
-                'password':password
+            "request": "user-login",
+            "body": {
+                "session_token": response_dict["response"]["session_token"],
+                "email": useremail,
+                "password": password,
             },
-            'reqid':102,
-            'client_ipaddr': '1.2.3.4'
+            "reqid": 102,
+            "client_ipaddr": "1.2.3.4",
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
 
         # send the request to the authnzerver
         resp = requests.post(
-            'http://%s:%s' % (server_listen, server_port),
+            "http://%s:%s" % (server_listen, server_port),
             data=encrypted_request,
-            timeout=1.0
+            timeout=1.0,
         )
         resp.raise_for_status()
 
         # decrypt the response
         response_dict = decrypt_message(resp.text, secret)
 
-        assert response_dict['reqid'] == request_dict['reqid']
-        assert response_dict['success'] is True
-        assert isinstance(response_dict['response'], dict)
-        assert response_dict['response']['user_id'] == 1
+        assert response_dict["reqid"] == request_dict["reqid"]
+        assert response_dict["success"] is True
+        assert isinstance(response_dict["response"], dict)
+        assert response_dict["response"]["user_id"] == 1
 
         #
         # kill the server at the end
@@ -179,44 +180,45 @@ def test_server_with_env(monkeypatch, tmpdir):
 
 @mark.skipif(
     os.environ.get("GITHUB_WORKFLOW", None) is not None,
-    reason="github doesn't allow server tests probably"
+    reason="github doesn't allow server tests probably",
 )
 def test_server_invalid_logins(monkeypatch, tmpdir):
-    '''This tests if the server responds appropriately to invalid logins.
+    """This tests if the server responds appropriately to invalid logins.
 
     The timing difference between successive failed logins should increase
     roughly exponentially.
 
-    '''
+    """
 
     # the basedir will be the pytest provided temporary directory
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file, env_file = (
-        autogen_secrets_authdb(
-            basedir,
-            interactive=False
-        )
-    )
+    (
+        authdb_path,
+        creds,
+        secrets_file,
+        salt_file,
+        env_file,
+    ) = autogen_secrets_authdb(basedir, interactive=False)
 
     # read in the secrets file for the secret
-    with open(secrets_file,'r') as infd:
-        secret = infd.read().strip('\n')
+    with open(secrets_file, "r") as infd:
+        secret = infd.read().strip("\n")
 
     # read in the salts file for the salt
-    with open(salt_file,'r') as infd:
-        salt = infd.read().strip('\n')
+    with open(salt_file, "r") as infd:
+        salt = infd.read().strip("\n")
 
     # read the creds file so we can try logging in
-    with open(creds,'r') as infd:
-        useremail, password = infd.read().strip('\n').split()
+    with open(creds, "r") as infd:
+        useremail, password = infd.read().strip("\n").split()
 
     # get a temp directory
-    tmpdir = os.path.join('/tmp', 'authnzrv-%s' % secrets.token_urlsafe(8))
+    tmpdir = os.path.join("/tmp", "authnzrv-%s" % secrets.token_urlsafe(8))
 
-    server_listen = '127.0.0.1'
-    server_port = '18158'
+    server_listen = "127.0.0.1"
+    server_port = "18158"
 
     # set up the environment
     monkeypatch.setenv("AUTHNZERVER_AUTHDB", authdb_path)
@@ -236,7 +238,7 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
     monkeypatch.setenv(
         "AUTHNZERVER_RATELIMITS",
         "ipaddr:300;user:360;session:120;apikey:720;burst:150;"
-        "user-new:50;user-login:50"
+        "user-new:50;user-login:50",
     )
 
     # launch the server subprocess
@@ -257,47 +259,47 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
 
             # create a new anonymous session token
             session_payload = {
-                'user_id':2,
-                'user_agent':'Mozzarella Killerwhale',
-                'expires':datetime.utcnow()+timedelta(hours=1),
-                'ip_address': '1.1.1.1',
-                'extra_info_json':{'pref_datasets_always_private':True}
+                "user_id": 2,
+                "user_agent": "Mozzarella Killerwhale",
+                "expires": datetime.utcnow() + timedelta(hours=1),
+                "ip_address": "1.1.1.1",
+                "extra_info_json": {"pref_datasets_always_private": True},
             }
 
             request_dict = {
-                'request':'session-new',
-                'body':session_payload,
-                'reqid':i,
-                'client_ipaddr': '1.2.3.4'
+                "request": "session-new",
+                "body": session_payload,
+                "reqid": i,
+                "client_ipaddr": "1.2.3.4",
             }
 
             encrypted_request = encrypt_message(request_dict, secret)
 
             # send the request to the authnzerver
             resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
+                "http://%s:%s" % (server_listen, server_port),
                 data=encrypted_request,
-                timeout=1.0
+                timeout=1.0,
             )
             resp.raise_for_status()
 
             # decrypt the response
             session_dict = decrypt_message(resp.text, secret)
 
-            assert session_dict['reqid'] == request_dict['reqid']
-            assert session_dict['success'] is True
-            assert isinstance(session_dict['response'], dict)
-            assert session_dict['response']['session_token'] is not None
+            assert session_dict["reqid"] == request_dict["reqid"]
+            assert session_dict["success"] is True
+            assert isinstance(session_dict["response"], dict)
+            assert session_dict["response"]["session_token"] is not None
 
             request_dict = {
-                'request':'user-login',
-                'body':{
-                    'session_token':session_dict['response']['session_token'],
-                    'email':useremail,
-                    'password':'%s-%i' % (password,i)
+                "request": "user-login",
+                "body": {
+                    "session_token": session_dict["response"]["session_token"],
+                    "email": useremail,
+                    "password": "%s-%i" % (password, i),
                 },
-                'reqid':10*i + 10,
-                'client_ipaddr': '1.2.3.4'
+                "reqid": 10 * i + 10,
+                "client_ipaddr": "1.2.3.4",
             }
 
             encrypted_request = encrypt_message(request_dict, secret)
@@ -306,9 +308,9 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
 
             # send the request to the authnzerver
             resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
+                "http://%s:%s" % (server_listen, server_port),
                 data=encrypted_request,
-                timeout=60.0
+                timeout=60.0,
             )
             resp.raise_for_status()
 
@@ -317,62 +319,62 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
             # decrypt the response
             response_dict = decrypt_message(resp.text, secret)
 
-            assert response_dict['reqid'] == request_dict['reqid']
-            assert response_dict['success'] is False
-            assert isinstance(response_dict['response'], dict)
-            assert response_dict['response']['user_id'] is None
+            assert response_dict["reqid"] == request_dict["reqid"]
+            assert response_dict["success"] is False
+            assert isinstance(response_dict["response"], dict)
+            assert response_dict["response"]["user_id"] is None
 
         #
         # check if the timings follow the expected trend
         #
-        diffs = [timing[x+1]-timing[x] for x in range(4)]
-        diffs_increasing = all(diffs[x+1] > diffs[x] for x in range(3))
+        diffs = [timing[x + 1] - timing[x] for x in range(4)]
+        diffs_increasing = all(diffs[x + 1] > diffs[x] for x in range(3))
         assert diffs_increasing is True
 
         # now login wih the correct password and see if the login time goes back
         # to normal
         session_payload = {
-            'user_id':2,
-            'user_agent':'Mozzarella Killerwhale',
-            'expires':datetime.utcnow()+timedelta(hours=1),
-            'ip_address': '1.1.1.1',
-            'extra_info_json':{'pref_datasets_always_private':True}
+            "user_id": 2,
+            "user_agent": "Mozzarella Killerwhale",
+            "expires": datetime.utcnow() + timedelta(hours=1),
+            "ip_address": "1.1.1.1",
+            "extra_info_json": {"pref_datasets_always_private": True},
         }
 
         request_dict = {
-            'request':'session-new',
-            'body':session_payload,
-            'reqid':1004,
-            'client_ipaddr': '1.2.3.4'
+            "request": "session-new",
+            "body": session_payload,
+            "reqid": 1004,
+            "client_ipaddr": "1.2.3.4",
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
 
         # send the request to the authnzerver
         resp = requests.post(
-            'http://%s:%s' % (server_listen, server_port),
+            "http://%s:%s" % (server_listen, server_port),
             data=encrypted_request,
-            timeout=1.0
+            timeout=1.0,
         )
         resp.raise_for_status()
 
         # decrypt the response
         session_dict = decrypt_message(resp.text, secret)
 
-        assert session_dict['reqid'] == request_dict['reqid']
-        assert session_dict['success'] is True
-        assert isinstance(session_dict['response'], dict)
-        assert session_dict['response']['session_token'] is not None
+        assert session_dict["reqid"] == request_dict["reqid"]
+        assert session_dict["success"] is True
+        assert isinstance(session_dict["response"], dict)
+        assert session_dict["response"]["session_token"] is not None
 
         request_dict = {
-            'request':'user-login',
-            'body':{
-                'session_token':session_dict['response']['session_token'],
-                'email':useremail,
-                'password':password
+            "request": "user-login",
+            "body": {
+                "session_token": session_dict["response"]["session_token"],
+                "email": useremail,
+                "password": password,
             },
-            'reqid':1005,
-            'client_ipaddr': '1.2.3.4'
+            "reqid": 1005,
+            "client_ipaddr": "1.2.3.4",
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
@@ -381,9 +383,9 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
 
         # send the request to the authnzerver
         resp = requests.post(
-            'http://%s:%s' % (server_listen, server_port),
+            "http://%s:%s" % (server_listen, server_port),
             data=encrypted_request,
-            timeout=60.0
+            timeout=60.0,
         )
         resp.raise_for_status()
 
@@ -392,14 +394,14 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
         # decrypt the response
         response_dict = decrypt_message(resp.text, secret)
 
-        assert response_dict['reqid'] == request_dict['reqid']
-        assert response_dict['success'] is True
-        assert isinstance(response_dict['response'], dict)
-        assert response_dict['response']['user_id'] == 1
+        assert response_dict["reqid"] == request_dict["reqid"]
+        assert response_dict["success"] is True
+        assert isinstance(response_dict["response"], dict)
+        assert response_dict["response"]["user_id"] == 1
 
         # the latest time should be less than the 1st time (when throttling was
         # activated) and also less than the immediately previous time
-        assert ((timing[-1] < timing[0]) and (timing[-1] < timing[-2]))
+        assert (timing[-1] < timing[0]) and (timing[-1] < timing[-2])
 
     finally:
 
@@ -424,45 +426,46 @@ def test_server_invalid_logins(monkeypatch, tmpdir):
 
 @mark.skipif(
     os.environ.get("GITHUB_WORKFLOW", None) is not None,
-    reason="github doesn't allow server tests probably"
+    reason="github doesn't allow server tests probably",
 )
 def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
-    '''This tests if the server responds appropriately to invalid logins.
+    """This tests if the server responds appropriately to invalid logins.
 
     The timing difference between successive failed logins should increase
     roughly exponentially. In addition, the user should be locked out of their
     account for the configured amount of time and unlocked thereafter.
 
-    '''
+    """
 
     # the basedir will be the pytest provided temporary directory
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file, env_file = (
-        autogen_secrets_authdb(
-            basedir,
-            interactive=False
-        )
-    )
+    (
+        authdb_path,
+        creds,
+        secrets_file,
+        salt_file,
+        env_file,
+    ) = autogen_secrets_authdb(basedir, interactive=False)
 
     # read in the secrets file for the secret
-    with open(secrets_file,'r') as infd:
-        secret = infd.read().strip('\n')
+    with open(secrets_file, "r") as infd:
+        secret = infd.read().strip("\n")
 
     # read in the salts file for the salt
-    with open(salt_file,'r') as infd:
-        salt = infd.read().strip('\n')
+    with open(salt_file, "r") as infd:
+        salt = infd.read().strip("\n")
 
     # read the creds file so we can try logging in
-    with open(creds,'r') as infd:
-        useremail, password = infd.read().strip('\n').split()
+    with open(creds, "r") as infd:
+        useremail, password = infd.read().strip("\n").split()
 
     # get a temp directory
-    tmpdir = os.path.join('/tmp', 'authnzrv-%s' % secrets.token_urlsafe(8))
+    tmpdir = os.path.join("/tmp", "authnzrv-%s" % secrets.token_urlsafe(8))
 
-    server_listen = '127.0.0.1'
-    server_port = '18158'
+    server_listen = "127.0.0.1"
+    server_port = "18158"
 
     # set up the environment
     monkeypatch.setenv("AUTHNZERVER_AUTHDB", authdb_path)
@@ -484,7 +487,7 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
     monkeypatch.setenv(
         "AUTHNZERVER_RATELIMITS",
         "ipaddr:300;user:360;session:120;apikey:720;burst:150;"
-        "user-new:50;user-login:50"
+        "user-new:50;user-login:50",
     )
 
     # launch the server subprocess
@@ -505,47 +508,47 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
 
             # create a new anonymous session token
             session_payload = {
-                'user_id':2,
-                'user_agent':'Mozzarella Killerwhale',
-                'expires':datetime.utcnow()+timedelta(hours=1),
-                'ip_address': '1.1.1.1',
-                'extra_info_json':{'pref_datasets_always_private':True}
+                "user_id": 2,
+                "user_agent": "Mozzarella Killerwhale",
+                "expires": datetime.utcnow() + timedelta(hours=1),
+                "ip_address": "1.1.1.1",
+                "extra_info_json": {"pref_datasets_always_private": True},
             }
 
             request_dict = {
-                'request':'session-new',
-                'body':session_payload,
-                'reqid':i,
-                'client_ipaddr': '1.2.3.4'
+                "request": "session-new",
+                "body": session_payload,
+                "reqid": i,
+                "client_ipaddr": "1.2.3.4",
             }
 
             encrypted_request = encrypt_message(request_dict, secret)
 
             # send the request to the authnzerver
             resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
+                "http://%s:%s" % (server_listen, server_port),
                 data=encrypted_request,
-                timeout=1.0
+                timeout=1.0,
             )
             resp.raise_for_status()
 
             # decrypt the response
             session_dict = decrypt_message(resp.text, secret)
 
-            assert session_dict['reqid'] == request_dict['reqid']
-            assert session_dict['success'] is True
-            assert isinstance(session_dict['response'], dict)
-            assert session_dict['response']['session_token'] is not None
+            assert session_dict["reqid"] == request_dict["reqid"]
+            assert session_dict["success"] is True
+            assert isinstance(session_dict["response"], dict)
+            assert session_dict["response"]["session_token"] is not None
 
             request_dict = {
-                'request':'user-login',
-                'body':{
-                    'session_token':session_dict['response']['session_token'],
-                    'email':useremail,
-                    'password':'%s-%i' % (password,i)
+                "request": "user-login",
+                "body": {
+                    "session_token": session_dict["response"]["session_token"],
+                    "email": useremail,
+                    "password": "%s-%i" % (password, i),
                 },
-                'reqid':10*i + 10,
-                'client_ipaddr': '1.2.3.4'
+                "reqid": 10 * i + 10,
+                "client_ipaddr": "1.2.3.4",
             }
 
             encrypted_request = encrypt_message(request_dict, secret)
@@ -554,9 +557,9 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
 
             # send the request to the authnzerver
             resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
+                "http://%s:%s" % (server_listen, server_port),
                 data=encrypted_request,
-                timeout=60.0
+                timeout=60.0,
             )
             resp.raise_for_status()
 
@@ -565,10 +568,10 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
             # decrypt the response
             response_dict = decrypt_message(resp.text, secret)
 
-            assert response_dict['reqid'] == request_dict['reqid']
-            assert response_dict['success'] is False
-            assert isinstance(response_dict['response'], dict)
-            assert response_dict['response']['user_id'] is None
+            assert response_dict["reqid"] == request_dict["reqid"]
+            assert response_dict["success"] is False
+            assert isinstance(response_dict["response"], dict)
+            assert response_dict["response"]["user_id"] is None
 
             # for the last attempt, we should get back a "locked" account
             # message
@@ -579,54 +582,54 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
                     "after repeated login failures. "
                     "Try again in an hour or "
                     "contact the server admins."
-                ) in response_dict['messages']
+                ) in response_dict["messages"]
 
         # wait 30 seconds for the lock time to expire
         time.sleep(30)
 
         # now login wih the correct password and see if we can login now
         session_payload = {
-            'user_id':2,
-            'user_agent':'Mozzarella Killerwhale',
-            'expires':datetime.utcnow()+timedelta(hours=1),
-            'ip_address': '1.1.1.1',
-            'extra_info_json':{'pref_datasets_always_private':True}
+            "user_id": 2,
+            "user_agent": "Mozzarella Killerwhale",
+            "expires": datetime.utcnow() + timedelta(hours=1),
+            "ip_address": "1.1.1.1",
+            "extra_info_json": {"pref_datasets_always_private": True},
         }
 
         request_dict = {
-            'request':'session-new',
-            'body':session_payload,
-            'reqid':1004,
-            'client_ipaddr': '1.2.3.4'
+            "request": "session-new",
+            "body": session_payload,
+            "reqid": 1004,
+            "client_ipaddr": "1.2.3.4",
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
 
         # send the request to the authnzerver
         resp = requests.post(
-            'http://%s:%s' % (server_listen, server_port),
+            "http://%s:%s" % (server_listen, server_port),
             data=encrypted_request,
-            timeout=1.0
+            timeout=1.0,
         )
         resp.raise_for_status()
 
         # decrypt the response
         session_dict = decrypt_message(resp.text, secret)
 
-        assert session_dict['reqid'] == request_dict['reqid']
-        assert session_dict['success'] is True
-        assert isinstance(session_dict['response'], dict)
-        assert session_dict['response']['session_token'] is not None
+        assert session_dict["reqid"] == request_dict["reqid"]
+        assert session_dict["success"] is True
+        assert isinstance(session_dict["response"], dict)
+        assert session_dict["response"]["session_token"] is not None
 
         request_dict = {
-            'request':'user-login',
-            'body':{
-                'session_token':session_dict['response']['session_token'],
-                'email':useremail,
-                'password':password
+            "request": "user-login",
+            "body": {
+                "session_token": session_dict["response"]["session_token"],
+                "email": useremail,
+                "password": password,
             },
-            'reqid':1005,
-            'client_ipaddr': '1.2.3.4'
+            "reqid": 1005,
+            "client_ipaddr": "1.2.3.4",
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
@@ -635,9 +638,9 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
 
         # send the request to the authnzerver
         resp = requests.post(
-            'http://%s:%s' % (server_listen, server_port),
+            "http://%s:%s" % (server_listen, server_port),
             data=encrypted_request,
-            timeout=60.0
+            timeout=60.0,
         )
         resp.raise_for_status()
 
@@ -646,11 +649,11 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
         # decrypt the response
         response_dict = decrypt_message(resp.text, secret)
 
-        assert response_dict['reqid'] == request_dict['reqid']
-        assert response_dict['success'] is True
-        assert isinstance(response_dict['response'], dict)
-        assert response_dict['response']['user_id'] == 1
-        assert response_dict['response']['user_role'] == 'superuser'
+        assert response_dict["reqid"] == request_dict["reqid"]
+        assert response_dict["success"] is True
+        assert isinstance(response_dict["response"], dict)
+        assert response_dict["response"]["user_id"] == 1
+        assert response_dict["response"]["user_role"] == "superuser"
 
     finally:
 
@@ -675,46 +678,47 @@ def test_server_invalid_logins_with_lock(monkeypatch, tmpdir):
 
 @mark.skipif(
     os.environ.get("GITHUB_WORKFLOW", None) is not None,
-    reason="github doesn't allow server tests probably"
+    reason="github doesn't allow server tests probably",
 )
 def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
-    '''This tests if the server responds appropriately to
+    """This tests if the server responds appropriately to
     invalid password checks.
 
     The timing difference between successive failed password checks should
     increase roughly exponentially. In addition, the user should be locked out
     of their account for the configured amount of time and unlocked thereafter.
 
-    '''
+    """
 
     # the basedir will be the pytest provided temporary directory
     basedir = str(tmpdir)
 
     # we'll make the auth DB and secrets file first
-    authdb_path, creds, secrets_file, salt_file, env_file = (
-        autogen_secrets_authdb(
-            basedir,
-            interactive=False
-        )
-    )
+    (
+        authdb_path,
+        creds,
+        secrets_file,
+        salt_file,
+        env_file,
+    ) = autogen_secrets_authdb(basedir, interactive=False)
 
     # read in the secrets file for the secret
-    with open(secrets_file,'r') as infd:
-        secret = infd.read().strip('\n')
+    with open(secrets_file, "r") as infd:
+        secret = infd.read().strip("\n")
 
     # read in the salts file for the salt
-    with open(salt_file,'r') as infd:
-        salt = infd.read().strip('\n')
+    with open(salt_file, "r") as infd:
+        salt = infd.read().strip("\n")
 
     # read the creds file so we can try logging in
-    with open(creds,'r') as infd:
-        useremail, password = infd.read().strip('\n').split()
+    with open(creds, "r") as infd:
+        useremail, password = infd.read().strip("\n").split()
 
     # get a temp directory
-    tmpdir = os.path.join('/tmp', 'authnzrv-%s' % secrets.token_urlsafe(8))
+    tmpdir = os.path.join("/tmp", "authnzrv-%s" % secrets.token_urlsafe(8))
 
-    server_listen = '127.0.0.1'
-    server_port = '18158'
+    server_listen = "127.0.0.1"
+    server_port = "18158"
 
     # set up the environment
     monkeypatch.setenv("AUTHNZERVER_AUTHDB", authdb_path)
@@ -736,7 +740,7 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
     monkeypatch.setenv(
         "AUTHNZERVER_RATELIMITS",
         "ipaddr:300;user:360;session:120;apikey:720;burst:150;"
-        "user-new:50;user-login:50"
+        "user-new:50;user-login:50",
     )
 
     # launch the server subprocess
@@ -757,46 +761,46 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
 
             # create a new anonymous session token
             session_payload = {
-                'user_id':2,
-                'user_agent':'Mozzarella Killerwhale',
-                'expires':datetime.utcnow()+timedelta(hours=1),
-                'ip_address': '1.1.1.1',
-                'extra_info_json':{'pref_datasets_always_private':True}
+                "user_id": 2,
+                "user_agent": "Mozzarella Killerwhale",
+                "expires": datetime.utcnow() + timedelta(hours=1),
+                "ip_address": "1.1.1.1",
+                "extra_info_json": {"pref_datasets_always_private": True},
             }
 
             request_dict = {
-                'request':'session-new',
-                'body':session_payload,
-                'reqid':i,
-                'client_ipaddr': '1.2.3.4'
+                "request": "session-new",
+                "body": session_payload,
+                "reqid": i,
+                "client_ipaddr": "1.2.3.4",
             }
 
             encrypted_request = encrypt_message(request_dict, secret)
 
             # send the request to the authnzerver
             resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
+                "http://%s:%s" % (server_listen, server_port),
                 data=encrypted_request,
-                timeout=1.0
+                timeout=1.0,
             )
             resp.raise_for_status()
 
             # decrypt the response
             session_dict = decrypt_message(resp.text, secret)
 
-            assert session_dict['reqid'] == request_dict['reqid']
-            assert session_dict['success'] is True
-            assert isinstance(session_dict['response'], dict)
-            assert session_dict['response']['session_token'] is not None
+            assert session_dict["reqid"] == request_dict["reqid"]
+            assert session_dict["success"] is True
+            assert isinstance(session_dict["response"], dict)
+            assert session_dict["response"]["session_token"] is not None
 
             request_dict = {
-                'request':'user-passcheck-nosession',
-                'body':{
-                    'email':useremail,
-                    'password':'%s-%i' % (password,i)
+                "request": "user-passcheck-nosession",
+                "body": {
+                    "email": useremail,
+                    "password": "%s-%i" % (password, i),
                 },
-                'reqid':10*i + 10,
-                'client_ipaddr': '1.2.3.4'
+                "reqid": 10 * i + 10,
+                "client_ipaddr": "1.2.3.4",
             }
 
             encrypted_request = encrypt_message(request_dict, secret)
@@ -805,9 +809,9 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
 
             # send the request to the authnzerver
             resp = requests.post(
-                'http://%s:%s' % (server_listen, server_port),
+                "http://%s:%s" % (server_listen, server_port),
                 data=encrypted_request,
-                timeout=60.0
+                timeout=60.0,
             )
             resp.raise_for_status()
 
@@ -816,10 +820,10 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
             # decrypt the response
             response_dict = decrypt_message(resp.text, secret)
 
-            assert response_dict['reqid'] == request_dict['reqid']
-            assert response_dict['success'] is False
-            assert isinstance(response_dict['response'], dict)
-            assert response_dict['response']['user_id'] is None
+            assert response_dict["reqid"] == request_dict["reqid"]
+            assert response_dict["success"] is False
+            assert isinstance(response_dict["response"], dict)
+            assert response_dict["response"]["user_id"] is None
 
             # for the last attempt, we should get back a "locked" account
             # message
@@ -830,53 +834,50 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
                     "after repeated login failures. "
                     "Try again in an hour or "
                     "contact the server admins."
-                ) in response_dict['messages']
+                ) in response_dict["messages"]
 
         # wait 30 seconds for the lock time to expire
         time.sleep(30)
 
         # now login wih the correct password and see if we can login now
         session_payload = {
-            'user_id':2,
-            'user_agent':'Mozzarella Killerwhale',
-            'expires':datetime.utcnow()+timedelta(hours=1),
-            'ip_address': '1.1.1.1',
-            'extra_info_json':{'pref_datasets_always_private':True}
+            "user_id": 2,
+            "user_agent": "Mozzarella Killerwhale",
+            "expires": datetime.utcnow() + timedelta(hours=1),
+            "ip_address": "1.1.1.1",
+            "extra_info_json": {"pref_datasets_always_private": True},
         }
 
         request_dict = {
-            'request':'session-new',
-            'body':session_payload,
-            'reqid':1004,
-            'client_ipaddr': '1.2.3.4'
+            "request": "session-new",
+            "body": session_payload,
+            "reqid": 1004,
+            "client_ipaddr": "1.2.3.4",
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
 
         # send the request to the authnzerver
         resp = requests.post(
-            'http://%s:%s' % (server_listen, server_port),
+            "http://%s:%s" % (server_listen, server_port),
             data=encrypted_request,
-            timeout=1.0
+            timeout=1.0,
         )
         resp.raise_for_status()
 
         # decrypt the response
         session_dict = decrypt_message(resp.text, secret)
 
-        assert session_dict['reqid'] == request_dict['reqid']
-        assert session_dict['success'] is True
-        assert isinstance(session_dict['response'], dict)
-        assert session_dict['response']['session_token'] is not None
+        assert session_dict["reqid"] == request_dict["reqid"]
+        assert session_dict["success"] is True
+        assert isinstance(session_dict["response"], dict)
+        assert session_dict["response"]["session_token"] is not None
 
         request_dict = {
-            'request':'user-passcheck-nosession',
-            'body':{
-                'email':useremail,
-                'password':password
-            },
-            'reqid':1005,
-            'client_ipaddr': '1.2.3.4'
+            "request": "user-passcheck-nosession",
+            "body": {"email": useremail, "password": password},
+            "reqid": 1005,
+            "client_ipaddr": "1.2.3.4",
         }
 
         encrypted_request = encrypt_message(request_dict, secret)
@@ -885,9 +886,9 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
 
         # send the request to the authnzerver
         resp = requests.post(
-            'http://%s:%s' % (server_listen, server_port),
+            "http://%s:%s" % (server_listen, server_port),
             data=encrypted_request,
-            timeout=60.0
+            timeout=60.0,
         )
         resp.raise_for_status()
 
@@ -896,11 +897,11 @@ def test_server_invalid_passchecks_with_lock(monkeypatch, tmpdir):
         # decrypt the response
         response_dict = decrypt_message(resp.text, secret)
 
-        assert response_dict['reqid'] == request_dict['reqid']
-        assert response_dict['success'] is True
-        assert isinstance(response_dict['response'], dict)
-        assert response_dict['response']['user_id'] == 1
-        assert response_dict['response']['user_role'] == 'superuser'
+        assert response_dict["reqid"] == request_dict["reqid"]
+        assert response_dict["success"] is True
+        assert isinstance(response_dict["response"], dict)
+        assert response_dict["response"]["user_id"] == 1
+        assert response_dict["response"]["user_role"] == "superuser"
 
     finally:
 
