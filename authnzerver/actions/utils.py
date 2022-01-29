@@ -8,6 +8,7 @@ import logging
 from multiprocessing import current_process
 from typing import Tuple
 import os.path
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -39,17 +40,27 @@ def get_procdb_permjson(
 
     if override_authdb_path:
         currproc.auth_db_path = override_authdb_path
-        logger.warning(
-            f"overriding currproc.auth_db_path with "
-            f"provided override_authdb_path = {override_authdb_path}"
-        )
+
+        try:
+            parsed_dburl = urlparse(currproc.auth_db_path)
+            logger.warning(
+                f"Overriding currproc.auth_db_path with "
+                f"provided DB = "
+                f"{parsed_dburl.scheme}://"
+                f"{parsed_dburl.hostname}/{parsed_dburl.path}"
+            )
+        except Exception:
+            logger.warning(
+                "Overriding currproc.auth_db_path with "
+                "provided override_authdb_path"
+            )
         currproc.authdb_engine, currproc.authdb_meta = authdb.get_auth_db(
             currproc.auth_db_path, echo=raiseonfail, returnconn=False
         )
 
     if override_permissions_json:
         logger.warning(
-            f"overriding currproc.permissions_json with "
+            f"Overriding currproc.permissions_json with "
             f"provided override_permissions_json = {override_permissions_json}"
         )
         currproc.permissions_json = override_permissions_json
